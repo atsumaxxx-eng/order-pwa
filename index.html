@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Order</title>
+</head>
+<body>
+  <div class="appbar">
+    <div class="title" id="shopName">Order</div>
+    <div class="table-chip" id="tableChip">Table —</div>
+    <button class="lang-btn" id="langBtn">JP</button>
+  </div>
+
+  <div class="net-banner offline-b" id="offlineBanner">
+    <span>📴</span><span id="offlineText">Offline — orders will be sent automatically when back online</span>
+  </div>
+
+  <div class="cats" id="cats"></div>
+
+  <div id="menuArea">
+    <div class="loading"><span class="spinner"></span></div>
+  </div>
+
+  <div class="cartbar">
+    <div class="row">
+      <div class="tot">
+        <div class="lbl" id="totalLbl">Total</div>
+        <div class="val" id="totalVal">—</div>
+        <div class="sub" id="totalSub"></div>
+      </div>
+      <button class="btn-send" id="sendBtn" disabled>
+        <span id="sendLbl">Order</span>
+        <span class="pending-pill" id="pendingPill">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="overlay" id="okOverlay">
+    <div class="sheet">
+      <div class="emoji" id="okEmoji">✅</div>
+      <h3 id="okTitle">Order sent</h3>
+      <p id="okMsg"></p>
+      <button class="btn-send ok" id="okBtn">OK</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="overlay" id="errOverlay">
+    <div class="sheet">
+      <div class="emoji">⚠️</div>
+      <h3 id="errTitle">Error</h3>
+      <p id="errMsg"></p>
+      <button class="btn-send ok" id="errBtn" style="background:var(--red);">OK</button>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
