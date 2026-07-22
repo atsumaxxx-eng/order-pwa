@@ -8,13 +8,15 @@
       queuedTitle:'Saved (offline)', queuedMsg:'No connection now. It will be sent automatically when back online.',
       errTitle:'Error', ok:'OK', table:'Table', noTable:'No table number in the QR link.',
       offline:'Offline — orders will be sent automatically when back online', lang:'JP',
-      svc:'Service', tax:'Tax' },
+      svc:'Service', tax:'Tax',
+      tblTitle:'Select your table', tblMsg:'Scan the QR at your table, or pick your table number.', tblGo:'Start' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
       errTitle:'エラー', ok:'OK', table:'卓', noTable:'QRリンクに卓番号がありません。',
       offline:'オフライン — 復帰時に自動送信します', lang:'EN',
-      svc:'サービス料', tax:'税' }
+      svc:'サービス料', tax:'税',
+      tblTitle:'テーブルを選択', tblMsg:'QRを読み取るか、テーブル番号を選んでください。', tblGo:'開始' }
   };
 
   var state = {
@@ -161,6 +163,24 @@
     }).catch(function () {});
   }
 
+  // テーブル未指定（QR無しアクセス）時に手動選択を促す
+  function showTablePicker(tables) {
+    var sel = $('tableSelect');
+    sel.innerHTML = '';
+    (tables || []).forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = 'Table ' + n; sel.appendChild(o); });
+    var x = t();
+    $('tblTitle').textContent = x.tblTitle;
+    $('tblMsg').textContent = x.tblMsg;
+    $('tblGo').textContent = x.tblGo;
+    $('tableOverlay').classList.add('show');
+    $('tblGo').onclick = function () {
+      var v = sel.value; if (!v) return;
+      state.table = String(v);
+      $('tableOverlay').classList.remove('show');
+      renderTexts();
+    };
+  }
+
   // ---- utils ----
   function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
   function escAttr(s) { return escHtml(s); }
@@ -197,6 +217,7 @@
       var _bid = state.settings.menuTopImageId;
       if (_bid) { var _b = $('shopBanner'); _b.src = 'https://lh3.googleusercontent.com/d/' + _bid; _b.style.display = 'block'; }
       renderTexts(); renderCats(); renderMenu(); updateTotal();
+      if (!state.table) showTablePicker(r.tables || []); // QR無しアクセス時はテーブル選択を促す
       // オンライン起動時に保留分を流す
       API.flush().then(refreshPending);
     }).catch(function (err) {

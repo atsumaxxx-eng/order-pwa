@@ -65,6 +65,17 @@
     </div>
   </div>
 
+  <!-- Table picker (shown when no ?table= in URL) -->
+  <div class="overlay" id="tableOverlay">
+    <div class="sheet">
+      <div class="emoji">🪑</div>
+      <h3 id="tblTitle">Select your table</h3>
+      <p id="tblMsg"></p>
+      <select id="tableSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:14px 0;background:#fff;"></select>
+      <button class="btn-send ok" id="tblGo" style="width:100%;">Start</button>
+    </div>
+  </div>
+
   <script src="./config.js"></script>
   <script src="./api.js"></script>
   <script src="./app.js"></script>

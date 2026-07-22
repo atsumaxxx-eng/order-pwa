@@ -1,6 +1,6 @@
 // Service Worker: アプリシェルをキャッシュし、オフラインでも起動できるようにする。
 // API（script.google.com）へのPOSTは横取りせず素通しする。
-const CACHE = 'pos-pwa-v2';
+const CACHE = 'pos-pwa-v3';
 const SHELL = [
   './',
   './index.html',
