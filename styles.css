@@ -131,3 +131,4 @@ body.offline .net-banner.offline-b { display: flex; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .hidden { display: none !important; }
+.shop-banner { width: 100%; max-height: 190px; object-fit: cover; display: block; }

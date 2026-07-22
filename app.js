@@ -193,7 +193,10 @@
       var cats = [];
       state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); });
       state.cats = cats;
-      applyAccent(); renderTexts(); renderCats(); renderMenu(); updateTotal();
+      applyAccent();
+      var _bid = state.settings.menuTopImageId;
+      if (_bid) { var _b = $('shopBanner'); _b.src = 'https://lh3.googleusercontent.com/d/' + _bid; _b.style.display = 'block'; }
+      renderTexts(); renderCats(); renderMenu(); updateTotal();
       // オンライン起動時に保留分を流す
       API.flush().then(refreshPending);
     }).catch(function (err) {
