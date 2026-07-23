@@ -76,6 +76,33 @@
     </div>
   </div>
 
+  <!-- Payment method choice -->
+  <div class="overlay" id="payChoice">
+    <div class="sheet">
+      <div class="emoji">🧾</div>
+      <h3 id="pcTitle">How would you like to pay?</h3>
+      <p id="pcSub" style="font-size:20px;font-weight:900;color:var(--accent);"></p>
+      <button class="btn-send ok" id="pcLater" style="width:100%;background:#334155;">Pay at counter</button>
+      <button class="btn-send ok" id="pcGcash" style="width:100%;margin-top:8px;background:#2563eb;">GCash</button>
+      <button class="btn-send ok" id="pcCard" style="width:100%;margin-top:8px;background:#0f172a;">Card</button>
+      <button id="pcCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Payment (PayMongo) -->
+  <div class="overlay" id="payModal">
+    <div class="sheet">
+      <div class="emoji">💳</div>
+      <h3 id="pmTitle">Pay</h3>
+      <p id="pmAmount" style="font-size:22px;font-weight:900;color:var(--accent);"></p>
+      <img id="pmQr" alt="" style="width:180px;height:180px;margin:8px auto;display:none;">
+      <a id="pmOpen" href="#" target="_blank" rel="noopener" class="btn-send ok" style="display:block;width:100%;text-decoration:none;text-align:center;box-sizing:border-box;">Open payment page</a>
+      <button class="btn-send ok" id="pmCheck" style="width:100%;margin-top:8px;background:var(--green);">I've paid — check</button>
+      <div id="pmStatus" style="margin-top:10px;font-size:13px;font-weight:700;"></div>
+      <button id="pmCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
   <script src="./config.js"></script>
   <script src="./api.js"></script>
   <script src="./app.js"></script>

@@ -9,14 +9,16 @@
       errTitle:'Error', ok:'OK', table:'Table', noTable:'No table number in the QR link.',
       offline:'Offline — orders will be sent automatically when back online', lang:'JP',
       svc:'Service', tax:'Tax',
-      tblTitle:'Select your table', tblMsg:'Scan the QR at your table, or pick your table number.', tblGo:'Start' },
+      tblTitle:'Select your table', tblMsg:'Scan the QR at your table, or pick your table number.', tblGo:'Start',
+      payTitle:'How would you like to pay?', payLater:'👤 Pay at counter', payCard:'💳 Card', payProcessing:'Preparing…', payScan:'Scan the QR to pay', payNotYet:'Payment not confirmed yet.', payNoKey:'Online payment is not set up.', paidTitle:'Paid & ordered', paidMsg:'Payment received. Your order was sent.', cancel:'Cancel' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
       errTitle:'エラー', ok:'OK', table:'卓', noTable:'QRリンクに卓番号がありません。',
       offline:'オフライン — 復帰時に自動送信します', lang:'EN',
       svc:'サービス料', tax:'税',
-      tblTitle:'テーブルを選択', tblMsg:'QRを読み取るか、テーブル番号を選んでください。', tblGo:'開始' }
+      tblTitle:'テーブルを選択', tblMsg:'QRを読み取るか、テーブル番号を選んでください。', tblGo:'開始',
+      payTitle:'お支払い方法', payLater:'👤 店員に支払う（後会計）', payCard:'💳 カード', payProcessing:'準備中…', payScan:'QRを読み取ってお支払い', payNotYet:'まだ支払いが確認できません。', payNoKey:'オンライン決済は未設定です。', paidTitle:'支払い完了・注文しました', paidMsg:'お支払いを受け付けました。注文を送信しました。', cancel:'キャンセル' }
   };
 
   var state = {
@@ -134,23 +136,79 @@
   }
 
   // ---- 送信 ----
+  var pendingOrder = null, payCheckoutId = null, payPoll = null;
+
   function send() {
     var x = t();
     if (!state.table) { showErr(x.noTable); return; }
     var items = [];
     Object.keys(state.cart).forEach(function (n) { if (state.cart[n] > 0) items.push({ name: n, count: state.cart[n] }); });
     if (!items.length) { showErr(x.empty); return; }
-    if (!confirm(x.confirm)) return;
     var b = breakdown();
-    var btn = $('sendBtn'); btn.disabled = true;
     var order = { tableNumber: state.table, items: items, totalPrice: b.total };
+    if (state.paymongo) { pendingOrder = order; openPayChoice(); }        // セルフ決済あり→会計方法を選択
+    else { if (!confirm(x.confirm)) return; doSubmit(order, false); }     // 後会計のみ
+  }
+
+  function doSubmit(order, paid) {
+    if (!order) return;
+    var x = t();
+    order.paid = !!paid;
+    var btn = $('sendBtn'); btn.disabled = true;
     API.submitOrder(order).then(function (result) {
       state.cart = {}; renderMenu(); updateTotal();
-      showOk(result === 'queued' ? x.queuedTitle : x.okTitle, result === 'queued' ? x.queuedMsg : x.okMsg, result === 'queued' ? '📥' : '✅');
+      var title = result === 'queued' ? x.queuedTitle : (paid ? x.paidTitle : x.okTitle);
+      var msg   = result === 'queued' ? x.queuedMsg   : (paid ? x.paidMsg   : x.okMsg);
+      showOk(title, msg, result === 'queued' ? '📥' : (paid ? '💳' : '✅'));
       refreshPending();
-    }).catch(function (err) {
-      showErr(String(err && err.message || err));
-    }).then(function () { btn.disabled = false; });
+    }).catch(function (err) { showErr(String(err && err.message || err)); })
+      .then(function () { btn.disabled = false; });
+  }
+
+  // ---- セルフ決済（PayMongo） ----
+  function openPayChoice() {
+    var x = t();
+    $('pcTitle').textContent = x.payTitle;
+    $('pcSub').textContent = money(breakdown().total);
+    $('pcLater').textContent = x.payLater;
+    $('pcCard').textContent = x.payCard;
+    $('pcCancel').textContent = x.cancel;
+    $('payChoice').classList.add('show');
+  }
+  function closePayChoice() { $('payChoice').classList.remove('show'); }
+  function closePayModal() { stopPoll(); $('payModal').classList.remove('show'); }
+  function stopPoll() { if (payPoll) { clearInterval(payPoll); payPoll = null; } }
+
+  function startPay(method) {
+    closePayChoice();
+    var x = t();
+    if (!pendingOrder) return;
+    var amt = pendingOrder.totalPrice;
+    $('pmTitle').textContent = x.payProcessing;
+    $('pmAmount').textContent = money(amt);
+    $('pmStatus').textContent = '';
+    $('pmQr').style.display = 'none';
+    $('payModal').classList.add('show');
+    API.post('createCheckout', { amount: amt, desc: 'Table ' + pendingOrder.tableNumber, method: method }).then(function (r) {
+      var d = r.data || {};
+      if (d.error) { closePayModal(); showErr(d.error === 'no_api_key' ? x.payNoKey : d.error); return; }
+      payCheckoutId = d.checkoutId;
+      $('pmQr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(d.checkoutUrl);
+      $('pmQr').style.display = 'block';
+      $('pmOpen').href = d.checkoutUrl;
+      $('pmTitle').textContent = x.payScan;
+      startPoll();
+    }).catch(function (e) { closePayModal(); showErr(String(e.message || e)); });
+  }
+  function startPoll() { stopPoll(); payPoll = setInterval(checkPay, 5000); }
+  function checkPay() {
+    if (!payCheckoutId) return;
+    var x = t();
+    API.post('checkoutStatus', { checkoutId: payCheckoutId }).then(function (r) {
+      var d = r.data || {};
+      if (d.paymentStatus === 'paid') { stopPoll(); closePayModal(); var o = pendingOrder; pendingOrder = null; payCheckoutId = null; doSubmit(o, true); }
+      else { $('pmStatus').textContent = x.payNotYet; $('pmStatus').style.color = '#b45309'; }
+    }).catch(function () {});
   }
 
   function showOk(title, msg, emoji) { $('okEmoji').textContent = emoji || '✅'; $('okTitle').textContent = title; $('okMsg').textContent = msg; $('okOverlay').classList.add('show'); }
@@ -201,6 +259,12 @@
     $('sendBtn').addEventListener('click', send);
     $('okBtn').addEventListener('click', function () { $('okOverlay').classList.remove('show'); });
     $('errBtn').addEventListener('click', function () { $('errOverlay').classList.remove('show'); });
+    $('pcLater').addEventListener('click', function () { closePayChoice(); var o = pendingOrder; pendingOrder = null; doSubmit(o, false); });
+    $('pcGcash').addEventListener('click', function () { startPay('gcash'); });
+    $('pcCard').addEventListener('click', function () { startPay('card'); });
+    $('pcCancel').addEventListener('click', function () { closePayChoice(); pendingOrder = null; });
+    $('pmCheck').addEventListener('click', checkPay);
+    $('pmCancel').addEventListener('click', function () { closePayModal(); pendingOrder = null; payCheckoutId = null; });
 
     window.addEventListener('online', function () { document.body.classList.remove('offline'); API.flush().then(refreshPending); });
     window.addEventListener('offline', function () { document.body.classList.add('offline'); });
@@ -209,6 +273,7 @@
     API.post('bootstrap', {}).then(function (r) {
       state.settings = r.settings || {};
       state.menu = (r.menu || []);
+      state.paymongo = !!r.paymongo;
       if (!state.lang) state.lang = state.settings.defaultLang || 'en';
       var cats = [];
       state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); });
