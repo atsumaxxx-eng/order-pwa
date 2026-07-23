@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Time Clock</title>
+  <style>
+    :root { --navy:#0f172a; --green:#16a34a; --amber:#f59e0b; --blue:#2563eb; --red:#dc2626; --border:#e5e7eb; --bg:#f6f7f9; --t2:#475569; --t3:#94a3b8; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN",sans-serif; background:var(--bg); color:var(--navy); }
+    .bar { position:sticky; top:0; z-index:10; background:var(--navy); color:#fff; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; }
+    .bar h1 { font-size:17px; font-weight:800; margin:0; }
+    .bar .now { font-size:15px; font-weight:800; }
+    .cam-wrap { position:relative; background:#000; }
+    video { width:100%; max-height:230px; object-fit:cover; display:block; background:#000; }
+    .cam-note { position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,.55); color:#fff; font-size:12px; font-weight:700; padding:3px 9px; border-radius:8px; }
+    .banner { display:none; background:#fff7ed; color:#c2410c; padding:9px 14px; font-size:13px; font-weight:700; text-align:center; }
+    .banner.show { display:block; }
+    .banner.err { background:#fee2e2; color:#b91c1c; }
+    .wrap { padding:14px; }
+    .lbl { font-size:13px; color:var(--t3); font-weight:700; margin:2px 0 10px; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+    .emp { background:#fff; border:1px solid var(--border); border-radius:16px; padding:16px 12px; text-align:center; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+    .emp .nm { font-size:16px; font-weight:800; margin-bottom:8px; }
+    .stt { display:inline-block; font-size:12px; font-weight:700; padding:3px 12px; border-radius:999px; }
+    .s-out{background:#f1f5f9;color:#64748b;} .s-work{background:#dcfce7;color:#15803d;} .s-break{background:#fef3c7;color:#b45309;} .s-done{background:#e0e7ff;color:#4338ca;}
+    .modal { display:none; position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:50; align-items:center; justify-content:center; padding:16px; }
+    .modal.show { display:flex; }
+    .sheet { background:#fff; border-radius:18px; width:100%; max-width:360px; overflow:hidden; }
+    .sheet .h { padding:18px; text-align:center; border-bottom:1px solid var(--border); }
+    .sheet .h .n { font-size:20px; font-weight:900; } .sheet .h .s { font-size:13px; color:var(--t3); margin-top:4px; }
+    .sheet .b { padding:16px 18px 20px; }
+    .btn { width:100%; padding:15px; border:none; border-radius:12px; font-size:16px; font-weight:800; color:#fff; cursor:pointer; margin-bottom:10px; }
+    .b-in{background:var(--green);} .b-out{background:var(--red);} .b-bs{background:var(--amber);} .b-be{background:var(--blue);}
+    .memo { width:100%; padding:11px 12px; border:1px solid var(--border); border-radius:10px; font-size:14px; margin-bottom:12px; }
+    .close { width:100%; padding:12px; background:#f1f5f9; color:var(--t2); border:none; border-radius:10px; font-weight:700; cursor:pointer; }
+    .toast { position:fixed; bottom:22px; left:50%; transform:translateX(-50%); background:var(--navy); color:#fff; padding:13px 22px; border-radius:999px; font-size:14px; font-weight:800; z-index:100; display:none; max-width:90%; text-align:center; }
+    .toast.err { background:var(--red); }
+    .loading { text-align:center; padding:50px 0; color:var(--t3); }
+  </style>
+</head>
+<body>
+  <div class="bar"><h1 id="title">打刻</h1><span class="now" id="now">--:--</span></div>
+
+  <div class="cam-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="cam-note" id="camNote">📷 カメラ</div>
+  </div>
+  <div class="banner" id="banner"></div>
+
+  <div class="wrap">
+    <div class="lbl" id="sub">自分の名前をタップして出勤・退勤（写真と位置が記録されます）</div>
+    <div id="area"><div class="loading">読み込み中...</div></div>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="sheet">
+      <div class="h"><div class="n" id="mName"></div><div class="s" id="mStatus"></div></div>
+      <div class="b">
+        <input type="text" class="memo" id="mMemo" placeholder="メモ（任意）">
+        <div id="mBtns"></div>
+        <button class="close" id="mClose">閉じる</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="./config.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var CFG = window.APP_CONFIG;
+    var video = document.getElementById('video');
+    var stream = null, camReady = false;
+    var employees = [], selected = null, lastGPS = null;
+
+    function $(id){ return document.getElementById(id); }
+    function p(n){ return (n<10?'0':'')+n; }
+
+    async function apiPost(action, payload){
+      var body = JSON.stringify(Object.assign({ action: action }, payload||{}));
+      var r = await fetch(CFG.API_URL+'?api=1', { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:body, redirect:'follow' });
+      var j = await r.json();
+      if(!j.ok) throw new Error(j.error||'api_error');
+      return j.data;
+    }
+
+    // ---- camera ----
+    async function initCamera(){
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user' }, audio:false });
+        video.srcObject = stream; camReady = true; hideBanner();
+      } catch(e){
+        camReady = false;
+        showBanner('カメラを許可してください（打刻には写真が必要です）', true);
+      }
+    }
+    function capture(name){
+      var w = video.videoWidth||640, h = video.videoHeight||480;
+      var c = document.createElement('canvas'); c.width=w; c.height=h;
+      var ctx = c.getContext('2d'); ctx.drawImage(video,0,0,w,h);
+      var d = new Date();
+      var stamp = d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());
+      var bh = Math.max(48, Math.round(h*0.14));
+      ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,h-bh,w,bh);
+      ctx.fillStyle='#fff'; ctx.textBaseline='middle';
+      ctx.font='bold '+Math.round(bh*0.34)+'px sans-serif'; ctx.fillText(name||'', 12, h-bh*0.66);
+      ctx.font='bold '+Math.round(bh*0.30)+'px sans-serif'; ctx.fillText(stamp, 12, h-bh*0.28);
+      return c.toDataURL('image/jpeg', 0.7);
+    }
+
+    // ---- gps ----
+    function getGPS(){
+      return new Promise(function(res){
+        if(!navigator.geolocation) return res(null);
+        navigator.geolocation.getCurrentPosition(
+          function(pos){ res({ lat:pos.coords.latitude, lng:pos.coords.longitude }); },
+          function(){ res(null); },
+          { enableHighAccuracy:true, timeout:8000, maximumAge:15000 }
+        );
+      });
+    }
+
+    // ---- ui ----
+    function showBanner(msg, err){ var b=$('banner'); b.textContent=msg; b.className='banner show'+(err?' err':''); }
+    function hideBanner(){ $('banner').className='banner'; }
+    function toast(msg, err){ var t=$('toast'); t.textContent=msg; t.className='toast show'+(err?' err':''); t.style.display='block'; setTimeout(function(){ t.style.display='none'; }, 3200); }
+
+    var SMAP = { '未出勤':['s-out','未出勤'], '勤務中':['s-work','勤務中'], '休憩中':['s-break','休憩中'], '退勤済':['s-done','退勤済'] };
+
+    function render(){
+      var area = $('area');
+      if(!employees.length){ area.innerHTML = '<div class="emp" style="grid-column:1/-1;cursor:default;">従業員が未登録です。管理→ユーザー管理/勤怠で登録してください。</div>'; return; }
+      var html = '<div class="grid">';
+      employees.forEach(function(e, i){
+        var sm = SMAP[e.status] || SMAP['未出勤'];
+        html += '<div class="emp" onclick="__open('+i+')"><div class="nm">'+esc(e.name)+'</div><span class="stt '+sm[0]+'">'+sm[1]+'</span></div>';
+      });
+      html += '</div>';
+      area.innerHTML = html;
+    }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+    window.__open = function(i){
+      selected = employees[i];
+      $('mName').textContent = selected.name;
+      var sm = SMAP[selected.status] || SMAP['未出勤'];
+      $('mStatus').textContent = sm[1];
+      $('mMemo').value = '';
+      var b = '';
+      if(selected.status==='未出勤' || selected.status==='退勤済') b += '<button class="btn b-in" onclick="__punch(\'出勤\')">🟢 出勤</button>';
+      else if(selected.status==='勤務中'){ b += '<button class="btn b-bs" onclick="__punch(\'休憩開始\')">☕ 休憩開始</button>'; b += '<button class="btn b-out" onclick="__punch(\'退勤\')">🔴 退勤</button>'; }
+      else if(selected.status==='休憩中') b += '<button class="btn b-be" onclick="__punch(\'休憩終了\')">✅ 休憩終了</button>';
+      $('mBtns').innerHTML = b;
+      $('modal').classList.add('show');
+    };
+    function closeModal(){ $('modal').classList.remove('show'); selected=null; }
+    $('mClose').onclick = closeModal;
+
+    var DONE = { '出勤':'出勤しました', '退勤':'お疲れさまでした', '休憩開始':'休憩開始', '休憩終了':'休憩終了' };
+    var ERR = { too_far:'⛔ 店舗から離れています', no_location:'⛔ 位置情報を許可してください', no_photo:'⛔ 写真が撮れませんでした', no_camera:'⛔ カメラを許可してください', already_in:'すでに出勤中です', not_in:'出勤していません' };
+
+    window.__punch = async function(type){
+      if(!selected) return;
+      if(!camReady || !stream){ toast('カメラを許可してください', true); return; }
+      var btns = document.querySelectorAll('#mBtns .btn'); btns.forEach(function(b){ b.disabled=true; });
+      try {
+        var photo = capture(selected.name);
+        var gps = await getGPS();
+        var res = await apiPost('punch', { empId:selected.id, type:type, memo:$('mMemo').value, photo:photo, lat:gps&&gps.lat, lng:gps&&gps.lng });
+        if(res && res.success){ closeModal(); toast('✅ '+(DONE[type]||'完了')); loadEmployees(); }
+        else {
+          var e = res && res.error;
+          var msg = ERR[e] || ('エラー'+(e?'（'+e+'）':''));
+          if(e==='too_far' && res.dist!=null) msg += '（約'+res.dist+'m / 許容'+res.radius+'m）';
+          toast(msg, true);
+          btns.forEach(function(b){ b.disabled=false; });
+        }
+      } catch(err){ toast('エラー: '+(err.message||err), true); btns.forEach(function(b){ b.disabled=false; }); }
+    };
+
+    function loadEmployees(){
+      apiPost('getEmployeeStatuses', {}).then(function(d){ employees = d||[]; render(); })
+        .catch(function(e){ $('area').innerHTML = '<div class="loading" style="color:var(--red)">エラー: '+esc(e.message||e)+'</div>'; });
+    }
+
+    function tick(){ var d=new Date(); $('now').textContent = '🕐 '+p(d.getHours())+':'+p(d.getMinutes()); }
+
+    tick(); setInterval(tick, 10000);
+    initCamera();
+    loadEmployees();
+  })();
+  </script>
+</body>
+</html>
