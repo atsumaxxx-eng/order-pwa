@@ -15,6 +15,7 @@
   <div class="appbar">
     <div class="title" id="shopName">Order</div>
     <div class="table-chip" id="tableChip">Table —</div>
+    <button class="lang-btn" id="memberBtn" style="display:none;">🎁</button>
     <button class="lang-btn" id="langBtn">JP</button>
   </div>
 
@@ -73,6 +74,23 @@
       <p id="tblMsg"></p>
       <select id="tableSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:14px 0;background:#fff;"></select>
       <button class="btn-send ok" id="tblGo" style="width:100%;">Start</button>
+    </div>
+  </div>
+
+  <!-- Member / loyalty -->
+  <div class="overlay" id="memberModal">
+    <div class="sheet">
+      <div class="emoji">🎁</div>
+      <h3 id="memTitle">Member</h3>
+      <p id="memSub" style="font-size:13px;color:var(--text-2);"></p>
+      <input type="tel" id="memPhone" placeholder="09xx xxx xxxx" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:10px 0;box-sizing:border-box;">
+      <button class="btn-send ok" id="memLookup" style="width:100%;">Check</button>
+      <div id="memInfo" style="margin-top:12px;display:none;">
+        <div id="memName" style="font-weight:800;"></div>
+        <div id="memPoints" style="font-size:22px;font-weight:900;color:var(--accent);"></div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;justify-content:center;"><input type="checkbox" id="memUse" style="width:20px;height:20px;"><span id="memUseLabel">Use points</span></label>
+      </div>
+      <button id="memClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
     </div>
   </div>
 

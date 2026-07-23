@@ -10,7 +10,8 @@
       offline:'Offline — orders will be sent automatically when back online', lang:'JP',
       svc:'Service', tax:'Tax',
       tblTitle:'Select your table', tblMsg:'Scan the QR at your table, or pick your table number.', tblGo:'Start',
-      payTitle:'How would you like to pay?', payLater:'👤 Pay at counter', payCard:'💳 Card', payProcessing:'Preparing…', payScan:'Scan the QR to pay', payNotYet:'Payment not confirmed yet.', payNoKey:'Online payment is not set up.', paidTitle:'Paid & ordered', paidMsg:'Payment received. Your order was sent.', cancel:'Cancel' },
+      payTitle:'How would you like to pay?', payLater:'👤 Pay at counter', payCard:'💳 Card', payProcessing:'Preparing…', payScan:'Scan the QR to pay', payNotYet:'Payment not confirmed yet.', payNoKey:'Online payment is not set up.', paidTitle:'Paid & ordered', paidMsg:'Payment received. Your order was sent.', cancel:'Cancel',
+      memberTitle:'Member (points)', memberSub:'Enter your phone to earn / use points.', check:'Check', usePoints:'Use points', points:'pts', discountLbl:'Points', earned:'pts earned' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -18,12 +19,13 @@
       offline:'オフライン — 復帰時に自動送信します', lang:'EN',
       svc:'サービス料', tax:'税',
       tblTitle:'テーブルを選択', tblMsg:'QRを読み取るか、テーブル番号を選んでください。', tblGo:'開始',
-      payTitle:'お支払い方法', payLater:'👤 店員に支払う（後会計）', payCard:'💳 カード', payProcessing:'準備中…', payScan:'QRを読み取ってお支払い', payNotYet:'まだ支払いが確認できません。', payNoKey:'オンライン決済は未設定です。', paidTitle:'支払い完了・注文しました', paidMsg:'お支払いを受け付けました。注文を送信しました。', cancel:'キャンセル' }
+      payTitle:'お支払い方法', payLater:'👤 店員に支払う（後会計）', payCard:'💳 カード', payProcessing:'準備中…', payScan:'QRを読み取ってお支払い', payNotYet:'まだ支払いが確認できません。', payNoKey:'オンライン決済は未設定です。', paidTitle:'支払い完了・注文しました', paidMsg:'お支払いを受け付けました。注文を送信しました。', cancel:'キャンセル',
+      memberTitle:'会員（ポイント）', memberSub:'電話番号を入力するとポイントが貯まる/使えます。', check:'確認', usePoints:'ポイントを使う', points:'pt', discountLbl:'ポイント割引', earned:'pt 獲得' }
   };
 
   var state = {
     lang: 'en', settings: {}, menu: [], cats: [], currentCat: 'all',
-    cart: {}, table: ''
+    cart: {}, table: '', paymongo: false, member: null, usePoints: false
   };
 
   function $(id) { return document.getElementById(id); }
@@ -49,7 +51,14 @@
     var taxRate = Number(state.settings.taxRate) || 0;
     var service = Math.round(sub * (svcRate / 100));
     var tax = Math.round((sub + service) * (taxRate / 100));
-    return { sub: sub, service: service, tax: tax, total: sub + service + tax };
+    var base = sub + service + tax;
+    var discount = 0, pointsUsed = 0;
+    if (state.usePoints && state.member && state.member.points > 0) {
+      var rv = Number(state.settings.loyaltyRedeemValue) || 1;
+      discount = Math.min(state.member.points * rv, base);
+      pointsUsed = Math.round(discount / rv);
+    }
+    return { sub: sub, service: service, tax: tax, discount: discount, pointsUsed: pointsUsed, total: base - discount };
   }
 
   // ---- 描画 ----
@@ -131,8 +140,9 @@
     var sub = '';
     if (b.service > 0) sub += x.svc + ' ' + money(b.service) + '　';
     if (b.tax > 0) sub += x.tax + ' ' + money(b.tax);
+    if (b.discount > 0) sub += (sub ? '　' : '') + '🎁 -' + money(b.discount);
     $('totalSub').textContent = sub;
-    $('sendBtn').disabled = b.total <= 0;
+    $('sendBtn').disabled = b.sub <= 0;
   }
 
   // ---- 送信 ----
@@ -145,7 +155,7 @@
     Object.keys(state.cart).forEach(function (n) { if (state.cart[n] > 0) items.push({ name: n, count: state.cart[n] }); });
     if (!items.length) { showErr(x.empty); return; }
     var b = breakdown();
-    var order = { tableNumber: state.table, items: items, totalPrice: b.total };
+    var order = { tableNumber: state.table, items: items, totalPrice: b.total, phone: (state.member ? state.member.phone : ''), pointsUsed: (state.usePoints ? b.pointsUsed : 0) };
     if (state.paymongo) { pendingOrder = order; openPayChoice(); }        // セルフ決済あり→会計方法を選択
     else { if (!confirm(x.confirm)) return; doSubmit(order, false); }     // 後会計のみ
   }
@@ -156,9 +166,17 @@
     order.paid = !!paid;
     var btn = $('sendBtn'); btn.disabled = true;
     API.submitOrder(order).then(function (result) {
+      var earnedTxt = '';
+      if (order.phone) {
+        var rate = Number(state.settings.loyaltyEarnRate) || 20;
+        var earned = Math.floor((Number(order.totalPrice) || 0) / rate);
+        if (state.member) state.member.points = Math.max(0, state.member.points - (order.pointsUsed || 0) + earned);
+        state.usePoints = false;
+        if (earned > 0) earnedTxt = '　🎁+' + earned + x.points;
+      }
       state.cart = {}; renderMenu(); updateTotal();
       var title = result === 'queued' ? x.queuedTitle : (paid ? x.paidTitle : x.okTitle);
-      var msg   = result === 'queued' ? x.queuedMsg   : (paid ? x.paidMsg   : x.okMsg);
+      var msg   = (result === 'queued' ? x.queuedMsg   : (paid ? x.paidMsg   : x.okMsg)) + earnedTxt;
       showOk(title, msg, result === 'queued' ? '📥' : (paid ? '💳' : '✅'));
       refreshPending();
     }).catch(function (err) { showErr(String(err && err.message || err)); })
@@ -239,6 +257,36 @@
     };
   }
 
+  // ---- 会員（ロイヤリティ） ----
+  function openMember() {
+    var x = t();
+    $('memTitle').textContent = x.memberTitle;
+    $('memSub').textContent = x.memberSub;
+    $('memLookup').textContent = x.check;
+    $('memUseLabel').textContent = x.usePoints;
+    $('memClose').textContent = (state.lang === 'ja' ? '閉じる' : 'Close');
+    if (state.member) { $('memPhone').value = state.member.phone; showMemberInfo(); } else { $('memInfo').style.display = 'none'; }
+    $('memberModal').classList.add('show');
+  }
+  function showMemberInfo() {
+    if (!state.member) { $('memInfo').style.display = 'none'; return; }
+    var x = t();
+    $('memName').textContent = state.member.name || '';
+    $('memPoints').textContent = state.member.points + ' ' + x.points;
+    $('memUse').checked = !!state.usePoints;
+    $('memInfo').style.display = 'block';
+  }
+  function lookupMember() {
+    var phone = $('memPhone').value.trim();
+    if (!phone) return;
+    $('memLookup').disabled = true;
+    API.post('loyaltyLookup', { phone: phone }).then(function (r) {
+      var m = r.data;
+      state.member = m || { phone: phone.replace(/[^0-9]/g, ''), name: '', points: 0, visits: 0 };
+      showMemberInfo();
+    }).catch(function () {}).then(function () { $('memLookup').disabled = false; });
+  }
+
   // ---- utils ----
   function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
   function escAttr(s) { return escHtml(s); }
@@ -265,6 +313,10 @@
     $('pcCancel').addEventListener('click', function () { closePayChoice(); pendingOrder = null; });
     $('pmCheck').addEventListener('click', checkPay);
     $('pmCancel').addEventListener('click', function () { closePayModal(); pendingOrder = null; payCheckoutId = null; });
+    $('memberBtn').addEventListener('click', openMember);
+    $('memLookup').addEventListener('click', lookupMember);
+    $('memUse').addEventListener('change', function () { state.usePoints = this.checked; updateTotal(); });
+    $('memClose').addEventListener('click', function () { $('memberModal').classList.remove('show'); });
 
     window.addEventListener('online', function () { document.body.classList.remove('offline'); API.flush().then(refreshPending); });
     window.addEventListener('offline', function () { document.body.classList.add('offline'); });
@@ -274,6 +326,7 @@
       state.settings = r.settings || {};
       state.menu = (r.menu || []);
       state.paymongo = !!r.paymongo;
+      if (state.settings.loyaltyEnabled === 'on' || state.settings.loyaltyEnabled === true || state.settings.loyaltyEnabled === 'true') $('memberBtn').style.display = '';
       if (!state.lang) state.lang = state.settings.defaultLang || 'en';
       var cats = [];
       state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); });
