@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Inventory</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:800px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .fg{ margin-bottom:8px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .fc{ width:100%; padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .btn{ border:0; border-radius:11px; padding:13px; font-size:15px; font-weight:900; cursor:pointer; font-family:inherit; }
+    .btn-pri{ background:var(--navy); color:#fff; width:100%; margin-top:10px; }
+    .btn-sec{ background:#eef2f7; color:var(--navy); width:100%; margin-top:8px; }
+    .btn-sm{ border:0; border-radius:8px; padding:7px 11px; font-size:12px; font-weight:800; cursor:pointer; }
+    .b-edit{ background:#eff6ff; color:#2563eb; } .b-del{ background:#fee2e2; color:#b91c1c; }
+    .it{ display:flex; gap:12px; align-items:center; padding:10px 0; border-bottom:1px solid var(--border); }
+    .it .thumb{ width:52px; height:52px; border-radius:9px; object-fit:cover; flex:0 0 52px; background:#e5e7eb; }
+    .it .nm{ font-weight:800; } .it .meta{ font-size:12px; color:var(--text-3); }
+    .alert{ margin-top:10px; display:none; padding:11px; border-radius:9px; font-size:14px; font-weight:700; }
+    .muted{ color:var(--text-3); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1>📦 在庫管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-title">➕ 品目の追加 / 編集</div>
+      <input type="hidden" id="iId"><input type="hidden" id="iImg">
+      <div class="grid2">
+        <div class="fg"><label class="form-label">品名</label><input id="iName" class="fc"></div>
+        <div class="fg"><label class="form-label">カテゴリ</label><input id="iCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
+        <div class="fg"><label class="form-label">価値</label><input id="iValue" type="number" min="0" class="fc"></div>
+        <div class="fg"><label class="form-label">備考</label><input id="iRemarks" class="fc"></div>
+      </div>
+      <div class="fg"><label class="form-label">画像（任意・変更時のみ選択）</label><input id="iFile" type="file" accept="image/*" class="fc"></div>
+      <button class="btn btn-pri" id="saveBtn" onclick="save()">💾 保存</button>
+      <button class="btn btn-sec" onclick="clearForm()">クリア</button>
+      <div class="alert" id="msg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📦 在庫一覧</div>
+      <div id="list"><div class="muted">読み込み中…</div></div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var ITEMS = [], SYM='₱';
+
+    function render(){
+      var cats = [];
+      ITEMS.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); });
+      document.getElementById('catList').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
+      if (!ITEMS.length){ document.getElementById('list').innerHTML='<div class="muted">在庫がありません</div>'; return; }
+      document.getElementById('list').innerHTML = ITEMS.map(function(m,i){
+        var thumb = m.displayUrl ? '<img class="thumb" src="'+esc(m.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
+        return '<div class="it">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(m['品名'])+'</div>'+
+          '<div class="meta">'+esc(m['カテゴリ']||'')+' ・ '+SYM+(Number(m['価値'])||0).toLocaleString()+(m['備考']?' ・ '+esc(m['備考']):'')+'</div></div>'+
+          '<button class="btn-sm b-edit" onclick="edit('+i+')">編集</button>'+
+          '<button class="btn-sm b-del" onclick="del('+i+')">削除</button></div>';
+      }).join('');
+    }
+    window.edit = function(i){
+      var m = ITEMS[i]; if(!m) return;
+      document.getElementById('iId').value = m['ID'];
+      document.getElementById('iImg').value = m['画像URL']||'';
+      document.getElementById('iName').value = m['品名'];
+      document.getElementById('iCat').value = m['カテゴリ']||'';
+      document.getElementById('iValue').value = Number(m['価値'])||0;
+      document.getElementById('iRemarks').value = m['備考']||'';
+      document.getElementById('iFile').value = '';
+      window.scrollTo({top:0,behavior:'smooth'});
+    };
+    window.clearForm = function(){ ['iId','iImg','iName','iCat','iValue','iRemarks','iFile'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('msg').style.display='none'; };
+    function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
+
+    window.save = function(){
+      var name = document.getElementById('iName').value.trim();
+      if (!name){ msg('品名を入力してください', false); return; }
+      var item = { id:document.getElementById('iId').value, name:name, category:document.getElementById('iCat').value,
+        value:document.getElementById('iValue').value, remarks:document.getElementById('iRemarks').value, currentImageUrl:document.getElementById('iImg').value };
+      var btn=document.getElementById('saveBtn'); btn.disabled=true;
+      var file = document.getElementById('iFile').files[0];
+      function send(fd){
+        rpc('saveInventoryItem',[item, fd]).then(function(res){
+          btn.disabled=false;
+          if (String(res).indexOf('Error')===0){ msg('エラー: '+res, false); return; }
+          msg('✅ 保存しました', true); clearForm(); return rpc('getInventoryList',[]).then(function(l){ ITEMS=l||[]; render(); });
+        }).catch(function(e){ btn.disabled=false; msg('エラー: '+(e.message||e), false); });
+      }
+      if (file){ var reader=new FileReader(); reader.onload=function(e){ send({ data:e.target.result.split(',')[1], type:file.type, name:file.name }); }; reader.readAsDataURL(file); }
+      else { send(null); }
+    };
+    window.del = function(i){
+      var m = ITEMS[i]; if(!m) return;
+      if (!confirm('「'+m['品名']+'」を削除しますか？')) return;
+      rpc('deleteInventoryItem',[m['ID']]).then(function(){ return rpc('getInventoryList',[]); }).then(function(l){ ITEMS=l||[]; render(); })
+        .catch(function(e){ msg('エラー: '+(e.message||e), false); });
+    };
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; }).catch(function(){});
+    rpc('getInventoryList',[]).then(function(l){ ITEMS=l||[]; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
+  </script>
+</body>
+</html>
