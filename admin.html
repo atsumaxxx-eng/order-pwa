@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Orders</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; --green:#16a34a; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); -webkit-tap-highlight-color:transparent; }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .head .r{ display:flex; gap:8px; align-items:center; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; }
+    .cnt{ background:#dc2626; border-radius:999px; padding:2px 10px; font-weight:900; font-size:13px; }
+    .wrap{ padding:14px; max-width:900px; margin:0 auto; }
+    .tg{ background:var(--surface); border:1px solid var(--border); border-radius:14px; margin-bottom:14px; overflow:hidden; }
+    .tg-h{ display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:#0b1220; color:#fff; }
+    .tg-h .ti{ font-size:17px; font-weight:900; }
+    .tg-h .to{ font-size:16px; font-weight:900; color:#fbbf24; }
+    .row{ display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); }
+    .row.served{ opacity:.55; }
+    .row .m{ flex:1; min-width:0; }
+    .row .tm{ font-size:11px; color:var(--text-3); }
+    .row .it{ font-size:14px; font-weight:600; margin-top:2px; }
+    .row .rt{ display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+    .row .pr{ font-weight:900; }
+    .b-xs{ border:0; border-radius:8px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; font-family:inherit; }
+    .b-warn{ background:#f59e0b; color:#0f172a; }
+    .served-lbl{ font-size:12px; color:var(--green); font-weight:800; }
+    .prepaid{ background:#dcfce7; color:#15803d; font-weight:800; font-size:11px; padding:1px 7px; border-radius:999px; }
+    .tg-a{ padding:12px 14px; }
+    .b-pay{ width:100%; border:0; border-radius:11px; padding:13px; font-size:14px; font-weight:900; background:var(--green); color:#fff; cursor:pointer; font-family:inherit; }
+    .empty{ text-align:center; color:var(--text-3); padding:50px 20px; font-weight:700; }
+    .ov{ position:fixed; inset:0; background:rgba(0,0,0,.62); z-index:9999; display:none; align-items:center; justify-content:center; }
+    .ov.on{ display:flex; }
+    .card{ background:#fff; border-radius:18px; padding:22px; max-width:340px; width:calc(100% - 32px); margin:16px; max-height:90vh; overflow:auto; }
+    .sum{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px; margin-bottom:16px; }
+    .sr{ display:flex; justify-content:space-between; font-size:13px; color:#555; margin-bottom:3px; }
+    .big{ font-size:22px; font-weight:900; color:var(--red); margin-top:4px; }
+    .pbtn{ border:0; padding:15px; font-size:15px; font-weight:800; border-radius:12px; cursor:pointer; color:#fff; font-family:inherit; width:100%; margin-bottom:10px; }
+    .cancel{ width:100%; padding:11px; background:none; border:1.5px solid #ddd; border-radius:9px; color:#888; font-size:14px; cursor:pointer; font-weight:700; font-family:inherit; }
+    .alert{ display:none; padding:11px; border-radius:9px; font-size:13px; margin-bottom:10px; text-align:left; line-height:1.5; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <h1 id="title">注文管理</h1>
+    <div class="r">
+      <span class="cnt" id="cnt">0</span>
+      <button class="hbtn" id="langBtn" onclick="toggleLang()">EN</button>
+      <button class="hbtn" onclick="load()">↻</button>
+    </div>
+  </div>
+  <div class="wrap" id="list"><div class="empty" id="loadMsg">読み込み中…</div></div>
+
+  <!-- Payment modal -->
+  <div class="ov" id="payModal">
+    <div class="card">
+      <div id="ps1">
+        <div style="font-size:17px;font-weight:900;margin-bottom:12px;" id="ps1t">お会計</div>
+        <div class="sum" id="paySum"></div>
+        <button class="pbtn" style="background:linear-gradient(135deg,#0f4c81,#1565c0);" onclick="startOnline('gcash')">📱 GCash</button>
+        <button class="pbtn" style="background:linear-gradient(135deg,#2e7d32,#43a047);" onclick="startOnline('card')">💳 Card</button>
+        <button class="pbtn" style="background:#334155;" onclick="cashPay()">💴 <span id="cashLbl">現金</span></button>
+        <button class="cancel" onclick="closePay()" id="cxl1">キャンセル</button>
+      </div>
+      <div id="ps2" style="display:none;text-align:center;">
+        <div style="font-size:17px;font-weight:900;margin-bottom:4px;" id="ps2t"></div>
+        <div id="ps2loading" style="padding:20px;color:#aaa;">QR生成中…</div>
+        <div style="display:inline-block;padding:8px;border:2px solid #e0e8f5;border-radius:12px;margin-bottom:12px;">
+          <img id="payQr" src="" alt="QR" style="width:200px;height:200px;display:none;border-radius:6px;">
+        </div>
+        <a id="payLink" href="#" target="_blank" rel="noopener" style="display:block;background:#0f172a;color:#fff;text-decoration:none;border-radius:9px;padding:11px;font-size:13px;font-weight:800;margin-bottom:10px;">支払いページを開く</a>
+        <button class="pbtn" style="background:#f59e0b;color:#0f172a;" onclick="checkPay()" id="checkBtn">支払い確認</button>
+        <div class="alert" id="payAlert"></div>
+        <button class="cancel" onclick="closePay()">キャンセル</button>
+      </div>
+      <div id="ps3" style="display:none;text-align:center;padding:12px 0;">
+        <div style="font-size:40px;">✅</div>
+        <div id="ps3lbl" style="font-weight:800;margin:8px 0;"></div>
+        <div id="ps3amt" style="font-size:20px;font-weight:900;color:var(--green);margin-bottom:16px;"></div>
+        <button class="pbtn" style="background:var(--green);" onclick="finalize()" id="doneBtn">完了（会計済にする）</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var SETTINGS = {}, PAYMONGO = false, orders = [];
+    var lang = (localStorage.getItem('lang') || '').match(/^(ja|en)$/) ? localStorage.getItem('lang') : 'ja';
+    var payTable = '', payTotal = 0, payCheckoutId = null;
+
+    var i18n = {
+      ja: { title:'注文管理', served:'✓ 提供済', servedBtn:'提供済にする', pay:'💳 会計する', noOrder:'未会計の注文はありません',
+            cash:'現金', card:'Card', cancel:'キャンセル', pTitle:'お会計', sub:'小計', svc:'サービス料', tax:'税',
+            openPay:'支払いページを開く', checkBtn:'支払い確認', checking:'確認中…', notYet:'まだ支払いが確認できません。',
+            noKey:'オンライン決済は未設定です。', cashRecv:'現金を受け取りましたか？', confirmed:'支払い完了', done:'完了（会計済にする）', processing:'処理中…', lang:'EN' },
+      en: { title:'Orders', served:'✓ Served', servedBtn:'Mark served', pay:'💳 Checkout', noOrder:'No open orders',
+            cash:'Cash', card:'Card', cancel:'Cancel', pTitle:'Payment', sub:'Subtotal', svc:'Service', tax:'Tax',
+            openPay:'Open payment page', checkBtn:'Check status', checking:'Checking…', notYet:'Payment not confirmed yet.',
+            noKey:'Online payment is not set up.', cashRecv:'Cash received?', confirmed:'Paid', done:'Done (settle)', processing:'Processing…', lang:'JP' }
+    };
+    function t(){ return i18n[lang]; }
+    function sym(){ return SETTINGS.currencySymbol || '₱'; }
+    function money(v){ return sym() + (Number(v)||0).toLocaleString(); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fmtTime(d){ try{ return new Date(d).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+    function breakdown(subtotal){
+      var s = Number(subtotal)||0;
+      var svc = Math.round(s * (Number(SETTINGS.serviceRate)||0)/100);
+      var tax = Math.round((s+svc) * (Number(SETTINGS.taxRate)||0)/100);
+      return { sub:s, service:svc, tax:tax, total:s+svc+tax };
+    }
+
+    window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); render(); };
+    function applyLang(){ document.getElementById('title').innerText=t().title; document.getElementById('langBtn').innerText=t().lang; }
+
+    function render(){
+      var active = orders.filter(function(o){ return o.status !== '会計済'; });
+      document.getElementById('cnt').innerText = active.length;
+      var el = document.getElementById('list');
+      if (!active.length){ el.innerHTML = '<div class="empty">✅ '+t().noOrder+'</div>'; return; }
+      var map = {}, order = [];
+      active.slice().reverse().forEach(function(o){ var k=String(o.table); if(!map[k]){ map[k]=[]; order.push(k); } map[k].push(o); });
+      var html = '';
+      order.forEach(function(tn){
+        var rows = map[tn];
+        var total = rows.reduce(function(s,o){ return s + (Number(o.price)||0); }, 0);
+        html += '<div class="tg"><div class="tg-h"><div class="ti">🪑 '+esc(tn)+'</div><div class="to">'+money(total)+'</div></div>';
+        rows.forEach(function(o){
+          var served = o.status === '提供済';
+          html += '<div class="row'+(served?' served':'')+'"><div class="m"><div class="tm">🕐 '+fmtTime(o.date)+'</div>'+
+            '<div class="it">'+esc(o.details)+(o.paid?' <span class="prepaid">💳前払い</span>':'')+'</div></div>'+
+            '<div class="rt"><span class="pr">'+money(o.price||0)+'</span>'+
+            (served?('<span class="served-lbl">'+t().served+'</span>'):('<button class="b-xs b-warn" onclick="setServed(\''+o.id+'\')">'+t().servedBtn+'</button>'))+
+            '</div></div>';
+        });
+        html += '<div class="tg-a"><button class="b-pay" onclick="openPay(\''+esc(tn).replace(/'/g,"\\'")+'\','+total+')">'+t().pay+' '+money(total)+'</button></div></div>';
+      });
+      el.innerHTML = html;
+    }
+
+    window.setServed = function(id){ API.post('updateOrderStatus', { id:id, status:'提供済' }).then(load).catch(load); };
+    window.load = function(){
+      API.post('getOrders', {}).then(function(r){ orders = r.data || []; render(); })
+        .catch(function(){ var lm=document.getElementById('loadMsg'); if(lm) lm.innerText='接続できません（自動再試行します）'; });
+    };
+
+    // ── Payment ──
+    window.openPay = function(tn, subtotal){
+      payTable = tn; payCheckoutId = null;
+      var b = breakdown(subtotal); payTotal = b.total;
+      var html = '<div style="font-weight:900;font-size:15px;margin-bottom:8px;">🪑 '+esc(tn)+'</div>';
+      if (b.service>0||b.tax>0){
+        html += '<div class="sr"><span>'+t().sub+'</span><span>'+money(b.sub)+'</span></div>';
+        if (b.service>0) html += '<div class="sr"><span>'+t().svc+'</span><span>'+money(b.service)+'</span></div>';
+        if (b.tax>0) html += '<div class="sr"><span>'+t().tax+'</span><span>'+money(b.tax)+'</span></div>';
+      }
+      html += '<div class="big">'+money(payTotal)+'</div>';
+      document.getElementById('paySum').innerHTML = html;
+      document.getElementById('ps1t').innerText = t().pTitle;
+      document.getElementById('cashLbl').innerText = t().cash;
+      document.getElementById('cxl1').innerText = t().cancel;
+      step(1);
+      document.getElementById('payModal').classList.add('on');
+    };
+    window.closePay = function(){ document.getElementById('payModal').classList.remove('on'); payCheckoutId=null; };
+    function step(n){ [1,2,3].forEach(function(i){ document.getElementById('ps'+i).style.display = (i===n)?'block':'none'; }); }
+
+    window.cashPay = function(){
+      document.getElementById('ps3lbl').innerText = t().cashRecv;
+      document.getElementById('ps3amt').innerText = money(payTotal)+' — '+payTable;
+      document.getElementById('doneBtn').innerText = t().done;
+      step(3);
+    };
+    window.startOnline = function(method){
+      document.getElementById('ps2t').innerText = method==='gcash'?'GCash':t().card;
+      document.getElementById('payQr').style.display='none';
+      document.getElementById('ps2loading').style.display='block';
+      document.getElementById('payAlert').style.display='none';
+      step(2);
+      API.post('createCheckout', { amount: payTotal, desc: 'Table '+payTable, method: method }).then(function(r){
+        var d = r.data || {};
+        document.getElementById('ps2loading').style.display='none';
+        if (d.error){ var a=document.getElementById('payAlert'); a.style.display='block'; a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText = d.error==='no_api_key'?t().noKey:d.error; return; }
+        payCheckoutId = d.checkoutId;
+        document.getElementById('payQr').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(d.checkoutUrl);
+        document.getElementById('payQr').style.display='block';
+        document.getElementById('payLink').href = d.checkoutUrl;
+        document.getElementById('payLink').innerText = t().openPay;
+        document.getElementById('checkBtn').innerText = t().checkBtn;
+      }).catch(function(e){ document.getElementById('ps2loading').style.display='none'; var a=document.getElementById('payAlert'); a.style.display='block'; a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText='Error: '+(e.message||e); });
+    };
+    window.checkPay = function(){
+      if (!payCheckoutId) return;
+      var btn = document.getElementById('checkBtn'); btn.disabled=true; btn.innerText=t().checking;
+      API.post('checkoutStatus', { checkoutId: payCheckoutId }).then(function(r){
+        btn.disabled=false; btn.innerText=t().checkBtn;
+        var d = r.data || {}; var a=document.getElementById('payAlert'); a.style.display='block';
+        if (d.error){ a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText = d.error==='no_api_key'?t().noKey:d.error; return; }
+        if (d.paymentStatus==='paid'){ document.getElementById('ps3lbl').innerText=t().confirmed; document.getElementById('ps3amt').innerText=money(payTotal)+' — '+payTable; document.getElementById('doneBtn').innerText=t().done; step(3); }
+        else { a.style.background='#fff8e1'; a.style.color='#856404'; a.innerText=t().notYet; }
+      }).catch(function(e){ btn.disabled=false; btn.innerText=t().checkBtn; var a=document.getElementById('payAlert'); a.style.display='block'; a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText='Error: '+(e.message||e); });
+    };
+    window.finalize = function(){
+      var btn = document.getElementById('doneBtn'); btn.disabled=true; btn.innerText=t().processing;
+      API.post('updateTableOrders', { table: payTable, status: '会計済' }).then(function(){ btn.disabled=false; closePay(); load(); })
+        .catch(function(e){ btn.disabled=false; btn.innerText=t().done; alert('Error: '+(e.message||e)); });
+    };
+
+    function boot(){
+      applyLang();
+      API.post('bootstrap', {}).then(function(r){ SETTINGS = r.settings || {}; PAYMONGO = !!r.paymongo; load(); })
+        .catch(function(){ load(); });
+      setInterval(load, 10000);
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
+    }
+    document.addEventListener('DOMContentLoaded', boot);
+  </script>
+</body>
+</html>
