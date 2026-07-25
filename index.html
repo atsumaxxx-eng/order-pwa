@@ -16,6 +16,7 @@
     <div class="title" id="shopName">Order</div>
     <div class="table-chip" id="tableChip">Table —</div>
     <button class="lang-btn" id="memberBtn" style="display:none;">🎁</button>
+    <button class="lang-btn" id="couponBtn">🎟️</button>
     <button class="lang-btn" id="langBtn">JP</button>
   </div>
 
@@ -91,6 +92,20 @@
         <label style="display:flex;align-items:center;gap:8px;margin-top:10px;justify-content:center;"><input type="checkbox" id="memUse" style="width:20px;height:20px;"><span id="memUseLabel">Use points</span></label>
       </div>
       <button id="memClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
+    </div>
+  </div>
+
+  <!-- Coupon / voucher -->
+  <div class="overlay" id="couponModal">
+    <div class="sheet">
+      <div class="emoji">🎟️</div>
+      <h3 id="cpTitle">Coupon</h3>
+      <p id="cpSub" style="font-size:13px;color:var(--text-2);"></p>
+      <input type="text" id="cpCode" placeholder="CODE" autocapitalize="characters" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:10px 0;box-sizing:border-box;text-transform:uppercase;">
+      <button class="btn-send ok" id="cpApply" style="width:100%;">Apply</button>
+      <div id="cpMsg" style="margin-top:10px;font-size:14px;font-weight:700;"></div>
+      <button id="cpRemove" style="width:100%;margin-top:10px;background:#fee2e2;color:#b91c1c;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;display:none;">Remove coupon</button>
+      <button id="cpClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
     </div>
   </div>
 

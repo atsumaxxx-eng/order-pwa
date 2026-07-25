@@ -11,7 +11,9 @@
       svc:'Service', tax:'Tax',
       tblTitle:'Select your table', tblMsg:'Scan the QR at your table, or pick your table number.', tblGo:'Start',
       payTitle:'How would you like to pay?', payLater:'👤 Pay at counter', payCard:'💳 Card', payProcessing:'Preparing…', payScan:'Scan the QR to pay', payNotYet:'Payment not confirmed yet.', payNoKey:'Online payment is not set up.', paidTitle:'Paid & ordered', paidMsg:'Payment received. Your order was sent.', cancel:'Cancel',
-      memberTitle:'Member (points)', memberSub:'Enter your phone to earn / use points.', check:'Check', usePoints:'Use points', points:'pts', discountLbl:'Points', earned:'pts earned' },
+      memberTitle:'Member (points)', memberSub:'Enter your phone to earn / use points.', check:'Check', usePoints:'Use points', points:'pts', discountLbl:'Points', earned:'pts earned',
+      couponTitle:'Coupon / Voucher', couponSub:'Enter a code to get a discount.', apply:'Apply', remove:'Remove coupon', close:'Close', couponLbl:'Coupon',
+      cpApplied:'Applied', cpEmpty:'Enter a code', cpNotfound:'Code not found', cpInactive:'Not available', cpExpired:'Expired', cpLimit:'Usage limit reached', cpMin:'Minimum order not met', cpInvalid:'Invalid code' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -20,12 +22,14 @@
       svc:'サービス料', tax:'税',
       tblTitle:'テーブルを選択', tblMsg:'QRを読み取るか、テーブル番号を選んでください。', tblGo:'開始',
       payTitle:'お支払い方法', payLater:'👤 店員に支払う（後会計）', payCard:'💳 カード', payProcessing:'準備中…', payScan:'QRを読み取ってお支払い', payNotYet:'まだ支払いが確認できません。', payNoKey:'オンライン決済は未設定です。', paidTitle:'支払い完了・注文しました', paidMsg:'お支払いを受け付けました。注文を送信しました。', cancel:'キャンセル',
-      memberTitle:'会員（ポイント）', memberSub:'電話番号を入力するとポイントが貯まる/使えます。', check:'確認', usePoints:'ポイントを使う', points:'pt', discountLbl:'ポイント割引', earned:'pt 獲得' }
+      memberTitle:'会員（ポイント）', memberSub:'電話番号を入力するとポイントが貯まる/使えます。', check:'確認', usePoints:'ポイントを使う', points:'pt', discountLbl:'ポイント割引', earned:'pt 獲得',
+      couponTitle:'クーポン／バウチャー', couponSub:'コードを入力すると割引されます。', apply:'適用', remove:'クーポンを外す', close:'閉じる', couponLbl:'クーポン',
+      cpApplied:'適用しました', cpEmpty:'コードを入力してください', cpNotfound:'コードが見つかりません', cpInactive:'利用できません', cpExpired:'期限切れ', cpLimit:'利用上限に達しています', cpMin:'最低注文額に達していません', cpInvalid:'無効なコード' }
   };
 
   var state = {
     lang: 'en', settings: {}, menu: [], cats: [], currentCat: 'all',
-    cart: {}, table: '', paymongo: false, member: null, usePoints: false
+    cart: {}, table: '', paymongo: false, member: null, usePoints: false, coupon: null
   };
 
   function $(id) { return document.getElementById(id); }
@@ -52,13 +56,23 @@
     var service = Math.round(sub * (svcRate / 100));
     var tax = Math.round((sub + service) * (taxRate / 100));
     var base = sub + service + tax;
+    // クーポン割引（先に適用）
+    var couponDiscount = 0;
+    if (state.coupon && state.coupon.discount > 0) {
+      couponDiscount = state.coupon.type === 'percent'
+        ? Math.round(base * (Number(state.coupon.value) || 0) / 100)  // 率は現在の会計額で再計算
+        : Math.min(Number(state.coupon.value) || 0, base);
+      couponDiscount = Math.max(0, Math.min(couponDiscount, base));
+    }
+    var afterCoupon = base - couponDiscount;
+    // ポイント割引（クーポン後の残額に対して）
     var discount = 0, pointsUsed = 0;
     if (state.usePoints && state.member && state.member.points > 0) {
       var rv = Number(state.settings.loyaltyRedeemValue) || 1;
-      discount = Math.min(state.member.points * rv, base);
+      discount = Math.min(state.member.points * rv, afterCoupon);
       pointsUsed = Math.round(discount / rv);
     }
-    return { sub: sub, service: service, tax: tax, discount: discount, pointsUsed: pointsUsed, total: base - discount };
+    return { sub: sub, service: service, tax: tax, couponDiscount: couponDiscount, discount: discount, pointsUsed: pointsUsed, total: afterCoupon - discount };
   }
 
   // ---- 描画 ----
@@ -140,6 +154,7 @@
     var sub = '';
     if (b.service > 0) sub += x.svc + ' ' + money(b.service) + '　';
     if (b.tax > 0) sub += x.tax + ' ' + money(b.tax);
+    if (b.couponDiscount > 0) sub += (sub ? '　' : '') + '🎟️ -' + money(b.couponDiscount);
     if (b.discount > 0) sub += (sub ? '　' : '') + '🎁 -' + money(b.discount);
     $('totalSub').textContent = sub;
     $('sendBtn').disabled = b.sub <= 0;
@@ -155,7 +170,8 @@
     Object.keys(state.cart).forEach(function (n) { if (state.cart[n] > 0) items.push({ name: n, count: state.cart[n] }); });
     if (!items.length) { showErr(x.empty); return; }
     var b = breakdown();
-    var order = { tableNumber: state.table, items: items, totalPrice: b.total, phone: (state.member ? state.member.phone : ''), pointsUsed: (state.usePoints ? b.pointsUsed : 0) };
+    var order = { tableNumber: state.table, items: items, totalPrice: b.total, phone: (state.member ? state.member.phone : ''), pointsUsed: (state.usePoints ? b.pointsUsed : 0),
+      coupon: (state.coupon ? state.coupon.code : ''), couponDiscount: (b.couponDiscount || 0) };
     if (state.paymongo) { pendingOrder = order; openPayChoice(); }        // セルフ決済あり→会計方法を選択
     else { if (!confirm(x.confirm)) return; doSubmit(order, false); }     // 後会計のみ
   }
@@ -174,7 +190,7 @@
         state.usePoints = false;
         if (earned > 0) earnedTxt = '　🎁+' + earned + x.points;
       }
-      state.cart = {}; renderMenu(); updateTotal();
+      state.cart = {}; state.coupon = null; updateCouponBtn(); renderMenu(); updateTotal();
       var title = result === 'queued' ? x.queuedTitle : (paid ? x.paidTitle : x.okTitle);
       var msg   = (result === 'queued' ? x.queuedMsg   : (paid ? x.paidMsg   : x.okMsg)) + earnedTxt;
       showOk(title, msg, result === 'queued' ? '📥' : (paid ? '💳' : '✅'));
@@ -287,6 +303,64 @@
     }).catch(function () {}).then(function () { $('memLookup').disabled = false; });
   }
 
+  // ---- クーポン / バウチャー ----
+  function updateCouponBtn() {
+    var el = $('couponBtn');
+    if (!el) return;
+    if (state.coupon) { el.textContent = '🎟️' + state.coupon.code; el.classList.add('active'); }
+    else { el.textContent = '🎟️'; el.classList.remove('active'); }
+  }
+  function openCoupon() {
+    var x = t();
+    $('cpTitle').textContent = x.couponTitle;
+    $('cpSub').textContent = x.couponSub;
+    $('cpApply').textContent = x.apply;
+    $('cpRemove').textContent = x.remove;
+    $('cpClose').textContent = x.close;
+    var msg = $('cpMsg'); msg.textContent = '';
+    if (state.coupon) {
+      $('cpCode').value = state.coupon.code;
+      $('cpRemove').style.display = 'block';
+      msg.style.color = 'var(--green)';
+      msg.textContent = '✅ ' + x.cpApplied + '（-' + money(breakdown().couponDiscount) + '）';
+    } else {
+      $('cpRemove').style.display = 'none';
+    }
+    $('couponModal').classList.add('show');
+  }
+  function applyCoupon() {
+    var x = t();
+    var code = ($('cpCode').value || '').trim().toUpperCase();
+    var msg = $('cpMsg');
+    if (!code) { msg.style.color = 'var(--red)'; msg.textContent = x.cpEmpty; return; }
+    var b = breakdown();
+    var amount = b.sub + b.service + b.tax; // クーポン適用前の会計額
+    $('cpApply').disabled = true;
+    API.post('validateCoupon', { code: code, amount: amount }).then(function (r) {
+      var d = r.data || {};
+      if (!d.ok) {
+        state.coupon = null; updateCouponBtn(); updateTotal();
+        $('cpRemove').style.display = 'none';
+        msg.style.color = 'var(--red)';
+        msg.textContent = '⚠️ ' + (x['cp' + (d.reason ? d.reason.charAt(0).toUpperCase() + d.reason.slice(1) : 'Invalid')] || x.cpInvalid) + (d.reason === 'min' && d.min ? '（' + money(d.min) + '）' : '');
+        return;
+      }
+      state.coupon = { code: d.code, type: d.type, value: d.value, discount: d.discount };
+      updateCouponBtn(); updateTotal();
+      $('cpRemove').style.display = 'block';
+      msg.style.color = 'var(--green)';
+      msg.textContent = '✅ ' + x.cpApplied + '（-' + money(breakdown().couponDiscount) + '）';
+    }).catch(function () {
+      msg.style.color = 'var(--red)'; msg.textContent = x.cpInvalid;
+    }).then(function () { $('cpApply').disabled = false; });
+  }
+  function removeCoupon() {
+    state.coupon = null; updateCouponBtn(); updateTotal();
+    $('cpRemove').style.display = 'none';
+    $('cpCode').value = '';
+    $('cpMsg').textContent = '';
+  }
+
   // ---- utils ----
   function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); }
   function escAttr(s) { return escHtml(s); }
@@ -332,6 +406,10 @@
     $('pmCancel').addEventListener('click', function () { closePayModal(); pendingOrder = null; payCheckoutId = null; });
     $('memberBtn').addEventListener('click', openMember);
     $('memLookup').addEventListener('click', lookupMember);
+    $('couponBtn').addEventListener('click', openCoupon);
+    $('cpApply').addEventListener('click', applyCoupon);
+    $('cpRemove').addEventListener('click', removeCoupon);
+    $('cpClose').addEventListener('click', function () { $('couponModal').classList.remove('show'); });
     $('memUse').addEventListener('change', function () { state.usePoints = this.checked; updateTotal(); });
     $('memClose').addEventListener('click', function () { $('memberModal').classList.remove('show'); });
 
