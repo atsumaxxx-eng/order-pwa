@@ -14,7 +14,7 @@
       redirect: 'follow'
     });
     const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'api_error');
+    if (!json.ok) { const e = new Error(json.error || 'api_error'); e.__server = true; throw e; }
     return json;
   };
 
@@ -56,31 +56,46 @@
 
   // ---- 注文送信（オフライン耐性つき） ----
   // 返り値: 'sent'（サーバ確定） / 'queued'（オフライン保留）
+  // clientId でサーバ側が冪等化するため、再送しても二重登録されない。
   API.submitOrder = async function (order) {
     if (!order.clientId) order.clientId = 'c-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    // オフラインが自明なら即キュー（無駄な待ち時間を回避）
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      await API.queuePut({ id: order.clientId, order: order, ts: Date.now(), attempts: 0 });
+      return 'queued';
+    }
     try {
       await API.post('submitOrder', { order: order });
       return 'sent';
     } catch (err) {
-      await API.queuePut({ id: order.clientId, order: order, ts: Date.now() });
+      await API.queuePut({ id: order.clientId, order: order, ts: Date.now(), attempts: 0 });
       return 'queued';
     }
   };
 
   // ---- 送信待ちの再送（online復帰・定期・起動時に呼ぶ） ----
+  // ネットワーク不通なら中断して次の機会に。サーバ到達済みの業務エラーは
+  // 再送しても無駄なので試行上限で破棄し、キューの目詰まりを防ぐ。
   API.flush = async function () {
     const pending = await API.queueAll();
-    let sent = 0;
+    let sent = 0, dropped = 0;
     for (const rec of pending) {
       try {
         await API.post('submitOrder', { order: rec.order });
         await API.queueDel(rec.id);
         sent++;
       } catch (err) {
-        break; // まだオフライン。次の機会に。
+        if (err && err.__server) {
+          rec.attempts = (rec.attempts || 0) + 1;
+          if (rec.attempts >= 5) { await API.queueDel(rec.id); dropped++; }
+          else { await API.queuePut(rec); }
+          continue; // 次の保留分へ
+        }
+        break; // ネットワーク不通。次の機会に。
       }
     }
-    return { sent: sent, remaining: pending.length - sent };
+    const remaining = await API.pendingCount();
+    return { sent: sent, dropped: dropped, remaining: remaining };
   };
 
   API.pendingCount = async function () {

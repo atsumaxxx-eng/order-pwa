@@ -298,6 +298,23 @@
     renderTexts(); renderCats(); renderMenu(); updateTotal();
   }
 
+  // ブートストラップ結果（サーバ or キャッシュ）を画面に反映
+  function applyBootstrap(r, fromCache) {
+    state.settings = r.settings || {};
+    state.menu = (r.menu || []);
+    state.paymongo = !!r.paymongo;
+    if (state.settings.loyaltyEnabled === 'on' || state.settings.loyaltyEnabled === true || state.settings.loyaltyEnabled === 'true') $('memberBtn').style.display = '';
+    if (!state.lang) state.lang = state.settings.defaultLang || 'en';
+    var cats = [];
+    state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); });
+    state.cats = cats;
+    applyAccent();
+    var _bid = state.settings.menuTopImageId;
+    if (_bid) { var _b = $('shopBanner'); _b.src = 'https://lh3.googleusercontent.com/d/' + _bid; _b.style.display = 'block'; }
+    renderTexts(); renderCats(); renderMenu(); updateTotal();
+    if (!state.table) showTablePicker(r.tables || []); // QR無しアクセス時はテーブル選択を促す
+  }
+
   // ---- 起動 ----
   function boot() {
     state.table = qs('table');
@@ -321,27 +338,25 @@
     window.addEventListener('online', function () { document.body.classList.remove('offline'); API.flush().then(refreshPending); });
     window.addEventListener('offline', function () { document.body.classList.add('offline'); });
     if (!navigator.onLine) document.body.classList.add('offline');
+    // 定期再送＋タブ復帰時の再送（online イベントが発火しない環境の保険）
+    setInterval(function () { if (navigator.onLine) API.flush().then(refreshPending); }, 20000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && navigator.onLine) API.flush().then(refreshPending); });
 
     API.post('bootstrap', {}).then(function (r) {
-      state.settings = r.settings || {};
-      state.menu = (r.menu || []);
-      state.paymongo = !!r.paymongo;
-      if (state.settings.loyaltyEnabled === 'on' || state.settings.loyaltyEnabled === true || state.settings.loyaltyEnabled === 'true') $('memberBtn').style.display = '';
-      if (!state.lang) state.lang = state.settings.defaultLang || 'en';
-      var cats = [];
-      state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); });
-      state.cats = cats;
-      applyAccent();
-      var _bid = state.settings.menuTopImageId;
-      if (_bid) { var _b = $('shopBanner'); _b.src = 'https://lh3.googleusercontent.com/d/' + _bid; _b.style.display = 'block'; }
-      renderTexts(); renderCats(); renderMenu(); updateTotal();
-      if (!state.table) showTablePicker(r.tables || []); // QR無しアクセス時はテーブル選択を促す
-      // オンライン起動時に保留分を流す
-      API.flush().then(refreshPending);
+      try { localStorage.setItem('bootCache', JSON.stringify({ settings: r.settings, menu: r.menu, paymongo: r.paymongo, tables: r.tables })); } catch (e) {}
+      applyBootstrap(r, false);
+      API.flush().then(refreshPending); // オンライン起動時に保留分を流す
     }).catch(function (err) {
-      if (!state.lang) state.lang = 'en';
-      renderTexts();
-      $('menuArea').innerHTML = '<div class="loading" style="color:var(--red)">' + escHtml(t().errTitle + ': ' + (err && err.message || err)) + '</div>';
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem('bootCache') || 'null'); } catch (e) {}
+      if (cached && cached.menu) {
+        document.body.classList.add('offline'); // キャッシュ表示中＝実質オフライン
+        applyBootstrap(cached, true);            // 保存済みメニューで注文可能（送信はキューへ）
+      } else {
+        if (!state.lang) state.lang = 'en';
+        renderTexts();
+        $('menuArea').innerHTML = '<div class="loading" style="color:var(--red)">' + escHtml(t().errTitle + ': ' + (err && err.message || err)) + '</div>';
+      }
       refreshPending();
     });
 
