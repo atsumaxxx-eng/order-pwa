@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Users &amp; Roles</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:900px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .tabs{ display:flex; gap:6px; margin-bottom:14px; }
+    .tab{ flex:1; padding:10px; text-align:center; border:1px solid var(--border); background:var(--surface); border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; color:var(--text-3); }
+    .tab.active{ background:var(--navy); color:#fff; border-color:var(--navy); }
+    .pane{ display:none; } .pane.active{ display:block; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .fg{ margin-bottom:8px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .fc{ width:100%; padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .btn{ border:0; border-radius:11px; padding:13px; font-size:15px; font-weight:900; cursor:pointer; font-family:inherit; }
+    .btn-pri{ background:var(--navy); color:#fff; width:100%; margin-top:10px; }
+    .btn-sec{ background:#eef2f7; color:var(--navy); width:100%; margin-top:8px; }
+    .btn-sm{ border:0; border-radius:8px; padding:7px 11px; font-size:12px; font-weight:800; cursor:pointer; }
+    .b-edit{ background:#eff6ff; color:#2563eb; } .b-del{ background:#fee2e2; color:#b91c1c; }
+    .u-row{ display:flex; align-items:center; gap:10px; padding:11px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .u-row .nm{ font-weight:800; } .u-row .lid{ font-family:monospace; font-size:12px; color:var(--text-3); }
+    .chip{ font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; background:#eef2f7; color:#475569; }
+    .muted{ color:var(--text-3); font-size:12px; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    .pm th,.pm td{ padding:8px 6px; text-align:center; border-bottom:1px solid var(--border); }
+    .pm th:first-child,.pm td:first-child{ text-align:left; font-weight:800; }
+    .pm input{ width:20px; height:20px; }
+    .alert{ margin-top:10px; display:none; padding:11px; border-radius:9px; font-size:14px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1>👥 ユーザー管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="wrap">
+    <div class="tabs">
+      <div class="tab active" id="tab-u" onclick="switchTab('u')">👤 ユーザー</div>
+      <div class="tab" id="tab-p" onclick="switchTab('p')">🔑 権限マスタ</div>
+    </div>
+
+    <div class="pane active" id="pane-u">
+      <div class="card">
+        <div class="card-title">➕ ユーザーの追加 / 編集</div>
+        <input type="hidden" id="uId">
+        <div class="grid2">
+          <div class="fg"><label class="form-label">名前</label><input id="uName" class="fc"></div>
+          <div class="fg"><label class="form-label">権限グループ</label><select id="uRole" class="fc"><option>一般</option><option>マネージャー</option><option>管理者</option><option>システム</option></select></div>
+          <div class="fg"><label class="form-label">ログインID</label><input id="uLogin" class="fc" autocomplete="off"></div>
+          <div class="fg"><label class="form-label">時給</label><input id="uWage" type="number" min="0" class="fc"></div>
+          <div class="fg"><label class="form-label">パスワード</label><input id="uPass" type="password" class="fc" autocomplete="new-password"><div class="muted">空欄なら変更しません（新規は6文字以上必須）</div></div>
+          <div class="fg"><label class="form-label">ステータス</label><select id="uStatus" class="fc"><option value="在籍">在籍</option><option value="退職">退職</option></select></div>
+        </div>
+        <button class="btn btn-pri" id="saveU" onclick="saveUser()">💾 保存</button>
+        <button class="btn btn-sec" onclick="clearForm()">クリア</button>
+        <div class="alert" id="uMsg"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 ユーザー一覧</div>
+        <div id="uList"><div class="muted">読み込み中…</div></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-p">
+      <div class="card">
+        <div class="card-title">🔑 権限マトリクス</div>
+        <div class="muted" style="margin-bottom:10px;line-height:1.7;">権限グループ×メニューでアクセス可否を設定します。✓＝表示/アクセス可。システムは常に全権限（ロックアウト防止）。</div>
+        <div style="overflow:auto;"><table class="pm" id="pmTable"><tbody><tr><td class="muted">読み込み中…</td></tr></tbody></table></div>
+        <button class="btn btn-pri" id="saveP" onclick="savePerms()">💾 保存</button>
+        <div class="alert" id="pMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var allUsers = [], pmData = null;
+    var LBL = { admin:'注文管理', menu_editor:'メニュー', inventory:'在庫', drink_inv:'ドリンク', sales:'売上', attendance:'勤怠', printers:'プリンタ', settings:'設定', users:'ユーザー', members:'会員', coupons:'クーポン' };
+
+    window.switchTab = function(w){
+      document.getElementById('tab-u').classList.toggle('active', w==='u');
+      document.getElementById('tab-p').classList.toggle('active', w==='p');
+      document.getElementById('pane-u').classList.toggle('active', w==='u');
+      document.getElementById('pane-p').classList.toggle('active', w==='p');
+      if (w==='p' && !pmData) loadMatrix();
+    };
+    function msg(id, text, ok){ var e=document.getElementById(id); e.style.display='block'; e.style.background=ok?'#dcfce7':'#fee2e2'; e.style.color=ok?'#15803d':'#b91c1c'; e.innerText=text; }
+
+    function renderUsers(){
+      if (!allUsers.length){ document.getElementById('uList').innerHTML='<div class="muted" style="padding:14px 0;">データがありません</div>'; return; }
+      document.getElementById('uList').innerHTML = allUsers.map(function(u){
+        return '<div class="u-row"><div style="flex:1;min-width:120px;"><div class="nm">'+esc(u.name)+'</div>'+
+          '<div class="lid">'+(u.loginId?esc(u.loginId):'<span class="muted">(未設定)</span>')+'</div></div>'+
+          '<span class="chip">'+esc(u.role)+'</span>'+
+          '<span class="muted">PW: '+(u.hasPassword?'設定済':'—')+'</span>'+
+          (u.status==='退職'?'<span class="muted">(退職)</span>':'')+
+          '<button class="btn-sm b-edit" onclick="editUser(\''+u.id+'\')">編集</button>'+
+          '<button class="btn-sm b-del" onclick="delUser(\''+u.id+'\')">削除</button></div>';
+      }).join('');
+    }
+    window.editUser = function(id){
+      var u = allUsers.filter(function(x){return x.id===id;})[0]; if(!u) return;
+      document.getElementById('uId').value=u.id; document.getElementById('uName').value=u.name;
+      document.getElementById('uRole').value=u.role; document.getElementById('uLogin').value=u.loginId||'';
+      document.getElementById('uWage').value=u.wage||0; document.getElementById('uPass').value='';
+      document.getElementById('uStatus').value=u.status||'在籍';
+      window.scrollTo({top:0,behavior:'smooth'});
+    };
+    window.clearForm = function(){ ['uId','uName','uLogin','uWage','uPass'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('uRole').value='一般'; document.getElementById('uStatus').value='在籍'; document.getElementById('uMsg').style.display='none'; };
+    window.saveUser = function(){
+      var name = document.getElementById('uName').value.trim();
+      if (!name){ msg('uMsg','名前を入力してください', false); return; }
+      var emp = { id:document.getElementById('uId').value||'', name:name, role:document.getElementById('uRole').value,
+        loginId:document.getElementById('uLogin').value.trim(), wage:Number(document.getElementById('uWage').value)||0,
+        password:document.getElementById('uPass').value, status:document.getElementById('uStatus').value };
+      var btn=document.getElementById('saveU'); btn.disabled=true;
+      rpc('saveEmployee',[emp]).then(function(r){
+        btn.disabled=false;
+        if (r && r.success){ msg('uMsg','✅ 保存しました', true); clearForm(); return rpc('getAllEmployees',[]).then(function(l){ allUsers=l||[]; renderUsers(); }); }
+        else { msg('uMsg', r&&r.error==='duplicate_login_id'?'そのログインIDは既に使われています':(r&&r.error==='password_too_short'?'パスワードは6文字以上にしてください':'エラー'), false); }
+      }).catch(function(e){ btn.disabled=false; msg('uMsg','エラー: '+(e.message||e), false); });
+    };
+    window.delUser = function(id){
+      if (!confirm('このユーザーを削除しますか？')) return;
+      rpc('deleteEmployee',[id]).then(function(){ return rpc('getAllEmployees',[]); }).then(function(l){ allUsers=l||[]; renderUsers(); })
+        .catch(function(e){ msg('uMsg','エラー: '+(e.message||e), false); });
+    };
+
+    function loadMatrix(){
+      rpc('getPermissionMatrixForUI',[]).then(function(d){ pmData=d; renderMatrix(); })
+        .catch(function(e){ document.getElementById('pmTable').innerHTML='<tbody><tr><td class="muted">エラー: '+esc(e.message||e)+'</td></tr></tbody>'; });
+    }
+    function renderMatrix(){
+      if (!pmData) return;
+      var html = '<thead><tr><th>権限</th>';
+      pmData.pages.forEach(function(k){ html += '<th>'+esc(LBL[k]||k)+'</th>'; });
+      html += '</tr></thead><tbody>';
+      pmData.roles.forEach(function(role){
+        html += '<tr><td>'+esc(role)+'</td>';
+        pmData.pages.forEach(function(k){
+          var on = !!(pmData.matrix[role] && pmData.matrix[role][k]); var sys = (role==='システム');
+          html += '<td><input type="checkbox" data-role="'+esc(role)+'" data-key="'+esc(k)+'"'+((on||sys)?' checked':'')+(sys?' disabled':'')+'></td>';
+        });
+        html += '</tr>';
+      });
+      html += '</tbody>';
+      document.getElementById('pmTable').innerHTML = html;
+    }
+    window.savePerms = function(){
+      if (!pmData) return;
+      var matrix = {}; pmData.roles.forEach(function(r){ matrix[r]={}; });
+      var boxes = document.querySelectorAll('#pmTable input[type="checkbox"]');
+      for (var i=0;i<boxes.length;i++){ matrix[boxes[i].getAttribute('data-role')][boxes[i].getAttribute('data-key')] = boxes[i].checked; }
+      var btn=document.getElementById('saveP'); btn.disabled=true;
+      rpc('savePermissionMatrix',[matrix]).then(function(res){ btn.disabled=false; if(res&&res.success){ msg('pMsg','✅ 保存しました', true); pmData.matrix=matrix; } else { msg('pMsg', res&&res.error==='forbidden'?'権限がありません':'エラー', false); } })
+        .catch(function(e){ btn.disabled=false; msg('pMsg','エラー: '+(e.message||e), false); });
+    };
+
+    rpc('getAllEmployees',[]).then(function(l){ allUsers=l||[]; renderUsers(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('uList').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
+  </script>
+</body>
+</html>
