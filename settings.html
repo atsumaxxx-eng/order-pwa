@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Settings</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; --green:#16a34a; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:720px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .fg{ margin-bottom:10px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .fc{ width:100%; padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .hint{ color:var(--text-3); font-size:12px; margin-top:4px; }
+    .btn{ border:0; border-radius:11px; padding:12px 16px; font-size:14px; font-weight:900; cursor:pointer; font-family:inherit; background:var(--navy); color:#fff; }
+    .btn.sec{ background:#eef2f7; color:var(--navy); }
+    .prev{ max-width:100%; max-height:120px; border-radius:10px; margin-top:8px; display:none; }
+    .st{ display:none; margin-top:10px; padding:10px; border-radius:9px; font-size:13px; font-weight:700; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .badge{ font-size:12px; font-weight:800; padding:3px 10px; border-radius:999px; }
+    .on{ background:#dcfce7; color:#15803d; } .offb{ background:#fee2e2; color:#b91c1c; }
+    label.chk{ display:flex; gap:8px; align-items:center; font-weight:700; }
+    label.chk input{ width:20px; height:20px; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1>⚙️ 設定</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="wrap">
+
+    <div class="card">
+      <div class="card-title">🏪 店舗設定</div>
+      <div class="fg"><label class="form-label">店舗名</label><input id="shopName" class="fc"></div>
+      <div class="fg"><label class="form-label">テーブル数</label><input id="tableCount" type="number" min="1" class="fc"><div class="hint">注文画面のテーブル番号の上限。</div></div>
+      <button class="btn" onclick="saveShop()">💾 保存</button>
+      <div class="st" id="st-shop"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🖼️ トップ画像</div>
+      <div class="fg"><label class="form-label">オーダートップ画像（注文画面）</label><input id="orderImg" type="file" accept="image/*" class="fc" onchange="prev('orderImg','prevOrder')"><img id="prevOrder" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('orderImg','uploadTopImage','st-img')">⬆️ アップロード</button></div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">
+      <div class="fg"><label class="form-label">システムトップ画像（ホーム画面）</label><input id="sysImg" type="file" accept="image/*" class="fc" onchange="prev('sysImg','prevSys')"><img id="prevSys" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('sysImg','uploadSystemTopImage','st-img')">⬆️ アップロード</button></div>
+      <div class="st" id="st-img"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌐 表示・地域</div>
+      <div class="grid2">
+        <div class="fg"><label class="form-label">通貨コード</label><input id="currencyCode" class="fc" placeholder="PHP"></div>
+        <div class="fg"><label class="form-label">通貨記号</label><input id="currencySymbol" class="fc" placeholder="₱"></div>
+        <div class="fg"><label class="form-label">サービス料 (%)</label><input id="serviceRate" type="number" min="0" step="any" class="fc"></div>
+        <div class="fg"><label class="form-label">税率 (%)</label><input id="taxRate" type="number" min="0" step="any" class="fc"></div>
+        <div class="fg"><label class="form-label">既定言語</label><select id="defaultLang" class="fc"><option value="en">English</option><option value="ja">日本語</option></select></div>
+        <div class="fg"><label class="form-label">アクセント色</label><input id="accentColor" type="color" class="fc" style="height:44px;"></div>
+      </div>
+      <button class="btn" onclick="saveLocale()">💾 保存</button>
+      <div class="st" id="st-locale"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔒 パスワード変更（共通管理パスワード）</div>
+      <div class="fg"><label class="form-label">現在のパスワード</label><input id="oldPass" type="password" class="fc" autocomplete="current-password"></div>
+      <div class="fg"><label class="form-label">新しいパスワード（8文字以上）</label><input id="newPass" type="password" class="fc" autocomplete="new-password"></div>
+      <button class="btn" onclick="changePass()">🔑 変更</button>
+      <div class="st" id="st-pass"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💳 PayMongo（オンライン決済）</div>
+      <div class="row" style="margin-bottom:8px;">状態: <span class="badge offb" id="payBadge">未設定</span></div>
+      <div class="fg"><label class="form-label">シークレットキー（sk_live_… / sk_test_…）</label><input id="payKey" type="password" class="fc" autocomplete="off" placeholder="貼り付けて保存"><div class="hint">保存後はキー自体は表示されません（状態のみ）。</div></div>
+      <button class="btn" onclick="savePayKey()">💾 保存</button>
+      <div class="st" id="st-pay"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🤖 Gemini APIキー（画像検索用・任意）</div>
+      <div class="row" style="margin-bottom:8px;">状態: <span class="badge offb" id="gemBadge">未設定</span></div>
+      <div class="fg"><label class="form-label">APIキー</label><input id="gemKey" type="password" class="fc" autocomplete="off" placeholder="貼り付けて保存"></div>
+      <button class="btn" onclick="saveGemKey()">💾 保存</button>
+      <div class="st" id="st-gem"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📍 勤怠・店舗位置</div>
+      <div class="grid2">
+        <div class="fg"><label class="form-label">緯度</label><input id="storeLat" class="fc"></div>
+        <div class="fg"><label class="form-label">経度</label><input id="storeLng" class="fc"></div>
+      </div>
+      <div class="fg"><label class="form-label">許容半径 (m)</label><input id="storeRadius" type="number" min="0" class="fc"></div>
+      <div class="row"><button class="btn sec" onclick="getLoc()">📡 現在地を取得</button><button class="btn" onclick="saveGeo()">💾 保存</button></div>
+      <div class="st" id="st-geo"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎁 ロイヤリティ（ポイント）</div>
+      <label class="chk" style="margin-bottom:10px;"><input type="checkbox" id="loyaltyEnabled">有効にする</label>
+      <div class="grid2">
+        <div class="fg"><label class="form-label">付与レート（何円で1pt）</label><input id="loyaltyEarnRate" type="number" min="1" class="fc" placeholder="20"></div>
+        <div class="fg"><label class="form-label">利用価値（1pt=何円）</label><input id="loyaltyRedeemValue" type="number" min="1" class="fc" placeholder="1"></div>
+      </div>
+      <button class="btn" onclick="saveLoy()">💾 保存</button>
+      <div class="st" id="st-loy"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📧 日次日報（自動メール）</div>
+      <label class="chk" style="margin-bottom:10px;"><input type="checkbox" id="reportEnabled">有効にする</label>
+      <div class="grid2">
+        <div class="fg"><label class="form-label">送信先メール</label><input id="reportEmail" type="email" class="fc"></div>
+        <div class="fg"><label class="form-label">送信時刻（0-23時・JST）</label><input id="reportHour" type="number" min="0" max="23" class="fc"></div>
+      </div>
+      <div class="row"><button class="btn" onclick="saveReport()">💾 保存＆スケジュール</button><button class="btn sec" onclick="testReport()">✉️ テスト送信</button></div>
+      <div class="st" id="st-report"></div>
+    </div>
+
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function $(id){ return document.getElementById(id); }
+    function st(id, text, ok){ var e=$(id); e.style.display='block'; e.style.background=ok?'#dcfce7':'#fee2e2'; e.style.color=ok?'#15803d':'#b91c1c'; e.innerText=text; }
+
+    window.prev = function(inp, img){ var f=$(inp).files[0]; if(!f) return; var el=$(img); el.src=URL.createObjectURL(f); el.style.display='block'; };
+    window.upImg = function(inp, fn, stId){
+      var f=$(inp).files[0]; if(!f){ st(stId,'画像を選択してください', false); return; }
+      var reader=new FileReader();
+      reader.onload=function(e){ rpc(fn,[{ name:f.name, type:f.type, data:e.target.result.split(',')[1] }]).then(function(){ st(stId,'✅ アップロードしました', true); }).catch(function(err){ st(stId,'エラー: '+(err.message||err), false); }); };
+      reader.readAsDataURL(f);
+    };
+
+    window.saveShop = function(){ Promise.all([ rpc('saveSettings',[{shopName:$('shopName').value}]), rpc('saveTableCount',[Number($('tableCount').value)||1]) ]).then(function(){ st('st-shop','✅ 保存しました', true); }).catch(function(e){ st('st-shop','エラー: '+(e.message||e), false); }); };
+    window.saveLocale = function(){ rpc('saveSettings',[{ currencyCode:$('currencyCode').value, currencySymbol:$('currencySymbol').value, serviceRate:$('serviceRate').value, taxRate:$('taxRate').value, defaultLang:$('defaultLang').value, accentColor:$('accentColor').value }]).then(function(){ st('st-locale','✅ 保存しました', true); }).catch(function(e){ st('st-locale','エラー: '+(e.message||e), false); }); };
+    window.changePass = function(){
+      var o=$('oldPass').value, n=$('newPass').value;
+      if(!n||n.length<8){ st('st-pass','新しいパスワードは8文字以上にしてください', false); return; }
+      rpc('changePassword',[o,n]).then(function(r){ if(r&&r.success){ st('st-pass','✅ 変更しました', true); $('oldPass').value=''; $('newPass').value=''; } else { st('st-pass', r&&r.error==='wrong_password'?'現在のパスワードが違います':(r&&r.error==='too_short'?'8文字以上にしてください':'エラー'), false); } }).catch(function(e){ st('st-pass','エラー: '+(e.message||e), false); });
+    };
+    window.savePayKey = function(){ var k=$('payKey').value.trim(); if(!k){ st('st-pay','キーを入力してください', false); return; } rpc('savePaymongoKey',[k]).then(function(){ $('payKey').value=''; st('st-pay','✅ 保存しました', true); return rpc('getPaymongoKeyStatus',[]); }).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(e){ st('st-pay','エラー: '+(e.message||e), false); }); };
+    window.saveGemKey = function(){ var k=$('gemKey').value.trim(); if(!k){ st('st-gem','キーを入力してください', false); return; } rpc('saveGeminiKey',[k]).then(function(){ $('gemKey').value=''; st('st-gem','✅ 保存しました', true); return rpc('getGeminiKeyStatus',[]); }).then(function(s){ if(s) setBadge('gemBadge', s.configured); }).catch(function(e){ st('st-gem','エラー: '+(e.message||e), false); }); };
+    window.getLoc = function(){
+      if(!navigator.geolocation){ st('st-geo','この端末は位置情報に対応していません', false); return; }
+      navigator.geolocation.getCurrentPosition(function(p){ $('storeLat').value=p.coords.latitude.toFixed(6); $('storeLng').value=p.coords.longitude.toFixed(6); st('st-geo','現在地を取得しました。「保存」を押してください。', true); }, function(){ st('st-geo','位置情報を取得できませんでした。手動入力してください。', false); }, { enableHighAccuracy:true, timeout:8000 });
+    };
+    window.saveGeo = function(){ rpc('saveSettings',[{ storeLat:$('storeLat').value, storeLng:$('storeLng').value, storeRadius:Number($('storeRadius').value)||0 }]).then(function(){ st('st-geo','✅ 保存しました', true); }).catch(function(e){ st('st-geo','エラー: '+(e.message||e), false); }); };
+    window.saveLoy = function(){ rpc('saveSettings',[{ loyaltyEnabled:$('loyaltyEnabled').checked?'on':'', loyaltyEarnRate:Number($('loyaltyEarnRate').value)||20, loyaltyRedeemValue:Number($('loyaltyRedeemValue').value)||1 }]).then(function(){ st('st-loy','✅ 保存しました', true); }).catch(function(e){ st('st-loy','エラー: '+(e.message||e), false); }); };
+    window.saveReport = function(){ rpc('saveReportSettings',[$('reportEmail').value.trim(), $('reportHour').value, $('reportEnabled').checked]).then(function(r){ if(r&&r.success){ st('st-report','✅ 保存＆スケジュール設定しました', true); } else { st('st-report','エラー: '+((r&&r.error)||'認証(スコープ)の再承認が必要かもしれません'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
+    window.testReport = function(){ st('st-report','送信中…', true); rpc('sendTestReport',[]).then(function(r){ if(r&&r.success){ st('st-report','✅ テスト送信しました。受信箱をご確認ください', true); } else { st('st-report','エラー: '+((r&&r.error)||'送信できませんでした'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
+    function setBadge(id, on){ var b=$(id); b.className='badge '+(on?'on':'offb'); b.innerText=on?'設定済':'未設定'; }
+
+    // ---- load ----
+    API.post('getSettings', {}).then(function(r){
+      var d = r.data || {};
+      $('shopName').value = d.shopName || '';
+      if (d.menuTopImageId){ var e1=$('prevOrder'); e1.src='https://lh3.googleusercontent.com/d/'+d.menuTopImageId; e1.style.display='block'; }
+      if (d.systemTopImageId){ var e2=$('prevSys'); e2.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; e2.style.display='block'; }
+      $('currencyCode').value = d.currencyCode || 'PHP';
+      $('currencySymbol').value = (d.currencySymbol!==undefined && d.currencySymbol!=='') ? d.currencySymbol : '₱';
+      $('serviceRate').value = d.serviceRate || '';
+      $('taxRate').value = d.taxRate || '';
+      $('defaultLang').value = d.defaultLang || 'en';
+      $('accentColor').value = d.accentColor || '#0f172a';
+      $('storeLat').value = d.storeLat || ''; $('storeLng').value = d.storeLng || ''; $('storeRadius').value = d.storeRadius || '';
+      $('loyaltyEnabled').checked = (d.loyaltyEnabled==='on'||d.loyaltyEnabled===true||d.loyaltyEnabled==='true');
+      $('loyaltyEarnRate').value = d.loyaltyEarnRate || ''; $('loyaltyRedeemValue').value = d.loyaltyRedeemValue || '';
+      $('reportEmail').value = d.reportEmail || ''; $('reportHour').value = (d.reportHour!==undefined&&d.reportHour!=='')?d.reportHour:'';
+      $('reportEnabled').checked = (d.reportEnabled==='on'||d.reportEnabled===true||d.reportEnabled==='true');
+    }).catch(function(){});
+    rpc('getTableMaster',[]).then(function(list){ if(list&&list.length) $('tableCount').value=list.length; }).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; } });
+    rpc('getPaymongoKeyStatus',[]).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(){});
+    rpc('getGeminiKeyStatus',[]).then(function(s){ if(s) setBadge('gemBadge', s.configured); }).catch(function(){});
+  </script>
+</body>
+</html>
