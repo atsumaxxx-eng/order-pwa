@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Management</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); -webkit-tap-highlight-color:transparent; }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .head .r{ display:flex; gap:8px; align-items:center; font-size:13px; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; }
+    .wrap{ padding:16px; max-width:900px; margin:0 auto; }
+    /* Login */
+    .login{ max-width:340px; margin:8vh auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:26px 22px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
+    .login .emoji{ font-size:42px; text-align:center; }
+    .login h2{ text-align:center; font-size:19px; margin:8px 0 4px; }
+    .login p{ text-align:center; color:var(--text-3); font-size:13px; margin:0 0 16px; }
+    .fc{ width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:16px; font-family:inherit; margin-bottom:12px; }
+    .btn{ width:100%; border:0; border-radius:11px; padding:14px; font-size:15px; font-weight:900; color:#fff; background:var(--navy); cursor:pointer; font-family:inherit; }
+    .err{ display:none; color:var(--red); font-size:13px; font-weight:700; text-align:center; margin-bottom:10px; }
+    /* Hub */
+    .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+    .tile{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 14px; text-decoration:none; color:var(--navy); display:flex; flex-direction:column; gap:6px; cursor:pointer; }
+    .tile .ic{ font-size:26px; }
+    .tile .tt{ font-weight:800; font-size:15px; }
+    .tile .ds{ font-size:12px; color:var(--text-3); }
+    .tile.soon{ opacity:.45; cursor:default; }
+    .tile.soon .ds:after{ content:' ・準備中'; }
+    .hidden{ display:none; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <h1 id="title">管理</h1>
+    <div class="r"><span id="who"></span><button class="hbtn hidden" id="logoutBtn" onclick="logout()">ログアウト</button></div>
+  </div>
+
+  <!-- Login view -->
+  <div class="wrap" id="loginView">
+    <div class="login">
+      <div class="emoji">🔒</div>
+      <h2>ログイン</h2>
+      <p>ログインIDとパスワードを入力</p>
+      <div class="err" id="loginErr">IDまたはパスワードが違います</div>
+      <input class="fc" id="loginId" placeholder="ログインID" autocapitalize="none" autocomplete="username">
+      <input class="fc" id="loginPass" type="password" placeholder="パスワード" autocomplete="current-password">
+      <button class="btn" id="loginBtn" onclick="doLogin()">🔓 ログイン</button>
+    </div>
+  </div>
+
+  <!-- Hub view -->
+  <div class="wrap hidden" id="hubView">
+    <div class="grid" id="tiles"></div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    var NAME = localStorage.getItem('mgmtName') || '';
+
+    // key: 権限キー（null=公開・常時表示）, active: 移設済みか
+    var TILES = [
+      { key:null, ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', url:'./admin.html', active:true },
+      { key:null, ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', url:'./kds.html', active:true },
+      { key:null, ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', url:'./takeout.html', active:true },
+      { key:'coupons', ic:'🎟️', tt:'クーポン', ds:'割引・バウチャー', url:'./coupons.html', active:true },
+      { key:'menu_editor', ic:'🍽️', tt:'メニュー編集', ds:'商品の追加・編集', url:'./menu_editor.html', active:false },
+      { key:'menu_editor', ic:'📖', tt:'レシピ・原価', ds:'材料・自動減算', url:'./recipe.html', active:false },
+      { key:'drink_inv', ic:'🍺', tt:'ドリンク在庫', ds:'在庫・原価', url:'./drink_inv.html', active:false },
+      { key:'inventory', ic:'📦', tt:'在庫管理', ds:'棚卸し', url:'./inventory.html', active:false },
+      { key:'sales', ic:'📊', tt:'売上管理', ds:'集計・分析', url:'./sales.html', active:false },
+      { key:'members', ic:'🎁', tt:'会員管理', ds:'ポイント・来店', url:'./members.html', active:false },
+      { key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', url:'./attendance.html', active:false },
+      { key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', url:'./printers.html', active:false },
+      { key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', url:'./users.html', active:false },
+      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:false }
+    ];
+
+    function showLogin(){ document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; }
+    function showHub(allowed){
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('hubView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      document.getElementById('who').innerText = NAME ? ('👤 '+NAME) : '';
+      var html = '';
+      TILES.forEach(function(x){
+        if (x.key && !(allowed && allowed[x.key])) return; // 権限なしは非表示
+        if (x.active){ html += '<a class="tile" href="'+x.url+'"><span class="ic">'+x.ic+'</span><span class="tt">'+x.tt+'</span><span class="ds">'+x.ds+'</span></a>'; }
+        else { html += '<div class="tile soon"><span class="ic">'+x.ic+'</span><span class="tt">'+x.tt+'</span><span class="ds">'+x.ds+'</span></div>'; }
+      });
+      document.getElementById('tiles').innerHTML = html;
+    }
+
+    window.doLogin = function(){
+      var id = document.getElementById('loginId').value.trim();
+      var pass = document.getElementById('loginPass').value;
+      document.getElementById('loginErr').style.display='none';
+      var btn = document.getElementById('loginBtn'); btn.disabled=true;
+      API.post('login', { loginId: id, pass: pass }).then(function(r){
+        btn.disabled=false;
+        TOKEN = r.token; NAME = r.name || '';
+        localStorage.setItem('mgmtToken', TOKEN); localStorage.setItem('mgmtName', NAME); localStorage.setItem('mgmtRole', r.role||'');
+        checkAndShow();
+      }).catch(function(){ btn.disabled=false; document.getElementById('loginErr').style.display='block'; });
+    };
+    window.logout = function(){ localStorage.removeItem('mgmtToken'); localStorage.removeItem('mgmtName'); localStorage.removeItem('mgmtRole'); TOKEN=''; NAME=''; showLogin(); };
+
+    function checkAndShow(){
+      if (!TOKEN){ showLogin(); return; }
+      API.post('checkToken', { token: TOKEN }).then(function(r){
+        if (r.valid && r.me){ showHub(r.me.allowed || {}); }
+        else { logout(); }
+      }).catch(function(){ showLogin(); });
+    }
+    document.addEventListener('DOMContentLoaded', checkAndShow);
+  </script>
+</body>
+</html>
