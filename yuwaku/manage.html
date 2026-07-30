@@ -47,6 +47,7 @@
   <!-- Login view -->
   <div class="wrap hidden" id="loginView">
     <div class="login">
+      <img id="loginPic" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:12px;margin-bottom:14px;">
       <div class="emoji">🔒</div>
       <h2>ログイン</h2>
       <p>ログインIDとパスワードを入力</p>
@@ -83,7 +84,8 @@
       { key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', url:'./attendance.html', active:true },
       { key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', url:'./printers.html', active:false },
       { key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', url:'./users.html', active:true },
-      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:true }
+      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:true },
+      { key:null, ic:'🔑', tt:'パスワード変更', ds:'自分のパスワード', url:'./change_password.html', active:true }
     ];
 
     function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; }
@@ -123,6 +125,8 @@
         else { logout(); }
       }).catch(function(){ showLogin(); });
     }
+    // ログイン画面の画像（設定で登録した画像を表示。getSettingsはログイン前でも公開）
+    API.post('getSettings', {}).then(function(r){ var d=(r&&r.data)||{}; if(d.systemTopImageId){ var im=document.getElementById('loginPic'); if(im){ im.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; im.style.display='block'; } } }).catch(function(){});
     document.addEventListener('DOMContentLoaded', checkAndShow);
   </script>
 </body>

@@ -56,7 +56,9 @@
   </style>
 </head>
 <body>
+  <a class="lang-btn lang-fab" id="mgmtBack" href="./manage.html" style="display:none;left:12px;right:auto;">← 管理</a>
   <button class="lang-btn lang-fab" id="langToggle" onclick="toggleLang()">JP/EN</button>
+  <script>try{if(localStorage.getItem('mgmtToken')){var _mb=document.getElementById('mgmtBack');if(_mb)_mb.style.display='block';}}catch(e){}</script>
   <img id="banner" class="to-banner" alt="">
   <div class="to-head">
     <span class="to-shop" id="shopName">Takeout</span><span class="to-tag" id="tagTakeout">🥡 Takeout</span>

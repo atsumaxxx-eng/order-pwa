@@ -47,6 +47,8 @@
     <div class="card">
       <div class="card-title">🖼️ トップ画像</div>
       <div class="fg"><label class="form-label">オーダートップ画像（注文画面）</label><input id="orderImg" type="file" accept="image/*" class="fc" onchange="prev('orderImg','prevOrder')"><img id="prevOrder" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('orderImg','uploadTopImage','st-img')">⬆️ アップロード</button></div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">
+      <div class="fg"><label class="form-label">ログイン画面の画像（管理ログイン画面に表示）</label><input id="loginImg" type="file" accept="image/*" class="fc" onchange="prev('loginImg','prevLogin')"><img id="prevLogin" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('loginImg','uploadSystemTopImage','st-img')">⬆️ アップロード</button></div>
       <div class="st" id="st-img"></div>
     </div>
 
@@ -151,6 +153,7 @@
       var d = r.data || {};
       $('shopName').value = d.shopName || '';
       if (d.menuTopImageId){ var e1=$('prevOrder'); e1.src='https://lh3.googleusercontent.com/d/'+d.menuTopImageId; e1.style.display='block'; }
+      if (d.systemTopImageId){ var e2=$('prevLogin'); e2.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; e2.style.display='block'; }
       $('currencyCode').value = d.currencyCode || 'PHP';
       $('currencySymbol').value = (d.currencySymbol!==undefined && d.currencySymbol!=='') ? d.currencySymbol : '₱';
       $('serviceRate').value = d.serviceRate || '';
