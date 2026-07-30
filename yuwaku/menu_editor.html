@@ -33,33 +33,34 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>🍽️ メニュー編集</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">🍽️ メニュー編集</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap">
     <div class="card">
-      <div class="card-title">➕ 商品の追加 / 編集</div>
+      <div class="card-title" data-t="formTitle">➕ 商品の追加 / 編集</div>
       <input type="hidden" id="oldName">
       <div class="grid2">
-        <div class="fg"><label class="form-label">商品名</label><input id="mName" class="fc"></div>
-        <div class="fg"><label class="form-label">価格</label><input id="mPrice" type="number" min="0" class="fc"></div>
-        <div class="fg"><label class="form-label">カテゴリ</label><input id="mCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
-        <div class="fg"><label class="form-label">ステータス</label><select id="mStatus" class="fc"><option value="販売中">販売中</option><option value="販売停止">販売停止</option></select></div>
-        <div class="fg"><label class="form-label">商品名（English）</label><input id="mNameEn" class="fc" placeholder="空欄なら自動翻訳"></div>
-        <div class="fg"><label class="form-label">カテゴリ（English）</label><input id="mCatEn" class="fc" list="catListEn" placeholder="空欄なら自動翻訳"><datalist id="catListEn"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblName">商品名</label><input id="mName" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lblPrice">価格</label><input id="mPrice" type="number" min="0" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label><input id="mCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblStatus">ステータス</label><select id="mStatus" class="fc"><option value="販売中" data-t="onSale">販売中</option><option value="販売停止" data-t="stopped">販売停止</option></select></div>
+        <div class="fg"><label class="form-label" data-t="lblNameEn">商品名（English）</label><input id="mNameEn" class="fc" placeholder="空欄なら自動翻訳" data-tph="phAuto"></div>
+        <div class="fg"><label class="form-label" data-t="lblCatEn">カテゴリ（English）</label><input id="mCatEn" class="fc" list="catListEn" placeholder="空欄なら自動翻訳" data-tph="phAuto"><datalist id="catListEn"></datalist></div>
       </div>
-      <div class="muted" style="margin:-2px 0 8px;">英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。</div>
-      <div class="fg"><label class="form-label">画像（任意・変更時のみ選択）</label><input id="mFile" type="file" accept="image/*" class="fc"></div>
-      <button class="btn btn-pri" id="saveBtn" onclick="save()">💾 保存</button>
-      <button class="btn btn-sec" onclick="clearForm()">クリア</button>
+      <div class="muted" style="margin:-2px 0 8px;" data-t="enHint">英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。</div>
+      <div class="fg"><label class="form-label" data-t="lblImg">画像（任意・変更時のみ選択）</label><input id="mFile" type="file" accept="image/*" class="fc"></div>
+      <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
+      <button class="btn btn-sec" onclick="clearForm()" data-t="clear">クリア</button>
       <div class="alert" id="msg"></div>
     </div>
     <div class="card">
-      <div class="card-title">🍽️ 商品一覧</div>
-      <div id="list"><div class="muted">読み込み中…</div></div>
+      <div class="card-title" data-t="listTitle">🍽️ 商品一覧</div>
+      <div id="list"><div class="muted" data-t="loading">読み込み中…</div></div>
     </div>
   </div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
@@ -72,13 +73,14 @@
       MENU.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); var ce=m['カテゴリ_EN']; if(ce && catsEn.indexOf(ce)===-1) catsEn.push(ce); });
       document.getElementById('catList').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
       document.getElementById('catListEn').innerHTML = catsEn.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
-      if (!MENU.length){ document.getElementById('list').innerHTML='<div class="muted">商品がありません</div>'; return; }
+      if (!MENU.length){ document.getElementById('list').innerHTML='<div class="muted">'+I18n.t('noItems')+'</div>'; return; }
       document.getElementById('list').innerHTML = MENU.map(function(m,i){
         var off = (m['ステータス']!=='販売中');
+        var st = off ? I18n.t('stopped') : I18n.t('onSale');
         var thumb = m.displayUrl ? '<img class="thumb" src="'+esc(m.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
         return '<div class="mi'+(off?' off':'')+'">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(m['商品名'])+'</div>'+
-          '<div class="meta">'+esc(m['カテゴリ']||'')+' ・ '+(SYM)+(Number(m['価格'])||0).toLocaleString()+' ・ '+esc(m['ステータス']||'')+'</div></div>'+
-          '<button class="btn-sm" onclick="edit('+i+')">編集</button></div>';
+          '<div class="meta">'+esc(m['カテゴリ']||'')+' ・ '+(SYM)+(Number(m['価格'])||0).toLocaleString()+' ・ '+st+'</div></div>'+
+          '<button class="btn-sm" onclick="edit('+i+')">'+I18n.t('edit')+'</button></div>';
       }).join('');
     }
     var SYM='₱';
@@ -99,23 +101,29 @@
 
     window.save = function(){
       var name = document.getElementById('mName').value.trim();
-      if (!name){ msg('商品名を入力してください', false); return; }
+      if (!name){ msg(I18n.t('needName'), false); return; }
       var item = { oldName:document.getElementById('oldName').value, name:name, price:document.getElementById('mPrice').value,
         category:document.getElementById('mCat').value, status:document.getElementById('mStatus').value, desc:'',
         nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:document.getElementById('mCatEn').value.trim() };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('mFile').files[0];
       function send(fd){
-        rpc('saveMenuItem',[item, fd]).then(function(){ btn.disabled=false; msg('✅ 保存しました', true); clearForm(); return rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; render(); }); })
-          .catch(function(e){ btn.disabled=false; msg('エラー: '+(e.message||e), false); });
+        rpc('saveMenuItem',[item, fd]).then(function(){ btn.disabled=false; msg(I18n.t('saved'), true); clearForm(); return rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; render(); }); })
+          .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
       }
       if (file){ var reader=new FileReader(); reader.onload=function(e){ send({ data:e.target.result.split(',')[1], type:file.type, name:file.name }); }; reader.readAsDataURL(file); }
       else { send(null); }
     };
 
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; }).catch(function(){});
-    rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
+    var __loaded=false;
+    rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
+
+    I18n.init({
+      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
   </script>
 </body>
 </html>

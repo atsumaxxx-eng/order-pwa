@@ -31,30 +31,31 @@
 </head>
 <body>
   <div class="head">
-    <h1>🎟️ クーポン</h1>
-    <a class="hbtn" href="./manage.html">← 管理へ</a>
+    <h1 data-t="title">🎟️ クーポン</h1>
+    <div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div>
   </div>
   <div class="wrap">
     <div class="card">
-      <div class="hint">コードごとに種別（％割引／金額割引）、最小注文額、有効期限、利用上限、有効/無効を設定できます。客の注文画面・テイクアウトで適用されます。利用回数は自動記録されます。</div>
+      <div class="hint" data-t="hint">コードごとに種別（％割引／金額割引）、最小注文額、有効期限、利用上限、有効/無効を設定できます。客の注文画面・テイクアウトで適用されます。利用回数は自動記録されます。</div>
       <div style="overflow:auto;">
         <table id="tbl">
           <thead><tr>
-            <th style="min-width:110px;">コード</th><th style="width:110px;">種別</th><th style="width:80px;">値</th>
-            <th style="width:90px;">最小注文</th><th style="width:140px;">有効期限</th><th style="width:70px;">上限</th>
-            <th style="width:56px;">有効</th><th style="min-width:120px;">説明</th><th style="width:44px;">利用</th><th style="width:40px;"></th>
+            <th style="min-width:110px;" data-t="thCode">コード</th><th style="width:110px;" data-t="thType">種別</th><th style="width:80px;" data-t="thVal">値</th>
+            <th style="width:90px;" data-t="thMin">最小注文</th><th style="width:140px;" data-t="thExp">有効期限</th><th style="width:70px;" data-t="thLimit">上限</th>
+            <th style="width:56px;" data-t="thActive">有効</th><th style="min-width:120px;" data-t="thDesc">説明</th><th style="width:44px;" data-t="thUsed">利用</th><th style="width:40px;"></th>
           </tr></thead>
-          <tbody id="rows"><tr><td colspan="10" style="color:#aaa;padding:16px;text-align:center;">読み込み中…</td></tr></tbody>
+          <tbody id="rows"><tr><td colspan="10" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody>
         </table>
       </div>
-      <button class="btn btn-sec" onclick="addRow()">＋ 行を追加</button>
-      <button class="btn btn-pri" id="saveBtn" onclick="save()">💾 保存</button>
+      <button class="btn btn-sec" onclick="addRow()" data-t="addRow">＋ 行を追加</button>
+      <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
       <div class="alert" id="msg"></div>
     </div>
   </div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) { location.href = './manage.html'; }
@@ -68,8 +69,8 @@
         html += '<tr>' +
           '<td><input value="'+esc(r.code||'')+'" oninput="window.rows['+i+'].code=this.value" placeholder="CODE" style="text-transform:uppercase;"></td>' +
           '<td><select onchange="window.rows['+i+'].type=this.value">' +
-            '<option value="amount"'+(r.type!=='percent'?' selected':'')+'>金額(₱)</option>' +
-            '<option value="percent"'+(r.type==='percent'?' selected':'')+'>％割引</option></select></td>' +
+            '<option value="amount"'+(r.type!=='percent'?' selected':'')+'>'+I18n.t('typeAmount')+'</option>' +
+            '<option value="percent"'+(r.type==='percent'?' selected':'')+'>'+I18n.t('typePercent')+'</option></select></td>' +
           '<td><input type="number" min="0" step="any" value="'+(r.value!=null?r.value:'')+'" oninput="window.rows['+i+'].value=Number(this.value)||0"></td>' +
           '<td><input type="number" min="0" step="any" value="'+(r.min||0)+'" oninput="window.rows['+i+'].min=Number(this.value)||0"></td>' +
           '<td><input type="date" value="'+esc(r.expiry||'')+'" oninput="window.rows['+i+'].expiry=this.value"></td>' +
@@ -79,7 +80,7 @@
           '<td class="used">'+(r.used||0)+'</td>' +
           '<td><button class="btn-sm" onclick="delRow('+i+')">🗑</button></td></tr>';
       });
-      if (!window.rows.length) html = '<tr><td colspan="10" style="color:#aaa;padding:16px;text-align:center;">「＋ 行を追加」で登録してください</td></tr>';
+      if (!window.rows.length) html = '<tr><td colspan="10" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>';
       document.getElementById('rows').innerHTML = html;
     }
     window.addRow = function(){ window.rows.push({ code:'', type:'amount', value:0, min:0, expiry:'', limit:0, used:0, active:true, desc:'' }); render(); };
@@ -88,13 +89,19 @@
     window.save = function(){
       var clean = window.rows.filter(function(r){ return (r.code||'').trim(); });
       var btn = document.getElementById('saveBtn'); btn.disabled=true;
-      rpc('saveCoupons', [clean]).then(function(){ btn.disabled=false; msg('✅ 保存しました', true); })
-        .catch(function(e){ btn.disabled=false; msg('エラー: '+(e.message||e), false); });
+      rpc('saveCoupons', [clean]).then(function(){ btn.disabled=false; msg(I18n.t('saved'), true); })
+        .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
     };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
-    rpc('getCoupons', []).then(function(list){ window.rows = (list||[]).slice(); render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="10" style="color:#b91c1c;padding:16px;">読み込みエラー: '+esc(e.message||e)+'</td></tr>'; });
+    var __loaded=false;
+    rpc('getCoupons', []).then(function(list){ window.rows = (list||[]).slice(); __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="10" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'🎟️ クーポン', back:'← 管理へ', hint:'コードごとに種別（％割引／金額割引）、最小注文額、有効期限、利用上限、有効/無効を設定できます。客の注文画面・テイクアウトで適用されます。利用回数は自動記録されます。', thCode:'コード', thType:'種別', thVal:'値', thMin:'最小注文', thExp:'有効期限', thLimit:'上限', thActive:'有効', thDesc:'説明', thUsed:'利用', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', typeAmount:'金額(₱)', typePercent:'％割引', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🎟️ Coupons', back:'← Manage', hint:'Set each code’s type (% off / amount off), minimum order, expiry, usage limit and on/off. Applied on the customer order & takeout screens. Usage counts are recorded automatically.', thCode:'Code', thType:'Type', thVal:'Value', thMin:'Min order', thExp:'Expiry', thLimit:'Limit', thActive:'On', thDesc:'Description', thUsed:'Used', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', typeAmount:'Amount(₱)', typePercent:'% off', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
   </script>
 </body>
 </html>

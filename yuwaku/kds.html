@@ -49,18 +49,20 @@
 </head>
 <body>
   <div class="kds-head">
-    <div class="kds-title">🍳 <span id="lblTitle">キッチン</span><span class="sub" id="lblSub">未提供オーダー</span></div>
+    <div class="kds-title">🍳 <span id="lblTitle" data-t="title">キッチン</span><span class="sub" id="lblSub" data-t="sub">未提供オーダー</span></div>
     <div class="actions">
-      <button class="kbtn" onclick="location.href='./manage.html'">← 管理</button>
+      <button class="kbtn" data-tlang onclick="I18n.toggle()">EN</button>
+      <button class="kbtn" onclick="location.href='./manage.html'" data-t="back">← 管理</button>
       <span class="kcount" id="kcount">0</span>
       <button class="kbtn on" id="soundBtn" onclick="toggleSound()">🔔 音 ON</button>
       <button class="kbtn" id="reloadBtn" onclick="load()">↻</button>
     </div>
   </div>
-  <div class="kgrid" id="grid"><div class="kempty" id="loadMsg">読み込み中…</div></div>
+  <div class="kgrid" id="grid"><div class="kempty" id="loadMsg" data-t="loading">読み込み中…</div></div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var soundOn = true, lastNewIds = {}, firstPaint = true;
 
@@ -81,8 +83,9 @@
     }
     function fmtTime(dateStr){ try { return new Date(dateStr).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); } catch(e){ return ''; } }
 
+    var lastData = [];
     function render(data){
-      data = data || [];
+      data = data || lastData || []; lastData = data;
       var active = data.filter(function(o){ return o.status === '未対応' || o.status === '調理中'; });
       active.sort(function(a,b){ return new Date(a.date).getTime() - new Date(b.date).getTime(); });
 
@@ -92,7 +95,7 @@
       lastNewIds = curNew; firstPaint = false;
 
       document.getElementById('kcount').innerText = active.length;
-      if (!active.length){ document.getElementById('grid').innerHTML = '<div class="kempty">✅ 未提供のオーダーはありません</div>'; return; }
+      if (!active.length){ document.getElementById('grid').innerHTML = '<div class="kempty">'+I18n.t('empty')+'</div>'; return; }
 
       var html = '';
       active.forEach(function(o){
@@ -102,18 +105,18 @@
         html += '<div class="ticket ' + (isNew?'new':'cook') + '">';
         html += '<div class="t-head"><div class="t-table">🪑 ' + esc(o.table) + '</div>'
              +  '<div style="display:flex;gap:6px;align-items:center;">'
-             +  '<span class="t-badge ' + (isNew?'b-new':'b-cook') + '">' + (isNew?'新規':'調理中') + '</span>'
-             +  '<span class="t-elapsed ' + el.cls + '">' + el.mins + '分</span></div></div>';
+             +  '<span class="t-badge ' + (isNew?'b-new':'b-cook') + '">' + (isNew?I18n.t('new'):I18n.t('cook')) + '</span>'
+             +  '<span class="t-elapsed ' + el.cls + '">' + el.mins + I18n.t('min') + '</span></div></div>';
         html += '<div class="t-items">';
         items.forEach(function(it){ html += '<div class="t-item"><span class="nm">' + esc(it.name) + '</span><span class="qty">×' + it.qty + '</span></div>'; });
-        if (o.paid) html += '<div class="t-prepaid">💳 前払い済</div>';
+        if (o.paid) html += '<div class="t-prepaid">💳 '+I18n.t('prepaid')+'</div>';
         html += '</div>';
         html += '<div class="t-time">🕐 ' + fmtTime(o.date) + '</div>';
         html += '<div class="t-act">';
-        if (isNew){ html += '<button class="act-btn act-cook" onclick="setStatus(\'' + o.id + '\',\'調理中\')">🔥 調理開始</button>'; }
+        if (isNew){ html += '<button class="act-btn act-cook" onclick="setStatus(\'' + o.id + '\',\'調理中\')">'+I18n.t('startCook')+'</button>'; }
         else {
-          html += '<button class="act-back" onclick="setStatus(\'' + o.id + '\',\'未対応\')" title="新規に戻す">↩</button>';
-          html += '<button class="act-btn act-done" onclick="setStatus(\'' + o.id + '\',\'提供済\')">✓ 提供完了</button>';
+          html += '<button class="act-back" onclick="setStatus(\'' + o.id + '\',\'未対応\')" title="'+I18n.t('backNew')+'">↩</button>';
+          html += '<button class="act-btn act-done" onclick="setStatus(\'' + o.id + '\',\'提供済\')">'+I18n.t('done')+'</button>';
         }
         html += '</div></div>';
       });
@@ -124,8 +127,8 @@
       API.post('updateOrderStatus', { id: id, status: status }).then(function(){ load(); }).catch(function(){ load(); });
     };
     window.load = function(){
-      API.post('getOrders', {}).then(function(r){ render(r.data || []); })
-        .catch(function(){ var lm=document.getElementById('loadMsg'); if(lm) lm.innerText='接続できません（自動再試行します）'; });
+      API.post('getOrders', {}).then(function(r){ __booted=true; render(r.data || []); })
+        .catch(function(){ var lm=document.getElementById('loadMsg'); if(lm) lm.innerText=I18n.t('connErr'); });
     };
 
     var _actx = null;
@@ -140,12 +143,8 @@
         o.start(); o.stop(_actx.currentTime+0.36);
       } catch(e){}
     }
-    window.toggleSound = function(){
-      soundOn = !soundOn;
-      var b = document.getElementById('soundBtn');
-      b.className = 'kbtn' + (soundOn?' on':''); b.innerText = soundOn ? '🔔 音 ON' : '🔕 音 OFF';
-      if (soundOn) beep();
-    };
+    function updateSoundBtn(){ var b = document.getElementById('soundBtn'); b.className = 'kbtn' + (soundOn?' on':''); b.innerText = soundOn ? I18n.t('soundOn') : I18n.t('soundOff'); }
+    window.toggleSound = function(){ soundOn = !soundOn; updateSoundBtn(); if (soundOn) beep(); };
 
     function boot(){
       load();
@@ -153,6 +152,11 @@
       setInterval(load, 60000);
       if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
     }
+    var __booted = false;
+    I18n.init({
+      ja:{ title:'キッチン', sub:'未提供オーダー', back:'← 管理', loading:'読み込み中…', empty:'✅ 未提供のオーダーはありません', new:'新規', cook:'調理中', min:'分', prepaid:'前払い済', startCook:'🔥 調理開始', done:'✓ 提供完了', backNew:'新規に戻す', soundOn:'🔔 音 ON', soundOff:'🔕 音 OFF', connErr:'接続できません（自動再試行します）' },
+      en:{ title:'Kitchen', sub:'Pending orders', back:'← Manage', loading:'Loading…', empty:'✅ No pending orders', new:'New', cook:'Cooking', min:'m', prepaid:'Prepaid', startCook:'🔥 Start', done:'✓ Served', backNew:'Back to new', soundOn:'🔔 Sound ON', soundOff:'🔕 Sound OFF', connErr:'Cannot connect (auto-retrying)' }
+    }, function(){ updateSoundBtn(); if(__booted) render(lastData); });
     document.addEventListener('DOMContentLoaded', boot);
   </script>
 </body>
