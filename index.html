@@ -4,47 +4,86 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>izakanpai — 飲食店向けQRオーダー＆店舗管理</title>
+  <title>izakanpai — 飲食店向けQRオーダー＆店舗管理クラウド</title>
   <meta name="description" content="izakanpai（イザカンパイ）は、QRセルフオーダーから在庫・売上・勤怠までを一つにした飲食店向けクラウド管理システムです。">
   <style>
-    :root{ --navy:#0f172a; --amber:#f59e0b; --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --text:#0f172a; --muted:#64748b; }
+    :root{
+      --navy:#0b1220; --navy2:#111c33; --ink:#0f172a; --amber:#f59e0b; --amber2:#fbbf24;
+      --bg:#f7f8fa; --surface:#fff; --border:#e6e8ec; --muted:#667085; --line:#eef1f5;
+    }
     *{ box-sizing:border-box; }
-    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; color:var(--text); background:var(--bg); line-height:1.7; }
-    a{ color:inherit; }
-    .wrap{ max-width:960px; margin:0 auto; padding:0 20px; }
+    html{ scroll-behavior:smooth; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; color:var(--ink); background:var(--bg); line-height:1.75; -webkit-font-smoothing:antialiased; }
+    a{ color:inherit; text-decoration:none; }
+    .wrap{ max-width:1040px; margin:0 auto; padding:0 22px; }
+    .en-only,.ja-only{ display:none; }
 
-    header{ position:sticky; top:0; z-index:10; background:rgba(15,23,42,.92); backdrop-filter:blur(6px); color:#fff; }
-    header .wrap{ display:flex; align-items:center; justify-content:space-between; height:60px; }
-    .logo{ font-weight:900; font-size:20px; letter-spacing:-.01em; }
-    .logo b{ color:var(--amber); }
-    .nav a{ color:#cbd5e1; text-decoration:none; font-size:14px; font-weight:700; margin-left:18px; }
+    /* Header */
+    header{ position:sticky; top:0; z-index:30; background:rgba(11,18,32,.9); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,.06); color:#fff; }
+    header .wrap{ display:flex; align-items:center; justify-content:space-between; height:62px; }
+    .logo{ font-weight:900; font-size:21px; letter-spacing:-.01em; }
+    .logo b{ color:var(--amber2); }
+    .nav{ display:flex; align-items:center; gap:22px; }
+    .nav a{ color:#c7ced9; font-size:14px; font-weight:700; }
     .nav a:hover{ color:#fff; }
+    .lang{ background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:7px 14px; font-size:13px; font-weight:800; cursor:pointer; font-family:inherit; }
+    .lang:hover{ background:rgba(255,255,255,.18); }
+    @media(max-width:600px){ .nav .navlink{ display:none; } }
 
-    .hero{ background:linear-gradient(160deg,#0f172a 0%,#1e293b 100%); color:#fff; padding:72px 0 80px; text-align:center; }
-    .hero h1{ font-size:40px; font-weight:900; margin:0 0 14px; letter-spacing:-.02em; }
-    .hero h1 b{ color:var(--amber); }
-    .hero p{ font-size:17px; color:#cbd5e1; max-width:620px; margin:0 auto 28px; }
-    .hero .en{ font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:#94a3b8; margin-bottom:10px; }
+    /* Hero */
+    .hero{ position:relative; overflow:hidden; background:radial-gradient(1100px 500px at 80% -10%, #24365e 0%, transparent 60%), linear-gradient(165deg,#0b1220 0%,#111c33 100%); color:#fff; text-align:center; padding:86px 0 96px; }
+    .hero:before{ content:""; position:absolute; inset:0; background:radial-gradient(600px 300px at 15% 120%, rgba(245,158,11,.16) 0%, transparent 60%); }
+    .hero .wrap{ position:relative; }
+    .glass{ font-size:52px; display:inline-block; animation:float 4s ease-in-out infinite; filter:drop-shadow(0 8px 20px rgba(0,0,0,.35)); }
+    @keyframes float{ 0%,100%{ transform:translateY(0) rotate(-4deg); } 50%{ transform:translateY(-10px) rotate(4deg); } }
+    .eyebrow{ margin:14px 0 12px; font-size:12.5px; letter-spacing:.22em; text-transform:uppercase; color:#93a2bd; font-weight:800; }
+    .hero h1{ font-size:60px; font-weight:900; margin:0; letter-spacing:.01em; line-height:1.1; background:linear-gradient(180deg,#fff 40%,#ffe3a6 130%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .hero .tag{ font-size:19px; font-weight:800; color:#fff; margin:12px 0 6px; }
+    .hero .lead{ font-size:16px; color:#c1cbdb; max-width:640px; margin:14px auto 30px; }
     .btns{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-    .btn{ display:inline-block; text-decoration:none; font-weight:800; font-size:15px; padding:13px 24px; border-radius:12px; }
-    .btn-pri{ background:var(--amber); color:#111827; }
-    .btn-ghost{ background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+    .btn{ display:inline-block; font-weight:800; font-size:15px; padding:14px 26px; border-radius:12px; transition:transform .12s ease, box-shadow .12s ease; }
+    .btn:active{ transform:translateY(1px); }
+    .btn-pri{ background:linear-gradient(180deg,var(--amber2),var(--amber)); color:#3a2606; box-shadow:0 8px 22px rgba(245,158,11,.35); }
+    .btn-ghost{ background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.24); }
+    @media(max-width:600px){ .hero h1{ font-size:42px; } .hero{ padding:64px 0 72px; } }
 
-    section{ padding:60px 0; }
-    .section-title{ text-align:center; font-size:26px; font-weight:900; margin:0 0 6px; }
-    .section-sub{ text-align:center; color:var(--muted); margin:0 0 40px; }
-    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; }
-    .card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; }
-    .card .ic{ font-size:30px; }
-    .card h3{ font-size:16px; font-weight:800; margin:12px 0 6px; }
-    .card p{ font-size:14px; color:var(--muted); margin:0; }
+    /* Sections */
+    section{ padding:76px 0; }
+    .kicker{ text-align:center; color:var(--amber); font-weight:900; font-size:12.5px; letter-spacing:.2em; text-transform:uppercase; margin:0 0 8px; }
+    .stitle{ text-align:center; font-size:30px; font-weight:900; margin:0 0 10px; letter-spacing:-.01em; }
+    .ssub{ text-align:center; color:var(--muted); max-width:620px; margin:0 auto 46px; }
 
-    .cta{ background:var(--navy); color:#fff; border-radius:20px; padding:44px 28px; text-align:center; }
-    .cta h2{ font-size:24px; font-weight:900; margin:0 0 10px; }
-    .cta p{ color:#cbd5e1; margin:0 0 22px; }
+    /* Etymology */
+    .etymon{ background:linear-gradient(165deg,#111c33,#0b1220); color:#fff; border-radius:24px; padding:44px 30px; text-align:center; box-shadow:0 20px 50px rgba(11,18,32,.18); }
+    .eq{ display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; margin-bottom:14px; }
+    .eq .w{ display:flex; flex-direction:column; align-items:center; line-height:1.2; }
+    .eq .w span{ font-size:26px; font-weight:900; }
+    .eq .w small{ font-size:11px; color:#93a2bd; letter-spacing:.08em; margin-top:2px; }
+    .eq .op{ font-size:22px; color:var(--amber2); font-weight:900; }
+    .eq .brand{ font-size:30px; font-weight:900; }
+    .eq .brand b{ color:var(--amber2); }
+    .reading{ font-size:24px; font-weight:900; color:var(--amber2); margin:6px 0 14px; letter-spacing:.02em; }
+    .etymon p{ color:#c8d1e0; max-width:640px; margin:0 auto; font-size:15.5px; }
 
-    footer{ text-align:center; color:var(--muted); font-size:13px; padding:36px 0 48px; }
-    @media(max-width:560px){ .hero h1{ font-size:30px; } }
+    /* Features */
+    .pillar{ margin-bottom:40px; }
+    .pillar-h{ display:flex; align-items:center; gap:10px; margin:0 0 16px; }
+    .pillar-h .no{ width:30px; height:30px; border-radius:9px; background:var(--ink); color:#fff; font-weight:900; font-size:14px; display:flex; align-items:center; justify-content:center; }
+    .pillar-h h3{ font-size:18px; font-weight:900; margin:0; }
+    .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .fcard{ background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:22px; transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease; }
+    .fcard:hover{ transform:translateY(-4px); box-shadow:0 16px 40px rgba(15,23,42,.1); border-color:#dfe3ea; }
+    .fic{ width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:24px; margin-bottom:14px; background:linear-gradient(160deg,#fff5e0,#ffe7b8); }
+    .fcard h4{ font-size:16px; font-weight:800; margin:0 0 6px; }
+    .fcard p{ font-size:14px; color:var(--muted); margin:0; }
+
+    /* CTA */
+    .cta{ background:radial-gradient(700px 300px at 50% -40%, rgba(245,158,11,.22), transparent 60%), linear-gradient(165deg,#0b1220,#111c33); color:#fff; border-radius:26px; padding:56px 30px; text-align:center; }
+    .cta h2{ font-size:28px; font-weight:900; margin:0 0 10px; }
+    .cta p{ color:#c1cbdb; margin:0 0 24px; }
+
+    footer{ text-align:center; color:var(--muted); font-size:13px; padding:40px 0 52px; }
+    footer .fk{ color:var(--amber); font-weight:800; }
   </style>
 </head>
 <body>
@@ -52,53 +91,120 @@
     <div class="wrap">
       <div class="logo">izaka<b>npai</b></div>
       <nav class="nav">
-        <a href="#features">特長</a>
-        <a href="#contact">お問い合わせ</a>
+        <a class="navlink" href="#name" data-ja="由来" data-en="Name">由来</a>
+        <a class="navlink" href="#features" data-ja="特長" data-en="Features">特長</a>
+        <a class="navlink" href="#contact" data-ja="お問い合わせ" data-en="Contact">お問い合わせ</a>
+        <button class="lang" id="langBtn" onclick="toggleLang()">EN</button>
       </nav>
     </div>
   </header>
 
+  <!-- Hero -->
   <div class="hero">
     <div class="wrap">
-      <div class="en">QR Order &amp; Restaurant Management</div>
-      <h1>飲食店の注文と運営を、<br><b>ひとつに。</b></h1>
-      <p>QRセルフオーダーから、キッチン表示・在庫・売上・勤怠・多言語対応まで。izakanpai（イザカンパイ）は、小さなお店でもすぐ始められる飲食店向けクラウド管理システムです。</p>
+      <div class="glass">🍻</div>
+      <div class="eyebrow" data-ja="QRオーダー ＆ 店舗管理クラウド" data-en="QR Order &amp; Restaurant Cloud">QRオーダー ＆ 店舗管理クラウド</div>
+      <h1 data-ja="いざ、乾杯。" data-en="Iza, Kanpai.">いざ、乾杯。</h1>
+      <div class="tag" data-ja="お店のすべてを、ひとつに。" data-en="Everything your restaurant needs, in one place.">お店のすべてを、ひとつに。</div>
+      <p class="lead" data-ja="QRセルフオーダーからキッチン・在庫・売上・勤怠まで。飲み会の最初の一杯みたいに、わくわくと勢いのある店づくりを izakanpai が支えます。" data-en="From QR self-ordering to kitchen, inventory, sales and staff — izakanpai powers your restaurant with the spark of that very first toast.">QRセルフオーダーからキッチン・在庫・売上・勤怠まで。飲み会の最初の一杯みたいに、わくわくと勢いのある店づくりを izakanpai が支えます。</p>
       <div class="btns">
-        <a class="btn btn-pri" href="#contact">導入のご相談</a>
-        <a class="btn btn-ghost" href="#features">特長を見る</a>
+        <a class="btn btn-pri" href="#contact" data-ja="導入のご相談" data-en="Get in touch">導入のご相談</a>
+        <a class="btn btn-ghost" href="#features" data-ja="特長を見る" data-en="See features">特長を見る</a>
       </div>
     </div>
   </div>
 
-  <section id="features">
+  <!-- Name origin -->
+  <section id="name">
     <div class="wrap">
-      <h2 class="section-title">できること</h2>
-      <p class="section-sub">お客様の注文から、店舗運営の裏側まで。</p>
-      <div class="grid">
-        <div class="card"><div class="ic">📱</div><h3>QRセルフオーダー</h3><p>テーブルのQRからお客様が直接注文。日本語／英語の切替にも対応。</p></div>
-        <div class="card"><div class="ic">🍳</div><h3>キッチン表示（KDS）</h3><p>入った注文をキッチンにリアルタイム表示。提供漏れを防ぎます。</p></div>
-        <div class="card"><div class="ic">🥡</div><h3>テイクアウト注文</h3><p>オンラインからの持ち帰り注文にも対応。</p></div>
-        <div class="card"><div class="ic">📦</div><h3>在庫・原価</h3><p>レシピ連動で在庫を自動減算。低在庫アラートと原価管理。</p></div>
-        <div class="card"><div class="ic">📊</div><h3>売上分析・日報</h3><p>売上の集計・分析と、日次日報の自動メール送信。</p></div>
-        <div class="card"><div class="ic">🕐</div><h3>勤怠・給与概算</h3><p>写真＋位置情報の打刻で、勤怠と給与概算を管理。</p></div>
-        <div class="card"><div class="ic">💳</div><h3>キャッシュレス決済</h3><p>GCash・カードなどのオンライン決済に対応。</p></div>
-        <div class="card"><div class="ic">🎁</div><h3>会員・クーポン</h3><p>ポイント・来店管理とクーポン／バウチャー。</p></div>
+      <p class="kicker" data-ja="由来" data-en="The Name">由来</p>
+      <h2 class="stitle" data-ja="「izakanpai」って？" data-en="What's in the name?">「izakanpai」って？</h2>
+      <div class="etymon">
+        <div class="eq">
+          <span class="w"><span>居酒屋</span><small data-ja="izakaya ／ 居酒屋" data-en="izakaya / Japanese pub">izakaya ／ 居酒屋</small></span>
+          <span class="op">＋</span>
+          <span class="w"><span>乾杯</span><small data-ja="kanpai ／ 乾杯" data-en="kanpai / cheers">kanpai ／ 乾杯</small></span>
+          <span class="op">＝</span>
+          <span class="brand">izaka<b>npai</b></span>
+        </div>
+        <div class="reading">「いざ、乾杯！」</div>
+        <p data-ja="居酒屋（izakaya）と乾杯（kanpai）を掛け合わせた造語で、読みは「いざ、乾杯！」。飲み会で最初の一杯を高く掲げる——あの一瞬のワクワクと高揚を、そのまま名前に込めました。" data-en="A blend of izakaya (a Japanese pub) and kanpai (cheers), read as &quot;Iza, kanpai!&quot; — &quot;Now, let's toast!&quot; It bottles the rush of raising that very first glass of the night.">居酒屋（izakaya）と乾杯（kanpai）を掛け合わせた造語で、読みは「いざ、乾杯！」。飲み会で最初の一杯を高く掲げる——あの一瞬のワクワクと高揚を、そのまま名前に込めました。</p>
       </div>
     </div>
   </section>
 
-  <section id="contact">
+  <!-- Features -->
+  <section id="features" style="padding-top:8px;">
+    <div class="wrap">
+      <p class="kicker" data-ja="特長" data-en="Features">特長</p>
+      <h2 class="stitle" data-ja="注文から経営まで、これ一つ。" data-en="From the first order to the bottom line.">注文から経営まで、これ一つ。</h2>
+      <p class="ssub" data-ja="お客様の体験、現場のオペレーション、経営の意思決定。3つのレイヤーをまるごとカバーします。" data-en="Guest experience, floor operations, and management decisions — all three layers, covered end to end.">お客様の体験、現場のオペレーション、経営の意思決定。3つのレイヤーをまるごとカバーします。</p>
+
+      <div class="pillar">
+        <div class="pillar-h"><span class="no">1</span><h3 data-ja="お客様体験" data-en="Guest experience">お客様体験</h3></div>
+        <div class="cards">
+          <div class="fcard"><div class="fic">📱</div><h4 data-ja="QRセルフオーダー（多言語）" data-en="QR self-ordering (multilingual)">QRセルフオーダー（多言語）</h4><p data-ja="テーブルのQRから、お客様が自分のスマホで注文。日本語・英語をワンタップ切替でき、写真付きメニューで注文ミスも減らします。" data-en="Guests order from their own phone via the table QR. One-tap Japanese/English and photo menus cut ordering mistakes.">テーブルのQRから、お客様が自分のスマホで注文。日本語・英語をワンタップ切替でき、写真付きメニューで注文ミスも減らします。</p></div>
+          <div class="fcard"><div class="fic">💳</div><h4 data-ja="キャッシュレス決済" data-en="Cashless payment">キャッシュレス決済</h4><p data-ja="GCash・カードなどオンライン決済に対応。お客様はその場でスマホ決済、レジ前の会計待ちを減らせます。" data-en="GCash, cards and more. Guests pay on their phone at the table — less queueing at the counter.">GCash・カードなどオンライン決済に対応。お客様はその場でスマホ決済、レジ前の会計待ちを減らせます。</p></div>
+          <div class="fcard"><div class="fic">🎁</div><h4 data-ja="会員・ポイント・クーポン" data-en="Loyalty &amp; coupons">会員・ポイント・クーポン</h4><p data-ja="来店・ポイントを記録し、クーポンやバウチャーでリピートを後押し。常連づくりを仕組みでサポートします。" data-en="Track visits and points, and drive repeat business with coupons and vouchers — regulars, by design.">来店・ポイントを記録し、クーポンやバウチャーでリピートを後押し。常連づくりを仕組みでサポートします。</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-h"><span class="no">2</span><h3 data-ja="現場オペレーション" data-en="Floor operations">現場オペレーション</h3></div>
+        <div class="cards">
+          <div class="fcard"><div class="fic">🍳</div><h4 data-ja="キッチン表示（KDS）" data-en="Kitchen display (KDS)">キッチン表示（KDS）</h4><p data-ja="入った注文を厨房のディスプレイにリアルタイム表示。提供済み・調理中がひと目でわかり、出し忘れをゼロへ。" data-en="Orders hit the kitchen screen in real time. See what's cooking and what's served at a glance — no missed tickets.">入った注文を厨房のディスプレイにリアルタイム表示。提供済み・調理中がひと目でわかり、出し忘れをゼロへ。</p></div>
+          <div class="fcard"><div class="fic">🥡</div><h4 data-ja="テイクアウト注文" data-en="Takeout orders">テイクアウト注文</h4><p data-ja="オンラインからの持ち帰り注文と店頭受取に対応。店内・持ち帰りを同じ仕組みでさばけます。" data-en="Online pickup orders, ready at the counter — dine-in and takeout run on the same system.">オンラインからの持ち帰り注文と店頭受取に対応。店内・持ち帰りを同じ仕組みでさばけます。</p></div>
+          <div class="fcard"><div class="fic">📦</div><h4 data-ja="在庫・レシピ原価" data-en="Inventory &amp; recipe cost">在庫・レシピ原価</h4><p data-ja="レシピと連動して在庫を自動減算。低在庫は自動アラート、原価もリアルタイムに把握できます。" data-en="Recipes auto-deduct stock. Get low-stock alerts and see food cost update in real time.">レシピと連動して在庫を自動減算。低在庫は自動アラート、原価もリアルタイムに把握できます。</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-h"><span class="no">3</span><h3 data-ja="経営・データ" data-en="Management &amp; data">経営・データ</h3></div>
+        <div class="cards">
+          <div class="fcard"><div class="fic">📊</div><h4 data-ja="売上分析・日次日報" data-en="Sales analytics &amp; daily report">売上分析・日次日報</h4><p data-ja="売上や人気商品を集計・分析。日次日報は指定時刻に自動でメール配信。数字を見る習慣が続きます。" data-en="Analyze sales and top sellers, with an automated daily email report at the time you choose.">売上や人気商品を集計・分析。日次日報は指定時刻に自動でメール配信。数字を見る習慣が続きます。</p></div>
+          <div class="fcard"><div class="fic">🕐</div><h4 data-ja="勤怠・給与概算" data-en="Attendance &amp; payroll">勤怠・給与概算</h4><p data-ja="写真＋位置情報の打刻で不正を防止。労働時間から給与を概算し、締め作業をラクにします。" data-en="Photo + GPS clock-in prevents fraud, and estimates payroll from hours worked — easier month-ends.">写真＋位置情報の打刻で不正を防止。労働時間から給与を概算し、締め作業をラクにします。</p></div>
+          <div class="fcard"><div class="fic">🏬</div><h4 data-ja="権限・マルチ店舗" data-en="Roles &amp; multi-store">権限・マルチ店舗</h4><p data-ja="役割ごとに見られる画面を制御。店舗ごとに独立した環境で、多店舗展開もそのまま拡張できます。" data-en="Role-based access to each screen, and a separate environment per store — ready to scale to many.">役割ごとに見られる画面を制御。店舗ごとに独立した環境で、多店舗展開もそのまま拡張できます。</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section id="contact" style="padding-top:8px;">
     <div class="wrap">
       <div class="cta">
-        <h2>お店に導入しませんか？</h2>
-        <p>店舗ごとに独立した環境をご用意します。まずはお気軽にご相談ください。</p>
-        <a class="btn btn-pri" href="mailto:admin@izakanpai.com">admin@izakanpai.com にメール</a>
+        <div style="font-size:34px;">🍻</div>
+        <h2 data-ja="お店に、izakanpai を。" data-en="Bring izakanpai to your place.">お店に、izakanpai を。</h2>
+        <p data-ja="店舗ごとに独立した環境をご用意します。まずはお気軽にご相談ください。" data-en="We set up a dedicated environment for each store. Let's talk.">店舗ごとに独立した環境をご用意します。まずはお気軽にご相談ください。</p>
+        <a class="btn btn-pri" href="mailto:admin@izakanpai.com" data-ja="admin@izakanpai.com にメール" data-en="Email admin@izakanpai.com">admin@izakanpai.com にメール</a>
       </div>
     </div>
   </section>
 
   <footer>
-    <div class="wrap">© 2026 izakanpai</div>
+    <div class="wrap">© 2026 izakanpai　·　<span class="fk">いざ、乾杯！</span></div>
   </footer>
+
+  <script>
+    function applyLang(l){
+      document.documentElement.lang = l;
+      document.querySelectorAll('[data-ja]').forEach(function(el){
+        var v = el.getAttribute('data-' + l);
+        if (v != null) el.innerHTML = v;
+      });
+      document.getElementById('langBtn').textContent = (l === 'ja') ? 'EN' : '日本語';
+      try { localStorage.setItem('izlang', l); } catch(e){}
+    }
+    function toggleLang(){
+      var cur = document.documentElement.lang === 'en' ? 'en' : 'ja';
+      applyLang(cur === 'ja' ? 'en' : 'ja');
+    }
+    (function(){
+      var saved = '';
+      try { saved = localStorage.getItem('izlang') || ''; } catch(e){}
+      if (!saved) saved = (navigator.language || '').toLowerCase().indexOf('ja') === 0 ? 'ja' : 'en';
+      applyLang(saved === 'en' ? 'en' : 'ja');
+    })();
+  </script>
 </body>
 </html>
