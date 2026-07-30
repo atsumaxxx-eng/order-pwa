@@ -28,19 +28,20 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>🍺 ドリンク在庫</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">🍺 ドリンク在庫</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap"><div class="card">
     <div style="overflow:auto;">
-      <table><thead><tr><th style="min-width:130px;">商品名</th><th style="width:70px;">単位</th><th style="width:90px;">在庫数</th><th style="width:100px;">最小在庫</th><th style="width:90px;">原価</th><th style="width:44px;"></th></tr></thead>
-      <tbody id="rows"><tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">読み込み中…</td></tr></tbody></table>
+      <table><thead><tr><th style="min-width:130px;" data-t="thName">商品名</th><th style="width:70px;" data-t="thUnit">単位</th><th style="width:90px;" data-t="thStock">在庫数</th><th style="width:100px;" data-t="thMin">最小在庫</th><th style="width:90px;" data-t="thCost">原価</th><th style="width:44px;"></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
     </div>
-    <button class="btn btn-sec" onclick="addRow()">＋ 行を追加</button>
-    <button class="btn btn-pri" id="saveBtn" onclick="save()">💾 保存</button>
+    <button class="btn btn-sec" onclick="addRow()" data-t="addRow">＋ 行を追加</button>
+    <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
     <div class="alert" id="msg"></div>
   </div></div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
@@ -60,7 +61,7 @@
           '<td><input type="number" step="any" value="'+(r.cost||0)+'" oninput="window.rows['+i+'].cost=Number(this.value)||0"></td>'+
           '<td><button class="btn-sm" onclick="delRow('+i+')">🗑</button></td></tr>';
       });
-      if (!window.rows.length) html = '<tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">「＋ 行を追加」で登録してください</td></tr>';
+      if (!window.rows.length) html = '<tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>';
       document.getElementById('rows').innerHTML = html;
     }
     window.addRow = function(){ window.rows.push({ name:'', unit:'本', stock:0, minimum:0, cost:0 }); render(); };
@@ -68,13 +69,19 @@
     window.save = function(){
       var clean = window.rows.filter(function(r){ return (r.name||'').trim(); });
       var btn = document.getElementById('saveBtn'); btn.disabled=true;
-      rpc('saveDrinkInventory',[clean]).then(function(){ btn.disabled=false; msg('✅ 保存しました', true); })
-        .catch(function(e){ btn.disabled=false; msg('エラー: '+(e.message||e), false); });
+      rpc('saveDrinkInventory',[clean]).then(function(){ btn.disabled=false; msg(I18n.t('saved'), true); })
+        .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
     };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
-    rpc('getDrinkInventory',[]).then(function(list){ window.rows=(list||[]).slice(); render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#b91c1c;padding:16px;">読み込みエラー: '+esc(e.message||e)+'</td></tr>'; });
+    var __loaded=false;
+    rpc('getDrinkInventory',[]).then(function(list){ window.rows=(list||[]).slice(); __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'🍺 ドリンク在庫', back:'← 管理へ', thName:'商品名', thUnit:'単位', thStock:'在庫数', thMin:'最小在庫', thCost:'原価', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🍺 Drink Stock', back:'← Manage', thName:'Item', thUnit:'Unit', thStock:'Stock', thMin:'Min stock', thCost:'Cost', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
   </script>
 </body>
 </html>

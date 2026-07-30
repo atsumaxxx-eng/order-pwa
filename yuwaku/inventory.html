@@ -33,30 +33,31 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>📦 在庫管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">📦 在庫管理</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap">
     <div class="card">
-      <div class="card-title">➕ 品目の追加 / 編集</div>
+      <div class="card-title" data-t="formTitle">➕ 品目の追加 / 編集</div>
       <input type="hidden" id="iId"><input type="hidden" id="iImg">
       <div class="grid2">
-        <div class="fg"><label class="form-label">品名</label><input id="iName" class="fc"></div>
-        <div class="fg"><label class="form-label">カテゴリ</label><input id="iCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
-        <div class="fg"><label class="form-label">価値</label><input id="iValue" type="number" min="0" class="fc"></div>
-        <div class="fg"><label class="form-label">備考</label><input id="iRemarks" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lblName">品名</label><input id="iName" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label><input id="iCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblValue">価値</label><input id="iValue" type="number" min="0" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lblRemarks">備考</label><input id="iRemarks" class="fc"></div>
       </div>
-      <div class="fg"><label class="form-label">画像（任意・変更時のみ選択）</label><input id="iFile" type="file" accept="image/*" class="fc"></div>
-      <button class="btn btn-pri" id="saveBtn" onclick="save()">💾 保存</button>
-      <button class="btn btn-sec" onclick="clearForm()">クリア</button>
+      <div class="fg"><label class="form-label" data-t="lblImg">画像（任意・変更時のみ選択）</label><input id="iFile" type="file" accept="image/*" class="fc"></div>
+      <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
+      <button class="btn btn-sec" onclick="clearForm()" data-t="clear">クリア</button>
       <div class="alert" id="msg"></div>
     </div>
     <div class="card">
-      <div class="card-title">📦 在庫一覧</div>
-      <div id="list"><div class="muted">読み込み中…</div></div>
+      <div class="card-title" data-t="listTitle">📦 在庫一覧</div>
+      <div id="list"><div class="muted" data-t="loading">読み込み中…</div></div>
     </div>
   </div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
@@ -68,13 +69,13 @@
       var cats = [];
       ITEMS.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); });
       document.getElementById('catList').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
-      if (!ITEMS.length){ document.getElementById('list').innerHTML='<div class="muted">在庫がありません</div>'; return; }
+      if (!ITEMS.length){ document.getElementById('list').innerHTML='<div class="muted">'+I18n.t('noItems')+'</div>'; return; }
       document.getElementById('list').innerHTML = ITEMS.map(function(m,i){
         var thumb = m.displayUrl ? '<img class="thumb" src="'+esc(m.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
         return '<div class="it">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(m['品名'])+'</div>'+
           '<div class="meta">'+esc(m['カテゴリ']||'')+' ・ '+SYM+(Number(m['価値'])||0).toLocaleString()+(m['備考']?' ・ '+esc(m['備考']):'')+'</div></div>'+
-          '<button class="btn-sm b-edit" onclick="edit('+i+')">編集</button>'+
-          '<button class="btn-sm b-del" onclick="del('+i+')">削除</button></div>';
+          '<button class="btn-sm b-edit" onclick="edit('+i+')">'+I18n.t('edit')+'</button>'+
+          '<button class="btn-sm b-del" onclick="del('+i+')">'+I18n.t('del')+'</button></div>';
       }).join('');
     }
     window.edit = function(i){
@@ -93,7 +94,7 @@
 
     window.save = function(){
       var name = document.getElementById('iName').value.trim();
-      if (!name){ msg('品名を入力してください', false); return; }
+      if (!name){ msg(I18n.t('needName'), false); return; }
       var item = { id:document.getElementById('iId').value, name:name, category:document.getElementById('iCat').value,
         value:document.getElementById('iValue').value, remarks:document.getElementById('iRemarks').value, currentImageUrl:document.getElementById('iImg').value };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
@@ -101,23 +102,29 @@
       function send(fd){
         rpc('saveInventoryItem',[item, fd]).then(function(res){
           btn.disabled=false;
-          if (String(res).indexOf('Error')===0){ msg('エラー: '+res, false); return; }
-          msg('✅ 保存しました', true); clearForm(); return rpc('getInventoryList',[]).then(function(l){ ITEMS=l||[]; render(); });
-        }).catch(function(e){ btn.disabled=false; msg('エラー: '+(e.message||e), false); });
+          if (String(res).indexOf('Error')===0){ msg(I18n.t('errPrefix')+res, false); return; }
+          msg(I18n.t('saved'), true); clearForm(); return rpc('getInventoryList',[]).then(function(l){ ITEMS=l||[]; render(); });
+        }).catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
       }
       if (file){ var reader=new FileReader(); reader.onload=function(e){ send({ data:e.target.result.split(',')[1], type:file.type, name:file.name }); }; reader.readAsDataURL(file); }
       else { send(null); }
     };
     window.del = function(i){
       var m = ITEMS[i]; if(!m) return;
-      if (!confirm('「'+m['品名']+'」を削除しますか？')) return;
+      if (!confirm(m['品名']+' — '+I18n.t('delConfirm'))) return;
       rpc('deleteInventoryItem',[m['ID']]).then(function(){ return rpc('getInventoryList',[]); }).then(function(l){ ITEMS=l||[]; render(); })
-        .catch(function(e){ msg('エラー: '+(e.message||e), false); });
+        .catch(function(e){ msg(I18n.t('errPrefix')+(e.message||e), false); });
     };
 
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; }).catch(function(){});
-    rpc('getInventoryList',[]).then(function(l){ ITEMS=l||[]; render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
+    var __loaded=false;
+    rpc('getInventoryList',[]).then(function(l){ ITEMS=l||[]; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
+
+    I18n.init({
+      ja:{ title:'📦 在庫管理', back:'← 管理へ', formTitle:'➕ 品目の追加 / 編集', lblName:'品名', lblCat:'カテゴリ', lblValue:'価値', lblRemarks:'備考', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'📦 在庫一覧', loading:'読み込み中…', noItems:'在庫がありません', edit:'編集', del:'削除', delConfirm:'削除しますか？', needName:'品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'📦 Inventory', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Item name', lblCat:'Category', lblValue:'Value', lblRemarks:'Remarks', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'📦 Inventory list', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete?', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
   </script>
 </body>
 </html>

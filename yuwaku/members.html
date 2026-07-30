@@ -24,17 +24,18 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>🎁 会員管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">🎁 会員管理</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap"><div class="card">
-    <input class="search" id="q" placeholder="🔎 電話番号・名前で検索" oninput="render()">
+    <input class="search" id="q" placeholder="🔎 電話番号・名前で検索" data-tph="search" oninput="render()">
     <div style="overflow:auto;">
-      <table><thead><tr><th>電話番号</th><th>名前</th><th style="text-align:right;">ポイント</th><th style="text-align:right;">来店</th><th style="text-align:right;">累計額</th><th>最終来店</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">読み込み中…</td></tr></tbody></table>
+      <table><thead><tr><th data-t="thPhone">電話番号</th><th data-t="thName">名前</th><th style="text-align:right;" data-t="thPts">ポイント</th><th style="text-align:right;" data-t="thVisits">来店</th><th style="text-align:right;" data-t="thTotal">累計額</th><th data-t="thLast">最終来店</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
     </div>
   </div></div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
@@ -45,7 +46,7 @@
     window.render = function(){
       var q = (document.getElementById('q').value||'').trim().toLowerCase();
       var list = MEMBERS.filter(function(m){ return !q || String(m.phone).toLowerCase().indexOf(q)>=0 || String(m.name).toLowerCase().indexOf(q)>=0; });
-      if (!list.length){ document.getElementById('rows').innerHTML = '<tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">該当なし</td></tr>'; return; }
+      if (!list.length){ document.getElementById('rows').innerHTML = '<tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('none')+'</td></tr>'; return; }
       document.getElementById('rows').innerHTML = list.map(function(m){
         return '<tr><td>'+esc(m.phone)+'</td><td>'+esc(m.name||'')+'</td>'+
           '<td class="num pts">'+(Number(m.points)||0)+'</td>'+
@@ -55,8 +56,14 @@
       }).join('');
     };
 
-    rpc('getMembers',[]).then(function(list){ MEMBERS=(list||[]).slice().sort(function(a,b){ return (Number(b.points)||0)-(Number(a.points)||0); }); render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#b91c1c;padding:16px;">読み込みエラー: '+esc(e.message||e)+'</td></tr>'; });
+    var __loaded=false;
+    rpc('getMembers',[]).then(function(list){ MEMBERS=(list||[]).slice().sort(function(a,b){ return (Number(b.points)||0)-(Number(a.points)||0); }); __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'🎁 会員管理', back:'← 管理へ', search:'🔎 電話番号・名前で検索', thPhone:'電話番号', thName:'名前', thPts:'ポイント', thVisits:'来店', thTotal:'累計額', thLast:'最終来店', loading:'読み込み中…', none:'該当なし', loadErr:'読み込みエラー: ' },
+      en:{ title:'🎁 Members', back:'← Manage', search:'🔎 Search by phone or name', thPhone:'Phone', thName:'Name', thPts:'Points', thVisits:'Visits', thTotal:'Total spent', thLast:'Last visit', loading:'Loading…', none:'No matches', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
   </script>
 </body>
 </html>
