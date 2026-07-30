@@ -41,32 +41,33 @@
   </style>
 </head>
 <body>
-  <div class="bar"><a href="./manage.html" style="color:#fff;text-decoration:none;font-weight:800;font-size:13px;background:rgba(255,255,255,.16);padding:6px 11px;border-radius:8px;">← 管理</a><h1 id="title">打刻</h1><span class="now" id="now">--:--</span></div>
+  <div class="bar"><a href="./manage.html" data-t="back" style="color:#fff;text-decoration:none;font-weight:800;font-size:13px;background:rgba(255,255,255,.16);padding:6px 11px;border-radius:8px;">← 管理</a><h1 id="title" data-t="title">打刻</h1><div style="display:flex;gap:8px;align-items:center;"><button data-tlang onclick="I18n.toggle()" style="background:rgba(255,255,255,.16);color:#fff;border:0;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;">EN</button><span class="now" id="now">--:--</span></div></div>
 
   <div class="cam-wrap">
     <video id="video" autoplay playsinline muted></video>
-    <div class="cam-note" id="camNote">📷 カメラ</div>
+    <div class="cam-note" id="camNote" data-t="cam">📷 カメラ</div>
   </div>
   <div class="banner" id="banner"></div>
 
   <div class="wrap">
-    <div class="lbl" id="sub">自分の名前をタップして出勤・退勤（写真と位置が記録されます）</div>
-    <div id="area"><div class="loading">読み込み中...</div></div>
+    <div class="lbl" id="sub" data-t="sub">自分の名前をタップして出勤・退勤（写真と位置が記録されます）</div>
+    <div id="area"><div class="loading" data-t="loading">読み込み中...</div></div>
   </div>
 
   <div class="modal" id="modal">
     <div class="sheet">
       <div class="h"><div class="n" id="mName"></div><div class="s" id="mStatus"></div></div>
       <div class="b">
-        <input type="text" class="memo" id="mMemo" placeholder="メモ（任意）">
+        <input type="text" class="memo" id="mMemo" placeholder="メモ（任意）" data-tph="memo">
         <div id="mBtns"></div>
-        <button class="close" id="mClose">閉じる</button>
+        <button class="close" id="mClose" data-t="close">閉じる</button>
       </div>
     </div>
   </div>
   <div class="toast" id="toast"></div>
 
   <script src="./config.js"></script>
+  <script src="./i18n.js"></script>
   <script>
   (function () {
     'use strict';
@@ -93,7 +94,7 @@
         video.srcObject = stream; camReady = true; hideBanner();
       } catch(e){
         camReady = false;
-        showBanner('カメラを許可してください（打刻には写真が必要です）', true);
+        showBanner(I18n.t('camDeny'), true);
       }
     }
     function capture(name){
@@ -127,15 +128,15 @@
     function hideBanner(){ $('banner').className='banner'; }
     function toast(msg, err){ var t=$('toast'); t.textContent=msg; t.className='toast show'+(err?' err':''); t.style.display='block'; setTimeout(function(){ t.style.display='none'; }, 3200); }
 
-    var SMAP = { '未出勤':['s-out','未出勤'], '勤務中':['s-work','勤務中'], '休憩中':['s-break','休憩中'], '退勤済':['s-done','退勤済'] };
+    var SMAP = { '未出勤':['s-out','stOut'], '勤務中':['s-work','stWork'], '休憩中':['s-break','stBreak'], '退勤済':['s-done','stDone'] };
 
     function render(){
       var area = $('area');
-      if(!employees.length){ area.innerHTML = '<div class="emp" style="grid-column:1/-1;cursor:default;">従業員が未登録です。管理→ユーザー管理/勤怠で登録してください。</div>'; return; }
+      if(!employees.length){ area.innerHTML = '<div class="emp" style="grid-column:1/-1;cursor:default;">'+I18n.t('noEmp')+'</div>'; return; }
       var html = '<div class="grid">';
       employees.forEach(function(e, i){
         var sm = SMAP[e.status] || SMAP['未出勤'];
-        html += '<div class="emp" onclick="__open('+i+')"><div class="nm">'+esc(e.name)+'</div><span class="stt '+sm[0]+'">'+sm[1]+'</span></div>';
+        html += '<div class="emp" onclick="__open('+i+')"><div class="nm">'+esc(e.name)+'</div><span class="stt '+sm[0]+'">'+I18n.t(sm[1])+'</span></div>';
       });
       html += '</div>';
       area.innerHTML = html;
@@ -146,46 +147,66 @@
       selected = employees[i];
       $('mName').textContent = selected.name;
       var sm = SMAP[selected.status] || SMAP['未出勤'];
-      $('mStatus').textContent = sm[1];
+      $('mStatus').textContent = I18n.t(sm[1]);
       $('mMemo').value = '';
       var b = '';
-      if(selected.status==='未出勤' || selected.status==='退勤済') b += '<button class="btn b-in" onclick="__punch(\'出勤\')">🟢 出勤</button>';
-      else if(selected.status==='勤務中'){ b += '<button class="btn b-bs" onclick="__punch(\'休憩開始\')">☕ 休憩開始</button>'; b += '<button class="btn b-out" onclick="__punch(\'退勤\')">🔴 退勤</button>'; }
-      else if(selected.status==='休憩中') b += '<button class="btn b-be" onclick="__punch(\'休憩終了\')">✅ 休憩終了</button>';
+      if(selected.status==='未出勤' || selected.status==='退勤済') b += '<button class="btn b-in" onclick="__punch(\'出勤\')">🟢 '+I18n.t('pIn')+'</button>';
+      else if(selected.status==='勤務中'){ b += '<button class="btn b-bs" onclick="__punch(\'休憩開始\')">☕ '+I18n.t('pBs')+'</button>'; b += '<button class="btn b-out" onclick="__punch(\'退勤\')">🔴 '+I18n.t('pOut')+'</button>'; }
+      else if(selected.status==='休憩中') b += '<button class="btn b-be" onclick="__punch(\'休憩終了\')">✅ '+I18n.t('pBe')+'</button>';
       $('mBtns').innerHTML = b;
       $('modal').classList.add('show');
     };
     function closeModal(){ $('modal').classList.remove('show'); selected=null; }
     $('mClose').onclick = closeModal;
 
-    var DONE = { '出勤':'出勤しました', '退勤':'お疲れさまでした', '休憩開始':'休憩開始', '休憩終了':'休憩終了' };
-    var ERR = { too_far:'⛔ 店舗から離れています', no_location:'⛔ 位置情報を許可してください', no_photo:'⛔ 写真が撮れませんでした', no_camera:'⛔ カメラを許可してください', already_in:'すでに出勤中です', not_in:'出勤していません' };
+    function DONE(type){ return ({ '出勤':I18n.t('dIn'), '退勤':I18n.t('dOut'), '休憩開始':I18n.t('dBs'), '休憩終了':I18n.t('dBe') })[type]; }
+    function ERR(e){ return ({ too_far:I18n.t('eFar'), no_location:I18n.t('eLoc'), no_photo:I18n.t('ePhoto'), no_camera:I18n.t('eCam'), already_in:I18n.t('eIn'), not_in:I18n.t('eNotIn') })[e]; }
 
     window.__punch = async function(type){
       if(!selected) return;
-      if(!camReady || !stream){ toast('カメラを許可してください', true); return; }
+      if(!camReady || !stream){ toast(I18n.t('camDeny'), true); return; }
       var btns = document.querySelectorAll('#mBtns .btn'); btns.forEach(function(b){ b.disabled=true; });
       try {
         var photo = capture(selected.name);
         var gps = await getGPS();
         var res = await apiPost('punch', { empId:selected.id, type:type, memo:$('mMemo').value, photo:photo, lat:gps&&gps.lat, lng:gps&&gps.lng });
-        if(res && res.success){ closeModal(); toast('✅ '+(DONE[type]||'完了')); loadEmployees(); }
+        if(res && res.success){ closeModal(); toast('✅ '+(DONE(type)||I18n.t('done'))); loadEmployees(); }
         else {
           var e = res && res.error;
-          var msg = ERR[e] || ('エラー'+(e?'（'+e+'）':''));
-          if(e==='too_far' && res.dist!=null) msg += '（約'+res.dist+'m / 許容'+res.radius+'m）';
+          var msg = ERR(e) || (I18n.t('errG')+(e?'（'+e+'）':''));
+          if(e==='too_far' && res.dist!=null) msg += '（'+I18n.t('approx')+res.dist+'m / '+I18n.t('allow')+res.radius+'m）';
           toast(msg, true);
           btns.forEach(function(b){ b.disabled=false; });
         }
-      } catch(err){ toast('エラー: '+(err.message||err), true); btns.forEach(function(b){ b.disabled=false; }); }
+      } catch(err){ toast(I18n.t('errPrefix')+(err.message||err), true); btns.forEach(function(b){ b.disabled=false; }); }
     };
 
+    var __loaded=false;
     function loadEmployees(){
-      apiPost('getEmployeeStatuses', {}).then(function(d){ employees = d||[]; render(); })
-        .catch(function(e){ $('area').innerHTML = '<div class="loading" style="color:var(--red)">エラー: '+esc(e.message||e)+'</div>'; });
+      apiPost('getEmployeeStatuses', {}).then(function(d){ employees = d||[]; __loaded=true; render(); })
+        .catch(function(e){ $('area').innerHTML = '<div class="loading" style="color:var(--red)">'+I18n.t('errPrefix')+esc(e.message||e)+'</div>'; });
     }
 
     function tick(){ var d=new Date(); $('now').textContent = '🕐 '+p(d.getHours())+':'+p(d.getMinutes()); }
+
+    I18n.init({
+      ja:{ back:'← 管理', title:'打刻', cam:'📷 カメラ', sub:'自分の名前をタップして出勤・退勤（写真と位置が記録されます）', loading:'読み込み中...', memo:'メモ（任意）', close:'閉じる',
+        stOut:'未出勤', stWork:'勤務中', stBreak:'休憩中', stDone:'退勤済',
+        noEmp:'従業員が未登録です。管理→ユーザー管理/勤怠で登録してください。',
+        pIn:'出勤', pOut:'退勤', pBs:'休憩開始', pBe:'休憩終了',
+        dIn:'出勤しました', dOut:'お疲れさまでした', dBs:'休憩開始', dBe:'休憩終了', done:'完了',
+        camDeny:'カメラを許可してください（打刻には写真が必要です）',
+        eFar:'⛔ 店舗から離れています', eLoc:'⛔ 位置情報を許可してください', ePhoto:'⛔ 写真が撮れませんでした', eCam:'⛔ カメラを許可してください', eIn:'すでに出勤中です', eNotIn:'出勤していません',
+        errG:'エラー', errPrefix:'エラー: ', approx:'約', allow:'許容' },
+      en:{ back:'← Manage', title:'Time Clock', cam:'📷 Camera', sub:'Tap your name to clock in/out (photo & location recorded)', loading:'Loading...', memo:'Memo (optional)', close:'Close',
+        stOut:'Out', stWork:'Working', stBreak:'On break', stDone:'Clocked out',
+        noEmp:'No employees registered. Add them in Manage → Users/Attendance.',
+        pIn:'Clock in', pOut:'Clock out', pBs:'Start break', pBe:'End break',
+        dIn:'Clocked in', dOut:'Thanks for your work', dBs:'Break started', dBe:'Break ended', done:'Done',
+        camDeny:'Please allow the camera (a photo is required to clock in)',
+        eFar:'⛔ Too far from the store', eLoc:'⛔ Please allow location', ePhoto:'⛔ Could not take a photo', eCam:'⛔ Please allow the camera', eIn:'Already clocked in', eNotIn:'Not clocked in',
+        errG:'Error', errPrefix:'Error: ', approx:'approx ', allow:'limit ' }
+    }, function(){ if(__loaded) render(); });
 
     tick(); setInterval(tick, 10000);
     initCamera();

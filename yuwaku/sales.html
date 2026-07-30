@@ -29,42 +29,43 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>📊 売上管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">📊 売上管理</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap">
     <div class="card">
-      <div class="card-title">📈 日別売上</div>
+      <div class="card-title" data-t="dailyTitle">📈 日別売上</div>
       <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
       <p id="noData" style="display:none;text-align:center;color:#aaa;padding:20px 0;"></p>
     </div>
     <div class="card">
-      <div class="card-title">📅 月別サマリー</div>
-      <div id="monthly"><div class="hint">読み込み中…</div></div>
+      <div class="card-title" data-t="monthlyTitle">📅 月別サマリー</div>
+      <div id="monthly"><div class="hint" data-t="loading">読み込み中…</div></div>
     </div>
     <div class="card">
-      <div class="card-title">🔎 分析（商品・時間帯・曜日）</div>
+      <div class="card-title" data-t="anaTitle">🔎 分析（商品・時間帯・曜日）</div>
       <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:130px;"><label class="form-label">対象月</label><input type="month" id="anaMonth" class="fc" style="width:100%;"></div>
-        <button class="btn" onclick="loadAnalytics()">🔍 分析</button>
+        <div style="flex:1;min-width:130px;"><label class="form-label" data-t="month">対象月</label><input type="month" id="anaMonth" class="fc" style="width:100%;"></div>
+        <button class="btn" onclick="loadAnalytics()" data-t="analyze">🔍 分析</button>
       </div>
       <div id="anaSummary" class="hint" style="margin-bottom:10px;"></div>
-      <div style="font-weight:800;margin:6px 0;">🏆 商品別（ABC分析）</div>
+      <div style="font-weight:800;margin:6px 0;" data-t="byItem">🏆 商品別（ABC分析）</div>
       <div style="overflow:auto;"><table id="anaItems"><tbody><tr><td style="color:#aaa;padding:14px;">—</td></tr></tbody></table></div>
-      <div style="font-weight:800;margin:14px 0 6px;">🍱 カテゴリ別売上</div>
+      <div style="font-weight:800;margin:14px 0 6px;" data-t="byCat">🍱 カテゴリ別売上</div>
       <div style="overflow:auto;"><table id="anaCat"><tbody><tr><td style="color:#aaa;padding:14px;">—</td></tr></tbody></table></div>
-      <div style="font-weight:800;margin:14px 0 6px;">🕐 時間帯別</div>
+      <div style="font-weight:800;margin:14px 0 6px;" data-t="byHour">🕐 時間帯別</div>
       <div style="height:180px;"><canvas id="hourChart"></canvas></div>
-      <div style="font-weight:800;margin:16px 0 6px;">📅 曜日別</div>
+      <div style="font-weight:800;margin:16px 0 6px;" data-t="byDow">📅 曜日別</div>
       <div style="height:180px;"><canvas id="dowChart"></canvas></div>
     </div>
     <div class="card">
-      <div class="card-title">🍽️ メニュー人気度スコア（直近30日）</div>
-      <div class="hint" style="margin-bottom:8px;">直近30日の注文数量で算出（最も売れた商品=100）。低スコア・未売上はメニュー見直しの参考に。</div>
-      <div id="popList" style="overflow:auto;"><div class="hint">読み込み中…</div></div>
+      <div class="card-title" data-t="popTitle">🍽️ メニュー人気度スコア（直近30日）</div>
+      <div class="hint" style="margin-bottom:8px;" data-t="popHint">直近30日の注文数量で算出（最も売れた商品=100）。低スコア・未売上はメニュー見直しの参考に。</div>
+      <div id="popList" style="overflow:auto;"><div class="hint" data-t="loading">読み込み中…</div></div>
     </div>
   </div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
@@ -73,17 +74,20 @@
     var SYM = '₱';
     function money(v){ return SYM + (Number(v)||0).toLocaleString(); }
     var dailyChart, hourChart, dowChart;
+    var _sales=null, _ana=null, _pop=null;
 
     function renderSales(data){
-      if (!data || !data.daily || !data.daily.length){ document.getElementById('noData').style.display='block'; document.getElementById('noData').innerText='売上データがありません。'; document.getElementById('monthly').innerHTML='<div class="hint">データなし</div>'; return; }
+      _sales = data || _sales;
+      data = _sales;
+      if (!data || !data.daily || !data.daily.length){ document.getElementById('noData').style.display='block'; document.getElementById('noData').innerText=I18n.t('noSales'); document.getElementById('monthly').innerHTML='<div class="hint">'+I18n.t('noData')+'</div>'; return; }
       var labels = data.daily.map(function(r){ return r.date; });
       var totals = data.daily.map(function(r){ return r.total; });
       if (dailyChart) dailyChart.destroy();
       dailyChart = new Chart(document.getElementById('dailyChart').getContext('2d'), {
-        type:'line', data:{ labels:labels, datasets:[{ label:'日別売上', data:totals, borderColor:'#c62828', backgroundColor:'rgba(198,40,40,0.12)', fill:true, tension:0.3, pointBackgroundColor:'#c62828' }] },
+        type:'line', data:{ labels:labels, datasets:[{ label:I18n.t('dailySales'), data:totals, borderColor:'#c62828', backgroundColor:'rgba(198,40,40,0.12)', fill:true, tension:0.3, pointBackgroundColor:'#c62828' }] },
         options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true, ticks:{ callback:function(v){ return money(v); } } } } }
       });
-      var mh = '<table><thead><tr><th>月</th><th style="text-align:right;">合計</th></tr></thead><tbody>';
+      var mh = '<table><thead><tr><th>'+I18n.t('colMonth')+'</th><th style="text-align:right;">'+I18n.t('colTotal')+'</th></tr></thead><tbody>';
       data.monthly.forEach(function(r){ mh += '<tr><td>'+esc(r.month)+'</td><td style="text-align:right;"><strong>'+money(r.total)+'</strong></td></tr>'; });
       mh += '</tbody></table>';
       document.getElementById('monthly').innerHTML = mh;
@@ -91,26 +95,27 @@
 
     window.loadAnalytics = function(){
       var month = document.getElementById('anaMonth').value; if(!month) return;
-      document.getElementById('anaItems').innerHTML = '<tbody><tr><td style="padding:14px;">読み込み中…</td></tr></tbody>';
+      document.getElementById('anaItems').innerHTML = '<tbody><tr><td style="padding:14px;">'+I18n.t('loading')+'</td></tr></tbody>';
       rpc('getSalesAnalytics',[month]).then(renderAnalytics).catch(function(e){ document.getElementById('anaItems').innerHTML='<tbody><tr><td style="color:#b91c1c;padding:14px;">'+esc(e.message||e)+'</td></tr></tbody>'; });
     };
     function renderAnalytics(d){
-      d = d || { items:[], byHour:[], byDow:[], total:0, count:0 };
-      document.getElementById('anaSummary').innerText = '注文 '+d.count+'件 ・ 売上 '+money(d.total)+' ・ 客単価 '+money(d.avg||0)+' ・ 原価率 '+(d.costRate||0)+'%';
+      _ana = d || _ana || { items:[], byHour:[], byDow:[], total:0, count:0 };
+      d = _ana;
+      document.getElementById('anaSummary').innerText = I18n.t('sOrders')+d.count+I18n.t('sOrdersU')+' ・ '+I18n.t('sSales')+money(d.total)+' ・ '+I18n.t('sAvg')+money(d.avg||0)+' ・ '+I18n.t('sCost')+(d.costRate||0)+'%';
       var abc = { A:'#16a34a', B:'#f59e0b', C:'#94a3b8' };
-      var html = '<thead><tr><th>商品</th><th style="text-align:right;">数量</th><th style="text-align:right;">売上</th><th style="text-align:right;">原価</th><th style="text-align:right;">原価率</th><th style="text-align:right;">累計比</th><th>ABC</th></tr></thead><tbody>';
-      if (!d.items.length) html += '<tr><td colspan="7" style="color:#aaa;padding:14px;">データがありません</td></tr>';
+      var html = '<thead><tr><th>'+I18n.t('cItem')+'</th><th style="text-align:right;">'+I18n.t('cQty')+'</th><th style="text-align:right;">'+I18n.t('cRev')+'</th><th style="text-align:right;">'+I18n.t('cCost')+'</th><th style="text-align:right;">'+I18n.t('cCostR')+'</th><th style="text-align:right;">'+I18n.t('cCum')+'</th><th>ABC</th></tr></thead><tbody>';
+      if (!d.items.length) html += '<tr><td colspan="7" style="color:#aaa;padding:14px;">'+I18n.t('noData')+'</td></tr>';
       d.items.forEach(function(it){ html += '<tr><td>'+esc(it.name)+'</td><td style="text-align:right;">'+it.qty+'</td><td style="text-align:right;">'+money(it.revenue)+'</td><td style="text-align:right;color:var(--text-3);">'+money(it.cost||0)+'</td><td style="text-align:right;">'+(it.costRate||0)+'%</td><td style="text-align:right;">'+it.cumPct+'%</td><td><span style="background:'+(abc[it.abc]||'#94a3b8')+';color:#fff;font-weight:800;font-size:11px;padding:1px 8px;border-radius:999px;">'+it.abc+'</span></td></tr>'; });
       html += '</tbody>';
       document.getElementById('anaItems').innerHTML = html;
-      var ch = '<thead><tr><th>カテゴリ</th><th style="text-align:right;">売上</th></tr></thead><tbody>';
-      (d.byCategory||[]).forEach(function(c){ ch += '<tr><td>'+esc(c.category||'その他')+'</td><td style="text-align:right;">'+money(c.revenue)+'</td></tr>'; });
+      var ch = '<thead><tr><th>'+I18n.t('cCat')+'</th><th style="text-align:right;">'+I18n.t('cRev')+'</th></tr></thead><tbody>';
+      (d.byCategory||[]).forEach(function(c){ ch += '<tr><td>'+esc(c.category||I18n.t('other'))+'</td><td style="text-align:right;">'+money(c.revenue)+'</td></tr>'; });
       if(!(d.byCategory||[]).length) ch += '<tr><td colspan="2" style="color:#aaa;padding:14px;">—</td></tr>';
       ch += '</tbody>'; document.getElementById('anaCat').innerHTML = ch;
-      var hLabels = d.byHour.map(function(x){ return x.hour+'時'; });
+      var hLabels = d.byHour.map(function(x){ return x.hour+I18n.t('hourU'); });
       if (hourChart) hourChart.destroy();
       hourChart = new Chart(document.getElementById('hourChart').getContext('2d'), { type:'bar', data:{ labels:hLabels, datasets:[{ data:d.byHour.map(function(x){return x.revenue;}), backgroundColor:'#2563eb' }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} } });
-      var dowNames = ['日','月','火','水','木','金','土'];
+      var dowNames = I18n.t('dowNames').split(',');
       if (dowChart) dowChart.destroy();
       dowChart = new Chart(document.getElementById('dowChart').getContext('2d'), { type:'bar', data:{ labels:dowNames, datasets:[{ data:d.byDow.map(function(x){return x.revenue;}), backgroundColor:'#16a34a' }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} } });
     }
@@ -118,14 +123,15 @@
     // 通貨記号
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM = r.data.currencySymbol; }).catch(function(){});
     document.getElementById('anaMonth').value = new Date().toISOString().slice(0,7);
-    rpc('getSalesSummary',[]).then(renderSales).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('monthly').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
+    rpc('getSalesSummary',[]).then(renderSales).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('monthly').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
     loadAnalytics();
 
     function renderPopularity(d){
-      d = d || { items:[] };
-      var lb = { hot:['🔥人気','#16a34a'], ok:['標準','#2563eb'], low:['⚠️低調','#f59e0b'], unsold:['❌未売上','#b91c1c'] };
-      var html = '<table><thead><tr><th>#</th><th>商品</th><th>カテゴリ</th><th style="text-align:right;">数量</th><th>スコア</th><th></th></tr></thead><tbody>';
-      if(!d.items.length){ html += '<tr><td colspan="6" style="color:#aaa;padding:14px;">データがありません</td></tr>'; }
+      _pop = d || _pop || { items:[] };
+      d = _pop;
+      var lb = { hot:[I18n.t('lHot'),'#16a34a'], ok:[I18n.t('lOk'),'#2563eb'], low:[I18n.t('lLow'),'#f59e0b'], unsold:[I18n.t('lUnsold'),'#b91c1c'] };
+      var html = '<table><thead><tr><th>#</th><th>'+I18n.t('cItem')+'</th><th>'+I18n.t('cCat')+'</th><th style="text-align:right;">'+I18n.t('cQty')+'</th><th>'+I18n.t('cScore')+'</th><th></th></tr></thead><tbody>';
+      if(!d.items.length){ html += '<tr><td colspan="6" style="color:#aaa;padding:14px;">'+I18n.t('noData')+'</td></tr>'; }
       d.items.forEach(function(it,i){
         var l = lb[it.label]||lb.ok;
         var bar = '<div style="background:#eef1f5;border-radius:6px;height:10px;width:88px;overflow:hidden;display:inline-block;vertical-align:middle;"><div style="height:10px;width:'+it.score+'%;background:'+l[1]+';"></div></div> <span style="font-weight:800;">'+it.score+'</span>';
@@ -135,6 +141,11 @@
       document.getElementById('popList').innerHTML = html;
     }
     rpc('getMenuPopularity',[30]).then(renderPopularity).catch(function(e){ document.getElementById('popList').innerHTML='<div style="color:#b91c1c;">'+esc(e.message||e)+'</div>'; });
+
+    I18n.init({
+      ja:{ title:'📊 売上管理', back:'← 管理へ', dailyTitle:'📈 日別売上', monthlyTitle:'📅 月別サマリー', anaTitle:'🔎 分析（商品・時間帯・曜日）', month:'対象月', analyze:'🔍 分析', byItem:'🏆 商品別（ABC分析）', byCat:'🍱 カテゴリ別売上', byHour:'🕐 時間帯別', byDow:'📅 曜日別', popTitle:'🍽️ メニュー人気度スコア（直近30日）', popHint:'直近30日の注文数量で算出（最も売れた商品=100）。低スコア・未売上はメニュー見直しの参考に。', loading:'読み込み中…', noData:'データがありません', noSales:'売上データがありません。', dailySales:'日別売上', colMonth:'月', colTotal:'合計', sOrders:'注文 ', sOrdersU:'件', sSales:'売上 ', sAvg:'客単価 ', sCost:'原価率 ', cItem:'商品', cQty:'数量', cRev:'売上', cCost:'原価', cCostR:'原価率', cCum:'累計比', cCat:'カテゴリ', cScore:'スコア', other:'その他', hourU:'時', dowNames:'日,月,火,水,木,金,土', lHot:'🔥人気', lOk:'標準', lLow:'⚠️低調', lUnsold:'❌未売上', loadErr:'読み込みエラー: ' },
+      en:{ title:'📊 Sales', back:'← Manage', dailyTitle:'📈 Daily sales', monthlyTitle:'📅 Monthly summary', anaTitle:'🔎 Analysis (items / hours / days)', month:'Target month', analyze:'🔍 Analyze', byItem:'🏆 By item (ABC analysis)', byCat:'🍱 Sales by category', byHour:'🕐 By hour', byDow:'📅 By day of week', popTitle:'🍽️ Menu popularity score (last 30 days)', popHint:'Based on order quantity over the last 30 days (top seller = 100). Low-score / unsold items help you review the menu.', loading:'Loading…', noData:'No data', noSales:'No sales data.', dailySales:'Daily sales', colMonth:'Month', colTotal:'Total', sOrders:'Orders ', sOrdersU:'', sSales:'Sales ', sAvg:'Avg/order ', sCost:'Cost rate ', cItem:'Item', cQty:'Qty', cRev:'Revenue', cCost:'Cost', cCostR:'Cost %', cCum:'Cum %', cCat:'Category', cScore:'Score', other:'Other', hourU:':00', dowNames:'Sun,Mon,Tue,Wed,Thu,Fri,Sat', lHot:'🔥Popular', lOk:'Normal', lLow:'⚠️Low', lUnsold:'❌Unsold', loadErr:'Load error: ' }
+    }, function(){ if(_sales) renderSales(); if(_ana) renderAnalytics(); if(_pop) renderPopularity(); });
   </script>
 </body>
 </html>

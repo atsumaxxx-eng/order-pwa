@@ -27,21 +27,22 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>🕐 勤怠管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">🕐 勤怠管理</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap"><div class="card">
     <div class="bar">
-      <div style="flex:1;"><label class="hint">対象月</label><br><input type="month" id="month" class="fc" style="width:100%;"></div>
-      <button class="btn" onclick="load()">🔍 表示</button>
+      <div style="flex:1;"><label class="hint" data-t="month">対象月</label><br><input type="month" id="month" class="fc" style="width:100%;"></div>
+      <button class="btn" onclick="load()" data-t="show">🔍 表示</button>
     </div>
-    <div class="hint" style="margin-bottom:8px;">労働時間・残業（8時間超）・深夜（22-5時）・出勤日数・給与概算を集計します。概算＝時給×労働時間。</div>
+    <div class="hint" style="margin-bottom:8px;" data-t="hint">労働時間・残業（8時間超）・深夜（22-5時）・出勤日数・給与概算を集計します。概算＝時給×労働時間。</div>
     <div style="overflow:auto;">
-      <table><thead><tr><th>従業員</th><th style="text-align:right;">出勤日</th><th style="text-align:right;">労働</th><th style="text-align:right;">残業</th><th style="text-align:right;">深夜</th><th style="text-align:right;">時給</th><th style="text-align:right;">概算</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;">月を選んで表示</td></tr></tbody></table>
+      <table><thead><tr><th data-t="colEmp">従業員</th><th style="text-align:right;" data-t="colDays">出勤日</th><th style="text-align:right;" data-t="colWork">労働</th><th style="text-align:right;" data-t="colOt">残業</th><th style="text-align:right;" data-t="colNight">深夜</th><th style="text-align:right;" data-t="colWage">時給</th><th style="text-align:right;" data-t="colEst">概算</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;" data-t="pickMonth">月を選んで表示</td></tr></tbody></table>
     </div>
   </div></div>
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
@@ -52,10 +53,10 @@
 
     window.load = function(){
       var month = document.getElementById('month').value; if(!month) return;
-      document.getElementById('rows').innerHTML = '<tr><td colspan="7" style="padding:14px;">読み込み中…</td></tr>';
+      document.getElementById('rows').innerHTML = '<tr><td colspan="7" style="padding:14px;">'+I18n.t('loading')+'</td></tr>';
       rpc('getAttendanceMonthlySummary',[month]).then(function(list){
         list = (list||[]).filter(function(e){ return e.days>0 || e.workedMin>0; }).sort(function(a,b){ return (b.estimate||0)-(a.estimate||0); });
-        if (!list.length){ document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;">この月の勤怠データはありません</td></tr>'; return; }
+        if (!list.length){ document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('noData')+'</td></tr>'; return; }
         document.getElementById('rows').innerHTML = list.map(function(e){
           return '<tr><td>'+esc(e.name)+'</td>'+
             '<td class="num">'+(e.days||0)+'</td>'+
@@ -65,11 +66,17 @@
             '<td class="num">'+SYM+(Number(e.wage)||0).toLocaleString()+'</td>'+
             '<td class="num est">'+SYM+(Number(e.estimate)||0).toLocaleString()+'</td></tr>';
         }).join('');
-      }).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#b91c1c;padding:14px;">読み込みエラー: '+esc(e.message||e)+'</td></tr>'; });
+      }).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#b91c1c;padding:14px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
     };
 
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; }).catch(function(){});
     document.getElementById('month').value = new Date().toISOString().slice(0,7);
+
+    I18n.init({
+      ja:{ title:'🕐 勤怠管理', back:'← 管理へ', month:'対象月', show:'🔍 表示', hint:'労働時間・残業（8時間超）・深夜（22-5時）・出勤日数・給与概算を集計します。概算＝時給×労働時間。', colEmp:'従業員', colDays:'出勤日', colWork:'労働', colOt:'残業', colNight:'深夜', colWage:'時給', colEst:'概算', pickMonth:'月を選んで表示', loading:'読み込み中…', noData:'この月の勤怠データはありません', loadErr:'読み込みエラー: ' },
+      en:{ title:'🕐 Attendance', back:'← Manage', month:'Target month', show:'🔍 Show', hint:'Summarizes work hours, overtime (over 8h), late-night (22–5), days worked and estimated pay. Estimate = wage × work hours.', colEmp:'Employee', colDays:'Days', colWork:'Work', colOt:'OT', colNight:'Night', colWage:'Wage', colEst:'Estimate', pickMonth:'Pick a month to show', loading:'Loading…', noData:'No attendance data for this month', loadErr:'Load error: ' }
+    }, function(){ load(); });
+
     load();
   </script>
 </body>

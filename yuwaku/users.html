@@ -41,41 +41,41 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1>👥 ユーザー管理</h1><a class="hbtn" href="./manage.html">← 管理へ</a></div>
+  <div class="head"><h1 data-t="title">👥 ユーザー管理</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
   <div class="wrap">
     <div class="tabs">
-      <div class="tab active" id="tab-u" onclick="switchTab('u')">👤 ユーザー</div>
-      <div class="tab" id="tab-p" onclick="switchTab('p')">🔑 権限マスタ</div>
+      <div class="tab active" id="tab-u" onclick="switchTab('u')" data-t="tabU">👤 ユーザー</div>
+      <div class="tab" id="tab-p" onclick="switchTab('p')" data-t="tabP">🔑 権限マスタ</div>
     </div>
 
     <div class="pane active" id="pane-u">
       <div class="card">
-        <div class="card-title">➕ ユーザーの追加 / 編集</div>
+        <div class="card-title" data-t="formTitle">➕ ユーザーの追加 / 編集</div>
         <input type="hidden" id="uId">
         <div class="grid2">
-          <div class="fg"><label class="form-label">名前</label><input id="uName" class="fc"></div>
-          <div class="fg"><label class="form-label">権限グループ</label><select id="uRole" class="fc"><option>一般</option><option>マネージャー</option><option>管理者</option><option>システム</option></select></div>
-          <div class="fg"><label class="form-label">ログインID</label><input id="uLogin" class="fc" autocomplete="off"></div>
-          <div class="fg"><label class="form-label">時給</label><input id="uWage" type="number" min="0" class="fc"></div>
-          <div class="fg"><label class="form-label">パスワード</label><input id="uPass" type="password" class="fc" autocomplete="new-password"><div class="muted">空欄なら変更しません（新規は6文字以上必須）</div></div>
-          <div class="fg"><label class="form-label">ステータス</label><select id="uStatus" class="fc"><option value="在籍">在籍</option><option value="退職">退職</option></select></div>
+          <div class="fg"><label class="form-label" data-t="lblName">名前</label><input id="uName" class="fc"></div>
+          <div class="fg"><label class="form-label" data-t="lblRole">権限グループ</label><select id="uRole" class="fc"><option value="一般" data-t="rGen">一般</option><option value="マネージャー" data-t="rMgr">マネージャー</option><option value="管理者" data-t="rAdmin">管理者</option><option value="システム" data-t="rSys">システム</option></select></div>
+          <div class="fg"><label class="form-label" data-t="lblLogin">ログインID</label><input id="uLogin" class="fc" autocomplete="off"></div>
+          <div class="fg"><label class="form-label" data-t="lblWage">時給</label><input id="uWage" type="number" min="0" class="fc"></div>
+          <div class="fg"><label class="form-label" data-t="lblPass">パスワード</label><input id="uPass" type="password" class="fc" autocomplete="new-password"><div class="muted" data-t="passHint">空欄なら変更しません（新規は6文字以上必須）</div></div>
+          <div class="fg"><label class="form-label" data-t="lblStatus">ステータス</label><select id="uStatus" class="fc"><option value="在籍" data-t="stActive">在籍</option><option value="退職" data-t="stLeft">退職</option></select></div>
         </div>
-        <button class="btn btn-pri" id="saveU" onclick="saveUser()">💾 保存</button>
-        <button class="btn btn-sec" onclick="clearForm()">クリア</button>
+        <button class="btn btn-pri" id="saveU" onclick="saveUser()" data-t="save">💾 保存</button>
+        <button class="btn btn-sec" onclick="clearForm()" data-t="clear">クリア</button>
         <div class="alert" id="uMsg"></div>
       </div>
       <div class="card">
-        <div class="card-title">👥 ユーザー一覧</div>
-        <div id="uList"><div class="muted">読み込み中…</div></div>
+        <div class="card-title" data-t="listTitle">👥 ユーザー一覧</div>
+        <div id="uList"><div class="muted" data-t="loading">読み込み中…</div></div>
       </div>
     </div>
 
     <div class="pane" id="pane-p">
       <div class="card">
-        <div class="card-title">🔑 権限マトリクス</div>
-        <div class="muted" style="margin-bottom:10px;line-height:1.7;">権限グループ×メニューでアクセス可否を設定します。✓＝表示/アクセス可。システムは常に全権限（ロックアウト防止）。</div>
-        <div style="overflow:auto;"><table class="pm" id="pmTable"><tbody><tr><td class="muted">読み込み中…</td></tr></tbody></table></div>
-        <button class="btn btn-pri" id="saveP" onclick="savePerms()">💾 保存</button>
+        <div class="card-title" data-t="pmTitle">🔑 権限マトリクス</div>
+        <div class="muted" style="margin-bottom:10px;line-height:1.7;" data-t="pmHint">権限グループ×メニューでアクセス可否を設定します。✓＝表示/アクセス可。システムは常に全権限（ロックアウト防止）。</div>
+        <div style="overflow:auto;"><table class="pm" id="pmTable"><tbody><tr><td class="muted" data-t="loading">読み込み中…</td></tr></tbody></table></div>
+        <button class="btn btn-pri" id="saveP" onclick="savePerms()" data-t="save">💾 保存</button>
         <div class="alert" id="pMsg"></div>
       </div>
     </div>
@@ -83,13 +83,14 @@
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     if (!TOKEN) location.href = './manage.html';
     function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     var allUsers = [], pmData = null;
-    var LBL = { admin:'注文管理', menu_editor:'メニュー', inventory:'在庫', drink_inv:'ドリンク', sales:'売上', attendance:'勤怠', printers:'プリンタ', settings:'設定', users:'ユーザー', members:'会員', coupons:'クーポン' };
+    function LBL(k){ return I18n.t('pg_'+k) || k; }
 
     window.switchTab = function(w){
       document.getElementById('tab-u').classList.toggle('active', w==='u');
@@ -101,15 +102,15 @@
     function msg(id, text, ok){ var e=document.getElementById(id); e.style.display='block'; e.style.background=ok?'#dcfce7':'#fee2e2'; e.style.color=ok?'#15803d':'#b91c1c'; e.innerText=text; }
 
     function renderUsers(){
-      if (!allUsers.length){ document.getElementById('uList').innerHTML='<div class="muted" style="padding:14px 0;">データがありません</div>'; return; }
+      if (!allUsers.length){ document.getElementById('uList').innerHTML='<div class="muted" style="padding:14px 0;">'+I18n.t('noData')+'</div>'; return; }
       document.getElementById('uList').innerHTML = allUsers.map(function(u){
         return '<div class="u-row"><div style="flex:1;min-width:120px;"><div class="nm">'+esc(u.name)+'</div>'+
-          '<div class="lid">'+(u.loginId?esc(u.loginId):'<span class="muted">(未設定)</span>')+'</div></div>'+
+          '<div class="lid">'+(u.loginId?esc(u.loginId):'<span class="muted">'+I18n.t('notSet')+'</span>')+'</div></div>'+
           '<span class="chip">'+esc(u.role)+'</span>'+
-          '<span class="muted">PW: '+(u.hasPassword?'設定済':'—')+'</span>'+
-          (u.status==='退職'?'<span class="muted">(退職)</span>':'')+
-          '<button class="btn-sm b-edit" onclick="editUser(\''+u.id+'\')">編集</button>'+
-          '<button class="btn-sm b-del" onclick="delUser(\''+u.id+'\')">削除</button></div>';
+          '<span class="muted">PW: '+(u.hasPassword?I18n.t('pwSet'):'—')+'</span>'+
+          (u.status==='退職'?'<span class="muted">('+I18n.t('stLeft')+')</span>':'')+
+          '<button class="btn-sm b-edit" onclick="editUser(\''+u.id+'\')">'+I18n.t('edit')+'</button>'+
+          '<button class="btn-sm b-del" onclick="delUser(\''+u.id+'\')">'+I18n.t('del')+'</button></div>';
       }).join('');
     }
     window.editUser = function(id){
@@ -123,31 +124,31 @@
     window.clearForm = function(){ ['uId','uName','uLogin','uWage','uPass'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('uRole').value='一般'; document.getElementById('uStatus').value='在籍'; document.getElementById('uMsg').style.display='none'; };
     window.saveUser = function(){
       var name = document.getElementById('uName').value.trim();
-      if (!name){ msg('uMsg','名前を入力してください', false); return; }
+      if (!name){ msg('uMsg',I18n.t('needName'), false); return; }
       var emp = { id:document.getElementById('uId').value||'', name:name, role:document.getElementById('uRole').value,
         loginId:document.getElementById('uLogin').value.trim(), wage:Number(document.getElementById('uWage').value)||0,
         password:document.getElementById('uPass').value, status:document.getElementById('uStatus').value };
       var btn=document.getElementById('saveU'); btn.disabled=true;
       rpc('saveEmployee',[emp]).then(function(r){
         btn.disabled=false;
-        if (r && r.success){ msg('uMsg','✅ 保存しました', true); clearForm(); return rpc('getAllEmployees',[]).then(function(l){ allUsers=l||[]; renderUsers(); }); }
-        else { msg('uMsg', r&&r.error==='duplicate_login_id'?'そのログインIDは既に使われています':(r&&r.error==='password_too_short'?'パスワードは6文字以上にしてください':'エラー'), false); }
-      }).catch(function(e){ btn.disabled=false; msg('uMsg','エラー: '+(e.message||e), false); });
+        if (r && r.success){ msg('uMsg',I18n.t('saved'), true); clearForm(); return rpc('getAllEmployees',[]).then(function(l){ allUsers=l||[]; renderUsers(); }); }
+        else { msg('uMsg', r&&r.error==='duplicate_login_id'?I18n.t('dupLogin'):(r&&r.error==='password_too_short'?I18n.t('pwShort'):I18n.t('errG')), false); }
+      }).catch(function(e){ btn.disabled=false; msg('uMsg',I18n.t('errPrefix')+(e.message||e), false); });
     };
     window.delUser = function(id){
-      if (!confirm('このユーザーを削除しますか？')) return;
+      if (!confirm(I18n.t('delConfirm'))) return;
       rpc('deleteEmployee',[id]).then(function(){ return rpc('getAllEmployees',[]); }).then(function(l){ allUsers=l||[]; renderUsers(); })
-        .catch(function(e){ msg('uMsg','エラー: '+(e.message||e), false); });
+        .catch(function(e){ msg('uMsg',I18n.t('errPrefix')+(e.message||e), false); });
     };
 
     function loadMatrix(){
       rpc('getPermissionMatrixForUI',[]).then(function(d){ pmData=d; renderMatrix(); })
-        .catch(function(e){ document.getElementById('pmTable').innerHTML='<tbody><tr><td class="muted">エラー: '+esc(e.message||e)+'</td></tr></tbody>'; });
+        .catch(function(e){ document.getElementById('pmTable').innerHTML='<tbody><tr><td class="muted">'+I18n.t('errPrefix')+esc(e.message||e)+'</td></tr></tbody>'; });
     }
     function renderMatrix(){
       if (!pmData) return;
-      var html = '<thead><tr><th>権限</th>';
-      pmData.pages.forEach(function(k){ html += '<th>'+esc(LBL[k]||k)+'</th>'; });
+      var html = '<thead><tr><th>'+I18n.t('colRole')+'</th>';
+      pmData.pages.forEach(function(k){ html += '<th>'+esc(LBL(k))+'</th>'; });
       html += '</tr></thead><tbody>';
       pmData.roles.forEach(function(role){
         html += '<tr><td>'+esc(role)+'</td>';
@@ -166,12 +167,18 @@
       var boxes = document.querySelectorAll('#pmTable input[type="checkbox"]');
       for (var i=0;i<boxes.length;i++){ matrix[boxes[i].getAttribute('data-role')][boxes[i].getAttribute('data-key')] = boxes[i].checked; }
       var btn=document.getElementById('saveP'); btn.disabled=true;
-      rpc('savePermissionMatrix',[matrix]).then(function(res){ btn.disabled=false; if(res&&res.success){ msg('pMsg','✅ 保存しました', true); pmData.matrix=matrix; } else { msg('pMsg', res&&res.error==='forbidden'?'権限がありません':'エラー', false); } })
-        .catch(function(e){ btn.disabled=false; msg('pMsg','エラー: '+(e.message||e), false); });
+      rpc('savePermissionMatrix',[matrix]).then(function(res){ btn.disabled=false; if(res&&res.success){ msg('pMsg',I18n.t('saved'), true); pmData.matrix=matrix; } else { msg('pMsg', res&&res.error==='forbidden'?I18n.t('forbidden'):I18n.t('errG'), false); } })
+        .catch(function(e){ btn.disabled=false; msg('pMsg',I18n.t('errPrefix')+(e.message||e), false); });
     };
 
-    rpc('getAllEmployees',[]).then(function(l){ allUsers=l||[]; renderUsers(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('uList').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
+    var __loaded=false;
+    rpc('getAllEmployees',[]).then(function(l){ allUsers=l||[]; __loaded=true; renderUsers(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('uList').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
+
+    I18n.init({
+      ja:{ title:'👥 ユーザー管理', back:'← 管理へ', tabU:'👤 ユーザー', tabP:'🔑 権限マスタ', formTitle:'➕ ユーザーの追加 / 編集', lblName:'名前', lblRole:'権限グループ', rGen:'一般', rMgr:'マネージャー', rAdmin:'管理者', rSys:'システム', lblLogin:'ログインID', lblWage:'時給', lblPass:'パスワード', passHint:'空欄なら変更しません（新規は6文字以上必須）', lblStatus:'ステータス', stActive:'在籍', stLeft:'退職', save:'💾 保存', clear:'クリア', listTitle:'👥 ユーザー一覧', loading:'読み込み中…', pmTitle:'🔑 権限マトリクス', pmHint:'権限グループ×メニューでアクセス可否を設定します。✓＝表示/アクセス可。システムは常に全権限（ロックアウト防止）。', colRole:'権限', noData:'データがありません', notSet:'(未設定)', pwSet:'設定済', edit:'編集', del:'削除', needName:'名前を入力してください', saved:'✅ 保存しました', dupLogin:'そのログインIDは既に使われています', pwShort:'パスワードは6文字以上にしてください', errG:'エラー', delConfirm:'このユーザーを削除しますか？', forbidden:'権限がありません', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', pg_admin:'注文管理', pg_menu_editor:'メニュー', pg_inventory:'在庫', pg_drink_inv:'ドリンク', pg_sales:'売上', pg_attendance:'勤怠', pg_printers:'プリンタ', pg_settings:'設定', pg_users:'ユーザー', pg_members:'会員', pg_coupons:'クーポン' },
+      en:{ title:'👥 Users', back:'← Manage', tabU:'👤 Users', tabP:'🔑 Permissions', formTitle:'➕ Add / Edit user', lblName:'Name', lblRole:'Role group', rGen:'General', rMgr:'Manager', rAdmin:'Admin', rSys:'System', lblLogin:'Login ID', lblWage:'Hourly wage', lblPass:'Password', passHint:'Leave blank to keep unchanged (new users need 6+ chars)', lblStatus:'Status', stActive:'Active', stLeft:'Left', save:'💾 Save', clear:'Clear', listTitle:'👥 User list', loading:'Loading…', pmTitle:'🔑 Permission matrix', pmHint:'Set access per role × menu. ✓ = visible/allowed. System always has full access (lockout prevention).', colRole:'Role', noData:'No data', notSet:'(not set)', pwSet:'Set', edit:'Edit', del:'Delete', needName:'Please enter a name', saved:'✅ Saved', dupLogin:'That login ID is already in use', pwShort:'Password must be 6+ characters', errG:'Error', delConfirm:'Delete this user?', forbidden:'No permission', errPrefix:'Error: ', loadErr:'Load error: ', pg_admin:'Orders', pg_menu_editor:'Menu', pg_inventory:'Inventory', pg_drink_inv:'Drinks', pg_sales:'Sales', pg_attendance:'Attendance', pg_printers:'Printers', pg_settings:'Settings', pg_users:'Users', pg_members:'Members', pg_coupons:'Coupons' }
+    }, function(){ if(__loaded) renderUsers(); if(pmData) renderMatrix(); });
   </script>
 </body>
 </html>
