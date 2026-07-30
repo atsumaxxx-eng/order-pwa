@@ -1,143 +1,104 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles.css">
-  <title>Order</title>
+  <title>izakanpai — 飲食店向けQRオーダー＆店舗管理</title>
+  <meta name="description" content="izakanpai（イザカンパイ）は、QRセルフオーダーから在庫・売上・勤怠までを一つにした飲食店向けクラウド管理システムです。">
+  <style>
+    :root{ --navy:#0f172a; --amber:#f59e0b; --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --text:#0f172a; --muted:#64748b; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; color:var(--text); background:var(--bg); line-height:1.7; }
+    a{ color:inherit; }
+    .wrap{ max-width:960px; margin:0 auto; padding:0 20px; }
+
+    header{ position:sticky; top:0; z-index:10; background:rgba(15,23,42,.92); backdrop-filter:blur(6px); color:#fff; }
+    header .wrap{ display:flex; align-items:center; justify-content:space-between; height:60px; }
+    .logo{ font-weight:900; font-size:20px; letter-spacing:-.01em; }
+    .logo b{ color:var(--amber); }
+    .nav a{ color:#cbd5e1; text-decoration:none; font-size:14px; font-weight:700; margin-left:18px; }
+    .nav a:hover{ color:#fff; }
+
+    .hero{ background:linear-gradient(160deg,#0f172a 0%,#1e293b 100%); color:#fff; padding:72px 0 80px; text-align:center; }
+    .hero h1{ font-size:40px; font-weight:900; margin:0 0 14px; letter-spacing:-.02em; }
+    .hero h1 b{ color:var(--amber); }
+    .hero p{ font-size:17px; color:#cbd5e1; max-width:620px; margin:0 auto 28px; }
+    .hero .en{ font-size:13px; letter-spacing:.15em; text-transform:uppercase; color:#94a3b8; margin-bottom:10px; }
+    .btns{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    .btn{ display:inline-block; text-decoration:none; font-weight:800; font-size:15px; padding:13px 24px; border-radius:12px; }
+    .btn-pri{ background:var(--amber); color:#111827; }
+    .btn-ghost{ background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.2); }
+
+    section{ padding:60px 0; }
+    .section-title{ text-align:center; font-size:26px; font-weight:900; margin:0 0 6px; }
+    .section-sub{ text-align:center; color:var(--muted); margin:0 0 40px; }
+    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:18px; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:22px; }
+    .card .ic{ font-size:30px; }
+    .card h3{ font-size:16px; font-weight:800; margin:12px 0 6px; }
+    .card p{ font-size:14px; color:var(--muted); margin:0; }
+
+    .cta{ background:var(--navy); color:#fff; border-radius:20px; padding:44px 28px; text-align:center; }
+    .cta h2{ font-size:24px; font-weight:900; margin:0 0 10px; }
+    .cta p{ color:#cbd5e1; margin:0 0 22px; }
+
+    footer{ text-align:center; color:var(--muted); font-size:13px; padding:36px 0 48px; }
+    @media(max-width:560px){ .hero h1{ font-size:30px; } }
+  </style>
 </head>
 <body>
-  <div class="appbar">
-    <div class="title" id="shopName">Order</div>
-    <div class="table-chip" id="tableChip">Table —</div>
-    <button class="lang-btn" id="memberBtn" style="display:none;">🎁</button>
-    <button class="lang-btn" id="couponBtn">🎟️</button>
-    <button class="lang-btn" id="langBtn">JP</button>
-  </div>
+  <header>
+    <div class="wrap">
+      <div class="logo">izaka<b>npai</b></div>
+      <nav class="nav">
+        <a href="#features">特長</a>
+        <a href="#contact">お問い合わせ</a>
+      </nav>
+    </div>
+  </header>
 
-  <div class="net-banner offline-b" id="offlineBanner">
-    <span>📴</span><span id="offlineText">Offline — orders will be sent automatically when back online</span>
-  </div>
-
-  <img id="shopBanner" class="shop-banner" alt="" style="display:none;">
-
-
-  <div class="cats" id="cats"></div>
-
-  <div id="menuArea">
-    <div class="loading"><span class="spinner"></span></div>
-  </div>
-
-  <div class="cartbar">
-    <div class="row">
-      <div class="tot">
-        <div class="lbl" id="totalLbl">Total</div>
-        <div class="val" id="totalVal">—</div>
-        <div class="sub" id="totalSub"></div>
+  <div class="hero">
+    <div class="wrap">
+      <div class="en">QR Order &amp; Restaurant Management</div>
+      <h1>飲食店の注文と運営を、<br><b>ひとつに。</b></h1>
+      <p>QRセルフオーダーから、キッチン表示・在庫・売上・勤怠・多言語対応まで。izakanpai（イザカンパイ）は、小さなお店でもすぐ始められる飲食店向けクラウド管理システムです。</p>
+      <div class="btns">
+        <a class="btn btn-pri" href="#contact">導入のご相談</a>
+        <a class="btn btn-ghost" href="#features">特長を見る</a>
       </div>
-      <button class="btn-send" id="sendBtn" disabled>
-        <span id="sendLbl">Order</span>
-        <span class="pending-pill" id="pendingPill">0</span>
-      </button>
     </div>
   </div>
 
-  <!-- Success -->
-  <div class="overlay" id="okOverlay">
-    <div class="sheet">
-      <div class="emoji" id="okEmoji">✅</div>
-      <h3 id="okTitle">Order sent</h3>
-      <p id="okMsg"></p>
-      <button class="btn-send ok" id="okBtn">OK</button>
-    </div>
-  </div>
-
-  <!-- Error -->
-  <div class="overlay" id="errOverlay">
-    <div class="sheet">
-      <div class="emoji">⚠️</div>
-      <h3 id="errTitle">Error</h3>
-      <p id="errMsg"></p>
-      <button class="btn-send ok" id="errBtn" style="background:var(--red);">OK</button>
-    </div>
-  </div>
-
-  <!-- Table picker (shown when no ?table= in URL) -->
-  <div class="overlay" id="tableOverlay">
-    <div class="sheet">
-      <div class="emoji">🪑</div>
-      <h3 id="tblTitle">Select your table</h3>
-      <p id="tblMsg"></p>
-      <select id="tableSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:14px 0;background:#fff;"></select>
-      <button class="btn-send ok" id="tblGo" style="width:100%;">Start</button>
-    </div>
-  </div>
-
-  <!-- Member / loyalty -->
-  <div class="overlay" id="memberModal">
-    <div class="sheet">
-      <div class="emoji">🎁</div>
-      <h3 id="memTitle">Member</h3>
-      <p id="memSub" style="font-size:13px;color:var(--text-2);"></p>
-      <input type="tel" id="memPhone" placeholder="09xx xxx xxxx" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:10px 0;box-sizing:border-box;">
-      <button class="btn-send ok" id="memLookup" style="width:100%;">Check</button>
-      <div id="memInfo" style="margin-top:12px;display:none;">
-        <div id="memName" style="font-weight:800;"></div>
-        <div id="memPoints" style="font-size:22px;font-weight:900;color:var(--accent);"></div>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;justify-content:center;"><input type="checkbox" id="memUse" style="width:20px;height:20px;"><span id="memUseLabel">Use points</span></label>
+  <section id="features">
+    <div class="wrap">
+      <h2 class="section-title">できること</h2>
+      <p class="section-sub">お客様の注文から、店舗運営の裏側まで。</p>
+      <div class="grid">
+        <div class="card"><div class="ic">📱</div><h3>QRセルフオーダー</h3><p>テーブルのQRからお客様が直接注文。日本語／英語の切替にも対応。</p></div>
+        <div class="card"><div class="ic">🍳</div><h3>キッチン表示（KDS）</h3><p>入った注文をキッチンにリアルタイム表示。提供漏れを防ぎます。</p></div>
+        <div class="card"><div class="ic">🥡</div><h3>テイクアウト注文</h3><p>オンラインからの持ち帰り注文にも対応。</p></div>
+        <div class="card"><div class="ic">📦</div><h3>在庫・原価</h3><p>レシピ連動で在庫を自動減算。低在庫アラートと原価管理。</p></div>
+        <div class="card"><div class="ic">📊</div><h3>売上分析・日報</h3><p>売上の集計・分析と、日次日報の自動メール送信。</p></div>
+        <div class="card"><div class="ic">🕐</div><h3>勤怠・給与概算</h3><p>写真＋位置情報の打刻で、勤怠と給与概算を管理。</p></div>
+        <div class="card"><div class="ic">💳</div><h3>キャッシュレス決済</h3><p>GCash・カードなどのオンライン決済に対応。</p></div>
+        <div class="card"><div class="ic">🎁</div><h3>会員・クーポン</h3><p>ポイント・来店管理とクーポン／バウチャー。</p></div>
       </div>
-      <button id="memClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
     </div>
-  </div>
+  </section>
 
-  <!-- Coupon / voucher -->
-  <div class="overlay" id="couponModal">
-    <div class="sheet">
-      <div class="emoji">🎟️</div>
-      <h3 id="cpTitle">Coupon</h3>
-      <p id="cpSub" style="font-size:13px;color:var(--text-2);"></p>
-      <input type="text" id="cpCode" placeholder="CODE" autocapitalize="characters" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:10px 0;box-sizing:border-box;text-transform:uppercase;">
-      <button class="btn-send ok" id="cpApply" style="width:100%;">Apply</button>
-      <div id="cpMsg" style="margin-top:10px;font-size:14px;font-weight:700;"></div>
-      <button id="cpRemove" style="width:100%;margin-top:10px;background:#fee2e2;color:#b91c1c;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;display:none;">Remove coupon</button>
-      <button id="cpClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
+  <section id="contact">
+    <div class="wrap">
+      <div class="cta">
+        <h2>お店に導入しませんか？</h2>
+        <p>店舗ごとに独立した環境をご用意します。まずはお気軽にご相談ください。</p>
+        <a class="btn btn-pri" href="mailto:admin@izakanpai.com">admin@izakanpai.com にメール</a>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Payment method choice -->
-  <div class="overlay" id="payChoice">
-    <div class="sheet">
-      <div class="emoji">🧾</div>
-      <h3 id="pcTitle">How would you like to pay?</h3>
-      <p id="pcSub" style="font-size:20px;font-weight:900;color:var(--accent);"></p>
-      <button class="btn-send ok" id="pcLater" style="width:100%;background:#334155;">Pay at counter</button>
-      <button class="btn-send ok" id="pcGcash" style="width:100%;margin-top:8px;background:#2563eb;">GCash</button>
-      <button class="btn-send ok" id="pcCard" style="width:100%;margin-top:8px;background:#0f172a;">Card</button>
-      <button id="pcCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
-    </div>
-  </div>
-
-  <!-- Payment (PayMongo) -->
-  <div class="overlay" id="payModal">
-    <div class="sheet">
-      <div class="emoji">💳</div>
-      <h3 id="pmTitle">Pay</h3>
-      <p id="pmAmount" style="font-size:22px;font-weight:900;color:var(--accent);"></p>
-      <img id="pmQr" alt="" style="width:180px;height:180px;margin:8px auto;display:none;">
-      <a id="pmOpen" href="#" target="_blank" rel="noopener" class="btn-send ok" style="display:block;width:100%;text-decoration:none;text-align:center;box-sizing:border-box;">Open payment page</a>
-      <button class="btn-send ok" id="pmCheck" style="width:100%;margin-top:8px;background:var(--green);">I've paid — check</button>
-      <div id="pmStatus" style="margin-top:10px;font-size:13px;font-weight:700;"></div>
-      <button id="pmCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
-    </div>
-  </div>
-
-  <script src="./config.js"></script>
-  <script src="./api.js"></script>
-  <script src="./app.js"></script>
+  <footer>
+    <div class="wrap">© 2026 izakanpai</div>
+  </footer>
 </body>
 </html>

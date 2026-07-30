@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Order</title>
+</head>
+<body>
+  <div class="appbar">
+    <div class="title" id="shopName">Order</div>
+    <div class="table-chip" id="tableChip">Table —</div>
+    <button class="lang-btn" id="memberBtn" style="display:none;">🎁</button>
+    <button class="lang-btn" id="couponBtn">🎟️</button>
+    <button class="lang-btn" id="langBtn">JP</button>
+  </div>
+
+  <div class="net-banner offline-b" id="offlineBanner">
+    <span>📴</span><span id="offlineText">Offline — orders will be sent automatically when back online</span>
+  </div>
+
+  <img id="shopBanner" class="shop-banner" alt="" style="display:none;">
+
+
+  <div class="cats" id="cats"></div>
+
+  <div id="menuArea">
+    <div class="loading"><span class="spinner"></span></div>
+  </div>
+
+  <div class="cartbar">
+    <div class="row">
+      <div class="tot">
+        <div class="lbl" id="totalLbl">Total</div>
+        <div class="val" id="totalVal">—</div>
+        <div class="sub" id="totalSub"></div>
+      </div>
+      <button class="btn-send" id="sendBtn" disabled>
+        <span id="sendLbl">Order</span>
+        <span class="pending-pill" id="pendingPill">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Success -->
+  <div class="overlay" id="okOverlay">
+    <div class="sheet">
+      <div class="emoji" id="okEmoji">✅</div>
+      <h3 id="okTitle">Order sent</h3>
+      <p id="okMsg"></p>
+      <button class="btn-send ok" id="okBtn">OK</button>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="overlay" id="errOverlay">
+    <div class="sheet">
+      <div class="emoji">⚠️</div>
+      <h3 id="errTitle">Error</h3>
+      <p id="errMsg"></p>
+      <button class="btn-send ok" id="errBtn" style="background:var(--red);">OK</button>
+    </div>
+  </div>
+
+  <!-- Table picker (shown when no ?table= in URL) -->
+  <div class="overlay" id="tableOverlay">
+    <div class="sheet">
+      <div class="emoji">🪑</div>
+      <h3 id="tblTitle">Select your table</h3>
+      <p id="tblMsg"></p>
+      <select id="tableSelect" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:14px 0;background:#fff;"></select>
+      <button class="btn-send ok" id="tblGo" style="width:100%;">Start</button>
+    </div>
+  </div>
+
+  <!-- Member / loyalty -->
+  <div class="overlay" id="memberModal">
+    <div class="sheet">
+      <div class="emoji">🎁</div>
+      <h3 id="memTitle">Member</h3>
+      <p id="memSub" style="font-size:13px;color:var(--text-2);"></p>
+      <input type="tel" id="memPhone" placeholder="09xx xxx xxxx" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:10px 0;box-sizing:border-box;">
+      <button class="btn-send ok" id="memLookup" style="width:100%;">Check</button>
+      <div id="memInfo" style="margin-top:12px;display:none;">
+        <div id="memName" style="font-weight:800;"></div>
+        <div id="memPoints" style="font-size:22px;font-weight:900;color:var(--accent);"></div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;justify-content:center;"><input type="checkbox" id="memUse" style="width:20px;height:20px;"><span id="memUseLabel">Use points</span></label>
+      </div>
+      <button id="memClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
+    </div>
+  </div>
+
+  <!-- Coupon / voucher -->
+  <div class="overlay" id="couponModal">
+    <div class="sheet">
+      <div class="emoji">🎟️</div>
+      <h3 id="cpTitle">Coupon</h3>
+      <p id="cpSub" style="font-size:13px;color:var(--text-2);"></p>
+      <input type="text" id="cpCode" placeholder="CODE" autocapitalize="characters" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:16px;margin:10px 0;box-sizing:border-box;text-transform:uppercase;">
+      <button class="btn-send ok" id="cpApply" style="width:100%;">Apply</button>
+      <div id="cpMsg" style="margin-top:10px;font-size:14px;font-weight:700;"></div>
+      <button id="cpRemove" style="width:100%;margin-top:10px;background:#fee2e2;color:#b91c1c;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;display:none;">Remove coupon</button>
+      <button id="cpClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
+    </div>
+  </div>
+
+  <!-- Payment method choice -->
+  <div class="overlay" id="payChoice">
+    <div class="sheet">
+      <div class="emoji">🧾</div>
+      <h3 id="pcTitle">How would you like to pay?</h3>
+      <p id="pcSub" style="font-size:20px;font-weight:900;color:var(--accent);"></p>
+      <button class="btn-send ok" id="pcLater" style="width:100%;background:#334155;">Pay at counter</button>
+      <button class="btn-send ok" id="pcGcash" style="width:100%;margin-top:8px;background:#2563eb;">GCash</button>
+      <button class="btn-send ok" id="pcCard" style="width:100%;margin-top:8px;background:#0f172a;">Card</button>
+      <button id="pcCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Payment (PayMongo) -->
+  <div class="overlay" id="payModal">
+    <div class="sheet">
+      <div class="emoji">💳</div>
+      <h3 id="pmTitle">Pay</h3>
+      <p id="pmAmount" style="font-size:22px;font-weight:900;color:var(--accent);"></p>
+      <img id="pmQr" alt="" style="width:180px;height:180px;margin:8px auto;display:none;">
+      <a id="pmOpen" href="#" target="_blank" rel="noopener" class="btn-send ok" style="display:block;width:100%;text-decoration:none;text-align:center;box-sizing:border-box;">Open payment page</a>
+      <button class="btn-send ok" id="pmCheck" style="width:100%;margin-top:8px;background:var(--green);">I've paid — check</button>
+      <div id="pmStatus" style="margin-top:10px;font-size:13px;font-weight:700;"></div>
+      <button id="pmCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
