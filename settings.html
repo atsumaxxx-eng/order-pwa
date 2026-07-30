@@ -47,8 +47,6 @@
     <div class="card">
       <div class="card-title">🖼️ トップ画像</div>
       <div class="fg"><label class="form-label">オーダートップ画像（注文画面）</label><input id="orderImg" type="file" accept="image/*" class="fc" onchange="prev('orderImg','prevOrder')"><img id="prevOrder" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('orderImg','uploadTopImage','st-img')">⬆️ アップロード</button></div>
-      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">
-      <div class="fg"><label class="form-label">システムトップ画像（ホーム画面）</label><input id="sysImg" type="file" accept="image/*" class="fc" onchange="prev('sysImg','prevSys')"><img id="prevSys" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('sysImg','uploadSystemTopImage','st-img')">⬆️ アップロード</button></div>
       <div class="st" id="st-img"></div>
     </div>
 
@@ -64,14 +62,6 @@
       </div>
       <button class="btn" onclick="saveLocale()">💾 保存</button>
       <div class="st" id="st-locale"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">🔒 パスワード変更（共通管理パスワード）</div>
-      <div class="fg"><label class="form-label">現在のパスワード</label><input id="oldPass" type="password" class="fc" autocomplete="current-password"></div>
-      <div class="fg"><label class="form-label">新しいパスワード（8文字以上）</label><input id="newPass" type="password" class="fc" autocomplete="new-password"></div>
-      <button class="btn" onclick="changePass()">🔑 変更</button>
-      <div class="st" id="st-pass"></div>
     </div>
 
     <div class="card">
@@ -116,7 +106,7 @@
       <div class="card-title">📧 日次日報（自動メール）</div>
       <label class="chk" style="margin-bottom:10px;"><input type="checkbox" id="reportEnabled">有効にする</label>
       <div class="grid2">
-        <div class="fg"><label class="form-label">送信先メール</label><input id="reportEmail" type="email" class="fc"></div>
+        <div class="fg"><label class="form-label">送信先メール（複数可・カンマか改行区切り）</label><textarea id="reportEmail" class="fc" rows="2" placeholder="a@example.com, b@example.com"></textarea></div>
         <div class="fg"><label class="form-label">送信時刻（0-23時・JST）</label><input id="reportHour" type="number" min="0" max="23" class="fc"></div>
       </div>
       <div class="row"><button class="btn" onclick="saveReport()">💾 保存＆スケジュール</button><button class="btn sec" onclick="testReport()">✉️ テスト送信</button></div>
@@ -144,11 +134,6 @@
 
     window.saveShop = function(){ Promise.all([ rpc('saveSettings',[{shopName:$('shopName').value}]), rpc('saveTableCount',[Number($('tableCount').value)||1]) ]).then(function(){ st('st-shop','✅ 保存しました', true); }).catch(function(e){ st('st-shop','エラー: '+(e.message||e), false); }); };
     window.saveLocale = function(){ rpc('saveSettings',[{ currencyCode:$('currencyCode').value, currencySymbol:$('currencySymbol').value, serviceRate:$('serviceRate').value, taxRate:$('taxRate').value, defaultLang:$('defaultLang').value, accentColor:$('accentColor').value }]).then(function(){ st('st-locale','✅ 保存しました', true); }).catch(function(e){ st('st-locale','エラー: '+(e.message||e), false); }); };
-    window.changePass = function(){
-      var o=$('oldPass').value, n=$('newPass').value;
-      if(!n||n.length<8){ st('st-pass','新しいパスワードは8文字以上にしてください', false); return; }
-      rpc('changePassword',[o,n]).then(function(r){ if(r&&r.success){ st('st-pass','✅ 変更しました', true); $('oldPass').value=''; $('newPass').value=''; } else { st('st-pass', r&&r.error==='wrong_password'?'現在のパスワードが違います':(r&&r.error==='too_short'?'8文字以上にしてください':'エラー'), false); } }).catch(function(e){ st('st-pass','エラー: '+(e.message||e), false); });
-    };
     window.savePayKey = function(){ var k=$('payKey').value.trim(); if(!k){ st('st-pay','キーを入力してください', false); return; } rpc('savePaymongoKey',[k]).then(function(){ $('payKey').value=''; st('st-pay','✅ 保存しました', true); return rpc('getPaymongoKeyStatus',[]); }).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(e){ st('st-pay','エラー: '+(e.message||e), false); }); };
     window.saveGemKey = function(){ var k=$('gemKey').value.trim(); if(!k){ st('st-gem','キーを入力してください', false); return; } rpc('saveGeminiKey',[k]).then(function(){ $('gemKey').value=''; st('st-gem','✅ 保存しました', true); return rpc('getGeminiKeyStatus',[]); }).then(function(s){ if(s) setBadge('gemBadge', s.configured); }).catch(function(e){ st('st-gem','エラー: '+(e.message||e), false); }); };
     window.getLoc = function(){
@@ -157,7 +142,7 @@
     };
     window.saveGeo = function(){ rpc('saveSettings',[{ storeLat:$('storeLat').value, storeLng:$('storeLng').value, storeRadius:Number($('storeRadius').value)||0 }]).then(function(){ st('st-geo','✅ 保存しました', true); }).catch(function(e){ st('st-geo','エラー: '+(e.message||e), false); }); };
     window.saveLoy = function(){ rpc('saveSettings',[{ loyaltyEnabled:$('loyaltyEnabled').checked?'on':'', loyaltyEarnRate:Number($('loyaltyEarnRate').value)||20, loyaltyRedeemValue:Number($('loyaltyRedeemValue').value)||1 }]).then(function(){ st('st-loy','✅ 保存しました', true); }).catch(function(e){ st('st-loy','エラー: '+(e.message||e), false); }); };
-    window.saveReport = function(){ rpc('saveReportSettings',[$('reportEmail').value.trim(), $('reportHour').value, $('reportEnabled').checked]).then(function(r){ if(r&&r.success){ st('st-report','✅ 保存＆スケジュール設定しました', true); } else { st('st-report','エラー: '+((r&&r.error)||'認証(スコープ)の再承認が必要かもしれません'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
+    window.saveReport = function(){ var emails=($('reportEmail').value||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean).join(','); rpc('saveReportSettings',[emails, $('reportHour').value, $('reportEnabled').checked]).then(function(r){ if(r&&r.success){ st('st-report','✅ 保存＆スケジュール設定しました', true); } else { st('st-report','エラー: '+((r&&r.error)||'認証(スコープ)の再承認が必要かもしれません'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
     window.testReport = function(){ st('st-report','送信中…', true); rpc('sendTestReport',[]).then(function(r){ if(r&&r.success){ st('st-report','✅ テスト送信しました。受信箱をご確認ください', true); } else { st('st-report','エラー: '+((r&&r.error)||'送信できませんでした'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
     function setBadge(id, on){ var b=$(id); b.className='badge '+(on?'on':'offb'); b.innerText=on?'設定済':'未設定'; }
 
@@ -166,7 +151,6 @@
       var d = r.data || {};
       $('shopName').value = d.shopName || '';
       if (d.menuTopImageId){ var e1=$('prevOrder'); e1.src='https://lh3.googleusercontent.com/d/'+d.menuTopImageId; e1.style.display='block'; }
-      if (d.systemTopImageId){ var e2=$('prevSys'); e2.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; e2.style.display='block'; }
       $('currencyCode').value = d.currencyCode || 'PHP';
       $('currencySymbol').value = (d.currencySymbol!==undefined && d.currencySymbol!=='') ? d.currencySymbol : '₱';
       $('serviceRate').value = d.serviceRate || '';
@@ -176,7 +160,7 @@
       $('storeLat').value = d.storeLat || ''; $('storeLng').value = d.storeLng || ''; $('storeRadius').value = d.storeRadius || '';
       $('loyaltyEnabled').checked = (d.loyaltyEnabled==='on'||d.loyaltyEnabled===true||d.loyaltyEnabled==='true');
       $('loyaltyEarnRate').value = d.loyaltyEarnRate || ''; $('loyaltyRedeemValue').value = d.loyaltyRedeemValue || '';
-      $('reportEmail').value = d.reportEmail || ''; $('reportHour').value = (d.reportHour!==undefined&&d.reportHour!=='')?d.reportHour:'';
+      $('reportEmail').value = (d.reportEmail || '').replace(/,/g,'\n'); $('reportHour').value = (d.reportHour!==undefined&&d.reportHour!=='')?d.reportHour:'';
       $('reportEnabled').checked = (d.reportEnabled==='on'||d.reportEnabled===true||d.reportEnabled==='true');
     }).catch(function(){});
     rpc('getTableMaster',[]).then(function(list){ if(list&&list.length) $('tableCount').value=list.length; }).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; } });

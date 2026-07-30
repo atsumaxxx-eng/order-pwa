@@ -41,8 +41,11 @@
     <div class="r"><span id="who"></span><button class="hbtn hidden" id="logoutBtn" onclick="logout()">ログアウト</button></div>
   </div>
 
+  <!-- Loading view (トークン確認中はこれを表示し、ログイン画面のちらつきを防ぐ) -->
+  <div class="wrap" id="loadingView"><p style="text-align:center;color:var(--text-3);margin-top:14vh;font-size:14px;">読み込み中…</p></div>
+
   <!-- Login view -->
-  <div class="wrap" id="loginView">
+  <div class="wrap hidden" id="loginView">
     <div class="login">
       <div class="emoji">🔒</div>
       <h2>ログイン</h2>
@@ -83,8 +86,9 @@
       { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:true }
     ];
 
-    function showLogin(){ document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; }
+    function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; }
     function showHub(allowed){
+      document.getElementById('loadingView').classList.add('hidden');
       document.getElementById('loginView').classList.add('hidden');
       document.getElementById('hubView').classList.remove('hidden');
       document.getElementById('logoutBtn').classList.remove('hidden');

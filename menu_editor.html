@@ -43,7 +43,10 @@
         <div class="fg"><label class="form-label">価格</label><input id="mPrice" type="number" min="0" class="fc"></div>
         <div class="fg"><label class="form-label">カテゴリ</label><input id="mCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
         <div class="fg"><label class="form-label">ステータス</label><select id="mStatus" class="fc"><option value="販売中">販売中</option><option value="販売停止">販売停止</option></select></div>
+        <div class="fg"><label class="form-label">商品名（English）</label><input id="mNameEn" class="fc" placeholder="空欄なら自動翻訳"></div>
+        <div class="fg"><label class="form-label">カテゴリ（English）</label><input id="mCatEn" class="fc" list="catListEn" placeholder="空欄なら自動翻訳"><datalist id="catListEn"></datalist></div>
       </div>
+      <div class="muted" style="margin:-2px 0 8px;">英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。</div>
       <div class="fg"><label class="form-label">画像（任意・変更時のみ選択）</label><input id="mFile" type="file" accept="image/*" class="fc"></div>
       <button class="btn btn-pri" id="saveBtn" onclick="save()">💾 保存</button>
       <button class="btn btn-sec" onclick="clearForm()">クリア</button>
@@ -65,9 +68,10 @@
     var MENU = [];
 
     function render(){
-      var cats = [];
-      MENU.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); });
+      var cats = [], catsEn = [];
+      MENU.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); var ce=m['カテゴリ_EN']; if(ce && catsEn.indexOf(ce)===-1) catsEn.push(ce); });
       document.getElementById('catList').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
+      document.getElementById('catListEn').innerHTML = catsEn.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
       if (!MENU.length){ document.getElementById('list').innerHTML='<div class="muted">商品がありません</div>'; return; }
       document.getElementById('list').innerHTML = MENU.map(function(m,i){
         var off = (m['ステータス']!=='販売中');
@@ -85,17 +89,20 @@
       document.getElementById('mPrice').value = Number(m['価格'])||0;
       document.getElementById('mCat').value = m['カテゴリ']||'';
       document.getElementById('mStatus').value = (m['ステータス']==='販売中'?'販売中':'販売停止');
+      document.getElementById('mNameEn').value = m['商品名_EN']||'';
+      document.getElementById('mCatEn').value = m['カテゴリ_EN']||'';
       document.getElementById('mFile').value = '';
       window.scrollTo({top:0,behavior:'smooth'});
     };
-    window.clearForm = function(){ ['oldName','mName','mPrice','mCat','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('mStatus').value='販売中'; document.getElementById('msg').style.display='none'; };
+    window.clearForm = function(){ ['oldName','mName','mPrice','mCat','mNameEn','mCatEn','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('mStatus').value='販売中'; document.getElementById('msg').style.display='none'; };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
     window.save = function(){
       var name = document.getElementById('mName').value.trim();
       if (!name){ msg('商品名を入力してください', false); return; }
       var item = { oldName:document.getElementById('oldName').value, name:name, price:document.getElementById('mPrice').value,
-        category:document.getElementById('mCat').value, status:document.getElementById('mStatus').value, desc:'' };
+        category:document.getElementById('mCat').value, status:document.getElementById('mStatus').value, desc:'',
+        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:document.getElementById('mCatEn').value.trim() };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('mFile').files[0];
       function send(fd){

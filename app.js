@@ -97,9 +97,10 @@
 
   function renderCats() {
     var x = t();
+    var lab = function (c) { return (state.lang === 'en' && state.catLabels && state.catLabels[c]) ? state.catLabels[c] : c; };
     var html = '<div class="cat' + (state.currentCat === 'all' ? ' active' : '') + '" data-cat="all">' + x.all + '</div>';
     state.cats.forEach(function (c) {
-      html += '<div class="cat' + (state.currentCat === c ? ' active' : '') + '" data-cat="' + escAttr(c) + '">' + escHtml(c) + '</div>';
+      html += '<div class="cat' + (state.currentCat === c ? ' active' : '') + '" data-cat="' + escAttr(c) + '">' + escHtml(lab(c)) + '</div>';
     });
     $('cats').innerHTML = html;
     Array.prototype.forEach.call($('cats').querySelectorAll('.cat'), function (el) {
@@ -114,8 +115,9 @@
     if (!items.length) { $('menuArea').innerHTML = '<div class="loading">—</div>'; return; }
     var html = '<div class="grid">';
     items.forEach(function (it) {
-      var name = it['商品名'];
-      var q = state.cart[name] || 0;
+      var key = it['商品名'];
+      var name = (state.lang === 'en' && it['商品名_EN']) ? it['商品名_EN'] : key;
+      var q = state.cart[key] || 0;
       var thumb = it.displayUrl
         ? '<img class="thumb" src="' + escAttr(it.displayUrl) + '" loading="lazy" alt="">'
         : '<div class="no-thumb"></div>';
@@ -124,9 +126,9 @@
           '<div class="name">' + escHtml(name) + '</div>' +
           '<div class="price">' + money(it['価格']) + '</div>' +
           '<div class="qty">' +
-            '<button class="minus" data-n="' + escAttr(name) + '" data-d="-1">−</button>' +
-            '<span class="n' + (q > 0 ? ' has' : '') + '" id="n-' + cssId(name) + '">' + q + '</span>' +
-            '<button class="plus" data-n="' + escAttr(name) + '" data-d="1">＋</button>' +
+            '<button class="minus" data-n="' + escAttr(key) + '" data-d="-1">−</button>' +
+            '<span class="n' + (q > 0 ? ' has' : '') + '" id="n-' + cssId(key) + '">' + q + '</span>' +
+            '<button class="plus" data-n="' + escAttr(key) + '" data-d="1">＋</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -379,9 +381,9 @@
     state.paymongo = !!r.paymongo;
     if (state.settings.loyaltyEnabled === 'on' || state.settings.loyaltyEnabled === true || state.settings.loyaltyEnabled === 'true') $('memberBtn').style.display = '';
     if (!state.lang) state.lang = state.settings.defaultLang || 'en';
-    var cats = [];
-    state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); });
-    state.cats = cats;
+    var cats = [], catLabels = {};
+    state.menu.forEach(function (it) { var c = it['カテゴリ']; if (c && cats.indexOf(c) === -1) cats.push(c); if (c && it['カテゴリ_EN'] && !catLabels[c]) catLabels[c] = it['カテゴリ_EN']; });
+    state.cats = cats; state.catLabels = catLabels;
     applyAccent();
     var _bid = state.settings.menuTopImageId;
     if (_bid) { var _b = $('shopBanner'); _b.src = 'https://lh3.googleusercontent.com/d/' + _bid; _b.style.display = 'block'; }
