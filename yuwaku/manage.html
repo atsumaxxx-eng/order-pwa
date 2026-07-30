@@ -46,7 +46,7 @@
 
   <!-- Login view -->
   <div class="wrap hidden" id="loginView">
-    <div class="login">
+    <div class="login" id="loginCard">
       <img id="loginPic" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:12px;margin-bottom:14px;">
       <div class="emoji">🔒</div>
       <h2>ログイン</h2>
@@ -55,6 +55,19 @@
       <input class="fc" id="loginId" placeholder="ログインID" autocapitalize="none" autocomplete="username">
       <input class="fc" id="loginPass" type="password" placeholder="パスワード" autocomplete="current-password">
       <button class="btn" id="loginBtn" onclick="doLogin()">🔓 ログイン</button>
+      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(true);return false;" style="font-size:13px;font-weight:700;color:var(--text-3);">🔑 パスワードを変更</a></div>
+    </div>
+    <div class="login hidden" id="chgPwCard">
+      <div class="emoji">🔑</div>
+      <h2>パスワード変更</h2>
+      <p>ログインIDと現在のパスワードで変更できます</p>
+      <div id="chgMsg" style="display:none;font-size:13px;font-weight:700;text-align:center;margin-bottom:10px;"></div>
+      <input class="fc" id="cpLoginId" placeholder="ログインID" autocapitalize="none" autocomplete="username">
+      <input class="fc" id="cpOldPass" type="password" placeholder="現在のパスワード" autocomplete="current-password">
+      <input class="fc" id="cpNewPass" type="password" placeholder="新しいパスワード（6文字以上）" autocomplete="new-password">
+      <input class="fc" id="cpNewPass2" type="password" placeholder="新しいパスワード（確認）" autocomplete="new-password">
+      <button class="btn" id="cpBtn" onclick="doChangePw()">🔑 変更する</button>
+      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(false);return false;" style="font-size:13px;color:var(--text-3);">← ログインに戻る</a></div>
     </div>
   </div>
 
@@ -84,11 +97,10 @@
       { key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', url:'./attendance.html', active:true },
       { key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', url:'./printers.html', active:false },
       { key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', url:'./users.html', active:true },
-      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:true },
-      { key:null, ic:'🔑', tt:'パスワード変更', ds:'自分のパスワード', url:'./change_password.html', active:true }
+      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:true }
     ];
 
-    function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; }
+    function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; var _lc=document.getElementById('loginCard'); if(_lc)_lc.classList.remove('hidden'); var _cc=document.getElementById('chgPwCard'); if(_cc)_cc.classList.add('hidden'); }
     function showHub(allowed){
       document.getElementById('loadingView').classList.add('hidden');
       document.getElementById('loginView').classList.add('hidden');
@@ -117,6 +129,28 @@
       }).catch(function(){ btn.disabled=false; document.getElementById('loginErr').style.display='block'; });
     };
     window.logout = function(){ localStorage.removeItem('mgmtToken'); localStorage.removeItem('mgmtName'); localStorage.removeItem('mgmtRole'); TOKEN=''; NAME=''; showLogin(); };
+
+    // ログイン画面からのパスワード変更（ログインID＋現在のパスワードで本人確認）
+    window.toggleChgPw = function(show){
+      document.getElementById('loginCard').classList.toggle('hidden', !!show);
+      document.getElementById('chgPwCard').classList.toggle('hidden', !show);
+      var m=document.getElementById('chgMsg'); if(m) m.style.display='none';
+    };
+    window.doChangePw = function(){
+      var g=function(id){ return document.getElementById(id); };
+      var id=g('cpLoginId').value.trim(), o=g('cpOldPass').value, n=g('cpNewPass').value, n2=g('cpNewPass2').value;
+      function msg(t,ok){ var m=g('chgMsg'); m.style.display='block'; m.style.color=ok?'#15803d':'#c62828'; m.innerText=t; }
+      if(!id){ msg('ログインIDを入力してください',false); return; }
+      if(!o){ msg('現在のパスワードを入力してください',false); return; }
+      if(!n||n.length<6){ msg('新しいパスワードは6文字以上にしてください',false); return; }
+      if(n!==n2){ msg('新しいパスワードが一致しません',false); return; }
+      var b=g('cpBtn'); b.disabled=true;
+      API.post('changePasswordByLogin',{loginId:id, oldPass:o, newPass:n}).then(function(r){
+        b.disabled=false;
+        if(r && r.data && r.data.success){ msg('✅ 変更しました。新しいパスワードでログインしてください',true); g('cpOldPass').value=''; g('cpNewPass').value=''; g('cpNewPass2').value=''; }
+        else { msg((r&&r.data&&r.data.error==='too_short')?'新しいパスワードは6文字以上にしてください':'ログインIDまたは現在のパスワードが違います',false); }
+      }).catch(function(e){ b.disabled=false; msg('エラー: '+(e.message||e),false); });
+    };
 
     function checkAndShow(){
       if (!TOKEN){ showLogin(); return; }
