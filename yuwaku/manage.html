@@ -37,37 +37,37 @@
 </head>
 <body>
   <div class="head">
-    <h1 id="title">管理</h1>
-    <div class="r"><span id="who"></span><button class="hbtn hidden" id="logoutBtn" onclick="logout()">ログアウト</button></div>
+    <h1 id="title" data-t="title">管理</h1>
+    <div class="r"><span id="who"></span><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><button class="hbtn hidden" id="logoutBtn" onclick="logout()" data-t="logout">ログアウト</button></div>
   </div>
 
   <!-- Loading view (トークン確認中はこれを表示し、ログイン画面のちらつきを防ぐ) -->
-  <div class="wrap" id="loadingView"><p style="text-align:center;color:var(--text-3);margin-top:14vh;font-size:14px;">読み込み中…</p></div>
+  <div class="wrap" id="loadingView"><p style="text-align:center;color:var(--text-3);margin-top:14vh;font-size:14px;" data-t="loading">読み込み中…</p></div>
 
   <!-- Login view -->
   <div class="wrap hidden" id="loginView">
     <div class="login" id="loginCard">
       <img id="loginPic" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:12px;margin-bottom:14px;">
       <div class="emoji">🔒</div>
-      <h2>ログイン</h2>
-      <p>ログインIDとパスワードを入力</p>
-      <div class="err" id="loginErr">IDまたはパスワードが違います</div>
-      <input class="fc" id="loginId" placeholder="ログインID" autocapitalize="none" autocomplete="username">
-      <input class="fc" id="loginPass" type="password" placeholder="パスワード" autocomplete="current-password">
-      <button class="btn" id="loginBtn" onclick="doLogin()">🔓 ログイン</button>
-      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(true);return false;" style="font-size:13px;font-weight:700;color:var(--text-3);">🔑 パスワードを変更</a></div>
+      <h2 data-t="login">ログイン</h2>
+      <p data-t="loginSub">ログインIDとパスワードを入力</p>
+      <div class="err" id="loginErr" data-t="loginErr">IDまたはパスワードが違います</div>
+      <input class="fc" id="loginId" placeholder="ログインID" data-tph="ph_loginId" autocapitalize="none" autocomplete="username">
+      <input class="fc" id="loginPass" type="password" placeholder="パスワード" data-tph="ph_pass" autocomplete="current-password">
+      <button class="btn" id="loginBtn" onclick="doLogin()" data-t="loginBtn">🔓 ログイン</button>
+      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(true);return false;" style="font-size:13px;font-weight:700;color:var(--text-3);" data-t="chgPwLink">🔑 パスワードを変更</a></div>
     </div>
     <div class="login hidden" id="chgPwCard">
       <div class="emoji">🔑</div>
-      <h2>パスワード変更</h2>
-      <p>ログインIDと現在のパスワードで変更できます</p>
+      <h2 data-t="chgTitle">パスワード変更</h2>
+      <p data-t="chgSub">ログインIDと現在のパスワードで変更できます</p>
       <div id="chgMsg" style="display:none;font-size:13px;font-weight:700;text-align:center;margin-bottom:10px;"></div>
-      <input class="fc" id="cpLoginId" placeholder="ログインID" autocapitalize="none" autocomplete="username">
-      <input class="fc" id="cpOldPass" type="password" placeholder="現在のパスワード" autocomplete="current-password">
-      <input class="fc" id="cpNewPass" type="password" placeholder="新しいパスワード（6文字以上）" autocomplete="new-password">
-      <input class="fc" id="cpNewPass2" type="password" placeholder="新しいパスワード（確認）" autocomplete="new-password">
-      <button class="btn" id="cpBtn" onclick="doChangePw()">🔑 変更する</button>
-      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(false);return false;" style="font-size:13px;color:var(--text-3);">← ログインに戻る</a></div>
+      <input class="fc" id="cpLoginId" placeholder="ログインID" data-tph="ph_loginId" autocapitalize="none" autocomplete="username">
+      <input class="fc" id="cpOldPass" type="password" placeholder="現在のパスワード" data-tph="ph_cpOld" autocomplete="current-password">
+      <input class="fc" id="cpNewPass" type="password" placeholder="新しいパスワード（6文字以上）" data-tph="ph_cpNew" autocomplete="new-password">
+      <input class="fc" id="cpNewPass2" type="password" placeholder="新しいパスワード（確認）" data-tph="ph_cpNew2" autocomplete="new-password">
+      <button class="btn" id="cpBtn" onclick="doChangePw()" data-t="cpBtn">🔑 変更する</button>
+      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(false);return false;" style="font-size:13px;color:var(--text-3);" data-t="backToLogin">← ログインに戻る</a></div>
     </div>
   </div>
 
@@ -78,26 +78,28 @@
 
   <script src="./config.js"></script>
   <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
   <script>
     var TOKEN = localStorage.getItem('mgmtToken') || '';
     var NAME = localStorage.getItem('mgmtName') || '';
+    var lastAllowed = {};
 
     // key: 権限キー（null=公開・常時表示）, active: 移設済みか
     var TILES = [
-      { key:null, ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', url:'./admin.html', active:true },
-      { key:null, ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', url:'./kds.html', active:true },
-      { key:null, ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', url:'./takeout.html', active:true },
-      { key:'coupons', ic:'🎟️', tt:'クーポン', ds:'割引・バウチャー', url:'./coupons.html', active:true },
-      { key:'menu_editor', ic:'🍽️', tt:'メニュー編集', ds:'商品の追加・編集', url:'./menu_editor.html', active:true },
-      { key:'menu_editor', ic:'📖', tt:'レシピ・原価', ds:'材料・自動減算', url:'./recipe.html', active:true },
-      { key:'drink_inv', ic:'🍺', tt:'ドリンク在庫', ds:'在庫・原価', url:'./drink_inv.html', active:true },
-      { key:'inventory', ic:'📦', tt:'在庫管理', ds:'棚卸し', url:'./inventory.html', active:true },
-      { key:'sales', ic:'📊', tt:'売上管理', ds:'集計・分析', url:'./sales.html', active:true },
-      { key:'members', ic:'🎁', tt:'会員管理', ds:'ポイント・来店', url:'./members.html', active:true },
-      { key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', url:'./attendance.html', active:true },
-      { key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', url:'./printers.html', active:true },
-      { key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', url:'./users.html', active:true },
-      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', url:'./settings.html', active:true }
+      { key:null, ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', ttEn:'Orders', dsEn:'Tables · billing', url:'./admin.html', active:true },
+      { key:null, ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', ttEn:'Kitchen', dsEn:'Pending orders', url:'./kds.html', active:true },
+      { key:null, ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', ttEn:'Takeout', dsEn:'Online orders', url:'./takeout.html', active:true },
+      { key:'coupons', ic:'🎟️', tt:'クーポン', ds:'割引・バウチャー', ttEn:'Coupons', dsEn:'Discounts · vouchers', url:'./coupons.html', active:true },
+      { key:'menu_editor', ic:'🍽️', tt:'メニュー編集', ds:'商品の追加・編集', ttEn:'Menu', dsEn:'Add · edit items', url:'./menu_editor.html', active:true },
+      { key:'menu_editor', ic:'📖', tt:'レシピ・原価', ds:'材料・自動減算', ttEn:'Recipes · cost', dsEn:'Ingredients · auto-deduct', url:'./recipe.html', active:true },
+      { key:'drink_inv', ic:'🍺', tt:'ドリンク在庫', ds:'在庫・原価', ttEn:'Drink stock', dsEn:'Stock · cost', url:'./drink_inv.html', active:true },
+      { key:'inventory', ic:'📦', tt:'在庫管理', ds:'棚卸し', ttEn:'Inventory', dsEn:'Stocktake', url:'./inventory.html', active:true },
+      { key:'sales', ic:'📊', tt:'売上管理', ds:'集計・分析', ttEn:'Sales', dsEn:'Reports · analytics', url:'./sales.html', active:true },
+      { key:'members', ic:'🎁', tt:'会員管理', ds:'ポイント・来店', ttEn:'Members', dsEn:'Points · visits', url:'./members.html', active:true },
+      { key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', ttEn:'Attendance', dsEn:'Shifts · payroll', url:'./attendance.html', active:true },
+      { key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', ttEn:'Printers', dsEn:'Kitchen printing', url:'./printers.html', active:true },
+      { key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', ttEn:'Users', dsEn:'Accounts · roles', url:'./users.html', active:true },
+      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true }
     ];
 
     function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; var _lc=document.getElementById('loginCard'); if(_lc)_lc.classList.remove('hidden'); var _cc=document.getElementById('chgPwCard'); if(_cc)_cc.classList.add('hidden'); }
@@ -107,11 +109,14 @@
       document.getElementById('hubView').classList.remove('hidden');
       document.getElementById('logoutBtn').classList.remove('hidden');
       document.getElementById('who').innerText = NAME ? ('👤 '+NAME) : '';
+      lastAllowed = allowed || {};
+      var en = (window.I18n && I18n.lang()==='en');
       var html = '';
       TILES.forEach(function(x){
         if (x.key && !(allowed && allowed[x.key])) return; // 権限なしは非表示
-        if (x.active){ html += '<a class="tile" href="'+x.url+'"><span class="ic">'+x.ic+'</span><span class="tt">'+x.tt+'</span><span class="ds">'+x.ds+'</span></a>'; }
-        else { html += '<div class="tile soon"><span class="ic">'+x.ic+'</span><span class="tt">'+x.tt+'</span><span class="ds">'+x.ds+'</span></div>'; }
+        var tt = (en && x.ttEn) ? x.ttEn : x.tt, ds = (en && x.dsEn) ? x.dsEn : x.ds;
+        if (x.active){ html += '<a class="tile" href="'+x.url+'"><span class="ic">'+x.ic+'</span><span class="tt">'+tt+'</span><span class="ds">'+ds+'</span></a>'; }
+        else { html += '<div class="tile soon"><span class="ic">'+x.ic+'</span><span class="tt">'+tt+'</span><span class="ds">'+ds+'</span></div>'; }
       });
       document.getElementById('tiles').innerHTML = html;
     }
@@ -140,16 +145,16 @@
       var g=function(id){ return document.getElementById(id); };
       var id=g('cpLoginId').value.trim(), o=g('cpOldPass').value, n=g('cpNewPass').value, n2=g('cpNewPass2').value;
       function msg(t,ok){ var m=g('chgMsg'); m.style.display='block'; m.style.color=ok?'#15803d':'#c62828'; m.innerText=t; }
-      if(!id){ msg('ログインIDを入力してください',false); return; }
-      if(!o){ msg('現在のパスワードを入力してください',false); return; }
-      if(!n||n.length<6){ msg('新しいパスワードは6文字以上にしてください',false); return; }
-      if(n!==n2){ msg('新しいパスワードが一致しません',false); return; }
+      if(!id){ msg(I18n.t('m_needId'),false); return; }
+      if(!o){ msg(I18n.t('m_needOld'),false); return; }
+      if(!n||n.length<6){ msg(I18n.t('m_short'),false); return; }
+      if(n!==n2){ msg(I18n.t('m_mismatch'),false); return; }
       var b=g('cpBtn'); b.disabled=true;
       API.post('changePasswordByLogin',{loginId:id, oldPass:o, newPass:n}).then(function(r){
         b.disabled=false;
-        if(r && r.data && r.data.success){ msg('✅ 変更しました。新しいパスワードでログインしてください',true); g('cpOldPass').value=''; g('cpNewPass').value=''; g('cpNewPass2').value=''; }
-        else { msg((r&&r.data&&r.data.error==='too_short')?'新しいパスワードは6文字以上にしてください':'ログインIDまたは現在のパスワードが違います',false); }
-      }).catch(function(e){ b.disabled=false; msg('エラー: '+(e.message||e),false); });
+        if(r && r.data && r.data.success){ msg(I18n.t('m_ok'),true); g('cpOldPass').value=''; g('cpNewPass').value=''; g('cpNewPass2').value=''; }
+        else { msg((r&&r.data&&r.data.error==='too_short')?I18n.t('m_short'):I18n.t('m_wrong'),false); }
+      }).catch(function(e){ b.disabled=false; msg(I18n.t('m_err')+(e.message||e),false); });
     };
 
     function checkAndShow(){
@@ -161,6 +166,10 @@
     }
     // ログイン画面の画像（設定で登録した画像を表示。getSettingsはログイン前でも公開）
     API.post('getSettings', {}).then(function(r){ var d=(r&&r.data)||{}; if(d.systemTopImageId){ var im=document.getElementById('loginPic'); if(im){ im.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; im.style.display='block'; } } }).catch(function(){});
+    I18n.init({
+      ja: { title:'管理', logout:'ログアウト', loading:'読み込み中…', login:'ログイン', loginSub:'ログインIDとパスワードを入力', loginErr:'IDまたはパスワードが違います', ph_loginId:'ログインID', ph_pass:'パスワード', loginBtn:'🔓 ログイン', chgPwLink:'🔑 パスワードを変更', chgTitle:'パスワード変更', chgSub:'ログインIDと現在のパスワードで変更できます', ph_cpOld:'現在のパスワード', ph_cpNew:'新しいパスワード（6文字以上）', ph_cpNew2:'新しいパスワード（確認）', cpBtn:'🔑 変更する', backToLogin:'← ログインに戻る', m_needId:'ログインIDを入力してください', m_needOld:'現在のパスワードを入力してください', m_short:'新しいパスワードは6文字以上にしてください', m_mismatch:'新しいパスワードが一致しません', m_ok:'✅ 変更しました。新しいパスワードでログインしてください', m_wrong:'ログインIDまたは現在のパスワードが違います', m_err:'エラー: ' },
+      en: { title:'Management', logout:'Logout', loading:'Loading…', login:'Login', loginSub:'Enter your login ID and password', loginErr:'Incorrect ID or password', ph_loginId:'Login ID', ph_pass:'Password', loginBtn:'🔓 Login', chgPwLink:'🔑 Change password', chgTitle:'Change password', chgSub:'Change it with your login ID and current password', ph_cpOld:'Current password', ph_cpNew:'New password (6+ chars)', ph_cpNew2:'New password (confirm)', cpBtn:'🔑 Change', backToLogin:'← Back to login', m_needId:'Please enter your login ID', m_needOld:'Please enter your current password', m_short:'New password must be 6+ characters', m_mismatch:'New passwords do not match', m_ok:'✅ Changed. Please log in with your new password', m_wrong:'Login ID or current password is incorrect', m_err:'Error: ' }
+    }, function(){ if(!document.getElementById('hubView').classList.contains('hidden')) showHub(lastAllowed); });
     document.addEventListener('DOMContentLoaded', checkAndShow);
   </script>
 </body>
