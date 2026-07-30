@@ -105,13 +105,20 @@
     </div>
 
     <div class="card">
-      <div class="card-title">📧 日次日報（自動メール）</div>
-      <label class="chk" style="margin-bottom:10px;"><input type="checkbox" id="reportEnabled">有効にする</label>
+      <div class="card-title">📧 定期レポート（自動メール）</div>
+      <label class="chk" style="display:block;margin-bottom:6px;"><input type="checkbox" id="reportEnabled">日次日報（毎日）</label>
+      <label class="chk" style="display:block;margin-bottom:6px;"><input type="checkbox" id="reportWeekly">週次レポート（毎週 月曜）</label>
+      <label class="chk" style="display:block;margin-bottom:10px;"><input type="checkbox" id="reportMonthly">月次レポート（毎月 1日）</label>
       <div class="grid2">
         <div class="fg"><label class="form-label">送信先メール（複数可・カンマか改行区切り）</label><textarea id="reportEmail" class="fc" rows="2" placeholder="a@example.com, b@example.com"></textarea></div>
-        <div class="fg"><label class="form-label">送信時刻（0-23時・JST）</label><input id="reportHour" type="number" min="0" max="23" class="fc"></div>
+        <div class="fg"><label class="form-label">送信時刻（0-23時）</label><input id="reportHour" type="number" min="0" max="23" class="fc"></div>
       </div>
-      <div class="row"><button class="btn" onclick="saveReport()">💾 保存＆スケジュール</button><button class="btn sec" onclick="testReport()">✉️ テスト送信</button></div>
+      <div class="row"><button class="btn" onclick="saveReport()">💾 保存＆スケジュール</button></div>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px;">
+        <button class="btn sec" onclick="testReport('daily')">✉️ 日次テスト</button>
+        <button class="btn sec" onclick="testReport('weekly')">✉️ 週次テスト</button>
+        <button class="btn sec" onclick="testReport('monthly')">✉️ 月次テスト</button>
+      </div>
       <div class="st" id="st-report"></div>
     </div>
 
@@ -144,8 +151,8 @@
     };
     window.saveGeo = function(){ rpc('saveSettings',[{ storeLat:$('storeLat').value, storeLng:$('storeLng').value, storeRadius:Number($('storeRadius').value)||0 }]).then(function(){ st('st-geo','✅ 保存しました', true); }).catch(function(e){ st('st-geo','エラー: '+(e.message||e), false); }); };
     window.saveLoy = function(){ rpc('saveSettings',[{ loyaltyEnabled:$('loyaltyEnabled').checked?'on':'', loyaltyEarnRate:Number($('loyaltyEarnRate').value)||20, loyaltyRedeemValue:Number($('loyaltyRedeemValue').value)||1 }]).then(function(){ st('st-loy','✅ 保存しました', true); }).catch(function(e){ st('st-loy','エラー: '+(e.message||e), false); }); };
-    window.saveReport = function(){ var emails=($('reportEmail').value||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean).join(','); rpc('saveReportSettings',[emails, $('reportHour').value, $('reportEnabled').checked]).then(function(r){ if(r&&r.success){ st('st-report','✅ 保存＆スケジュール設定しました', true); } else { st('st-report','エラー: '+((r&&r.error)||'認証(スコープ)の再承認が必要かもしれません'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
-    window.testReport = function(){ st('st-report','送信中…', true); rpc('sendTestReport',[]).then(function(r){ if(r&&r.success){ st('st-report','✅ テスト送信しました。受信箱をご確認ください', true); } else { st('st-report','エラー: '+((r&&r.error)||'送信できませんでした'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
+    window.saveReport = function(){ var emails=($('reportEmail').value||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean).join(','); rpc('saveReportSettings',[emails, $('reportHour').value, $('reportEnabled').checked, $('reportWeekly').checked, $('reportMonthly').checked]).then(function(r){ if(r&&r.success){ st('st-report','✅ 保存＆スケジュール設定しました', true); } else { st('st-report','エラー: '+((r&&r.error)||'認証(スコープ)の再承認が必要かもしれません'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
+    window.testReport = function(kind){ st('st-report','送信中…', true); rpc('sendTestReport',[kind||'daily']).then(function(r){ if(r&&r.success){ st('st-report','✅ テスト送信しました。受信箱をご確認ください', true); } else { st('st-report','エラー: '+((r&&r.error)||'送信できませんでした'), false); } }).catch(function(e){ st('st-report','エラー: '+(e.message||e), false); }); };
     function setBadge(id, on){ var b=$(id); b.className='badge '+(on?'on':'offb'); b.innerText=on?'設定済':'未設定'; }
 
     // ---- load ----
@@ -165,6 +172,8 @@
       $('loyaltyEarnRate').value = d.loyaltyEarnRate || ''; $('loyaltyRedeemValue').value = d.loyaltyRedeemValue || '';
       $('reportEmail').value = (d.reportEmail || '').replace(/,/g,'\n'); $('reportHour').value = (d.reportHour!==undefined&&d.reportHour!=='')?d.reportHour:'';
       $('reportEnabled').checked = (d.reportEnabled==='on'||d.reportEnabled===true||d.reportEnabled==='true');
+      $('reportWeekly').checked = (d.reportWeeklyEnabled==='on'||d.reportWeeklyEnabled===true||d.reportWeeklyEnabled==='true');
+      $('reportMonthly').checked = (d.reportMonthlyEnabled==='on'||d.reportMonthlyEnabled===true||d.reportMonthlyEnabled==='true');
     }).catch(function(){});
     rpc('getTableMaster',[]).then(function(list){ if(list&&list.length) $('tableCount').value=list.length; }).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; } });
     rpc('getPaymongoKeyStatus',[]).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(){});

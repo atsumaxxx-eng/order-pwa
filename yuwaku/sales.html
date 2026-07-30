@@ -49,10 +49,17 @@
       <div id="anaSummary" class="hint" style="margin-bottom:10px;"></div>
       <div style="font-weight:800;margin:6px 0;">🏆 商品別（ABC分析）</div>
       <div style="overflow:auto;"><table id="anaItems"><tbody><tr><td style="color:#aaa;padding:14px;">—</td></tr></tbody></table></div>
+      <div style="font-weight:800;margin:14px 0 6px;">🍱 カテゴリ別売上</div>
+      <div style="overflow:auto;"><table id="anaCat"><tbody><tr><td style="color:#aaa;padding:14px;">—</td></tr></tbody></table></div>
       <div style="font-weight:800;margin:14px 0 6px;">🕐 時間帯別</div>
       <div style="height:180px;"><canvas id="hourChart"></canvas></div>
       <div style="font-weight:800;margin:16px 0 6px;">📅 曜日別</div>
       <div style="height:180px;"><canvas id="dowChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🍽️ メニュー人気度スコア（直近30日）</div>
+      <div class="hint" style="margin-bottom:8px;">直近30日の注文数量で算出（最も売れた商品=100）。低スコア・未売上はメニュー見直しの参考に。</div>
+      <div id="popList" style="overflow:auto;"><div class="hint">読み込み中…</div></div>
     </div>
   </div>
 
@@ -89,13 +96,17 @@
     };
     function renderAnalytics(d){
       d = d || { items:[], byHour:[], byDow:[], total:0, count:0 };
-      document.getElementById('anaSummary').innerText = '注文 '+d.count+'件 ・ 売上 '+money(d.total)+' ・ 原価率 '+(d.costRate||0)+'%';
+      document.getElementById('anaSummary').innerText = '注文 '+d.count+'件 ・ 売上 '+money(d.total)+' ・ 客単価 '+money(d.avg||0)+' ・ 原価率 '+(d.costRate||0)+'%';
       var abc = { A:'#16a34a', B:'#f59e0b', C:'#94a3b8' };
       var html = '<thead><tr><th>商品</th><th style="text-align:right;">数量</th><th style="text-align:right;">売上</th><th style="text-align:right;">原価</th><th style="text-align:right;">原価率</th><th style="text-align:right;">累計比</th><th>ABC</th></tr></thead><tbody>';
       if (!d.items.length) html += '<tr><td colspan="7" style="color:#aaa;padding:14px;">データがありません</td></tr>';
       d.items.forEach(function(it){ html += '<tr><td>'+esc(it.name)+'</td><td style="text-align:right;">'+it.qty+'</td><td style="text-align:right;">'+money(it.revenue)+'</td><td style="text-align:right;color:var(--text-3);">'+money(it.cost||0)+'</td><td style="text-align:right;">'+(it.costRate||0)+'%</td><td style="text-align:right;">'+it.cumPct+'%</td><td><span style="background:'+(abc[it.abc]||'#94a3b8')+';color:#fff;font-weight:800;font-size:11px;padding:1px 8px;border-radius:999px;">'+it.abc+'</span></td></tr>'; });
       html += '</tbody>';
       document.getElementById('anaItems').innerHTML = html;
+      var ch = '<thead><tr><th>カテゴリ</th><th style="text-align:right;">売上</th></tr></thead><tbody>';
+      (d.byCategory||[]).forEach(function(c){ ch += '<tr><td>'+esc(c.category||'その他')+'</td><td style="text-align:right;">'+money(c.revenue)+'</td></tr>'; });
+      if(!(d.byCategory||[]).length) ch += '<tr><td colspan="2" style="color:#aaa;padding:14px;">—</td></tr>';
+      ch += '</tbody>'; document.getElementById('anaCat').innerHTML = ch;
       var hLabels = d.byHour.map(function(x){ return x.hour+'時'; });
       if (hourChart) hourChart.destroy();
       hourChart = new Chart(document.getElementById('hourChart').getContext('2d'), { type:'bar', data:{ labels:hLabels, datasets:[{ data:d.byHour.map(function(x){return x.revenue;}), backgroundColor:'#2563eb' }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} } });
@@ -109,6 +120,21 @@
     document.getElementById('anaMonth').value = new Date().toISOString().slice(0,7);
     rpc('getSalesSummary',[]).then(renderSales).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('monthly').innerHTML='<div style="color:#b91c1c;">読み込みエラー: '+esc(e.message||e)+'</div>'; });
     loadAnalytics();
+
+    function renderPopularity(d){
+      d = d || { items:[] };
+      var lb = { hot:['🔥人気','#16a34a'], ok:['標準','#2563eb'], low:['⚠️低調','#f59e0b'], unsold:['❌未売上','#b91c1c'] };
+      var html = '<table><thead><tr><th>#</th><th>商品</th><th>カテゴリ</th><th style="text-align:right;">数量</th><th>スコア</th><th></th></tr></thead><tbody>';
+      if(!d.items.length){ html += '<tr><td colspan="6" style="color:#aaa;padding:14px;">データがありません</td></tr>'; }
+      d.items.forEach(function(it,i){
+        var l = lb[it.label]||lb.ok;
+        var bar = '<div style="background:#eef1f5;border-radius:6px;height:10px;width:88px;overflow:hidden;display:inline-block;vertical-align:middle;"><div style="height:10px;width:'+it.score+'%;background:'+l[1]+';"></div></div> <span style="font-weight:800;">'+it.score+'</span>';
+        html += '<tr><td>'+(i+1)+'</td><td>'+esc(it.name)+'</td><td style="color:var(--text-3);">'+esc(it.category)+'</td><td style="text-align:right;">'+it.qty+'</td><td>'+bar+'</td><td><span style="color:'+l[1]+';font-weight:800;font-size:12px;white-space:nowrap;">'+l[0]+'</span></td></tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('popList').innerHTML = html;
+    }
+    rpc('getMenuPopularity',[30]).then(renderPopularity).catch(function(e){ document.getElementById('popList').innerHTML='<div style="color:#b91c1c;">'+esc(e.message||e)+'</div>'; });
   </script>
 </body>
 </html>
