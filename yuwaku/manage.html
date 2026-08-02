@@ -122,16 +122,18 @@
     }
 
     window.doLogin = function(){
-      var id = document.getElementById('loginId').value.trim();
-      var pass = document.getElementById('loginPass').value;
-      document.getElementById('loginErr').style.display='none';
+      var idEl = document.getElementById('loginId'), passEl = document.getElementById('loginPass');
+      var id = idEl.value.trim(), pass = passEl.value;
+      var errEl = document.getElementById('loginErr');
+      if (!id || !pass){ errEl.textContent = I18n.t('needLogin'); errEl.style.display='block'; (!id ? idEl : passEl).focus(); return; }
+      errEl.style.display='none';
       var btn = document.getElementById('loginBtn'); btn.disabled=true;
       API.post('login', { loginId: id, pass: pass }).then(function(r){
         btn.disabled=false;
         TOKEN = r.token; NAME = r.name || '';
         localStorage.setItem('mgmtToken', TOKEN); localStorage.setItem('mgmtName', NAME); localStorage.setItem('mgmtRole', r.role||'');
         checkAndShow();
-      }).catch(function(){ btn.disabled=false; document.getElementById('loginErr').style.display='block'; });
+      }).catch(function(){ btn.disabled=false; errEl.textContent = I18n.t('loginErr'); errEl.style.display='block'; });
     };
     window.logout = function(){ localStorage.removeItem('mgmtToken'); localStorage.removeItem('mgmtName'); localStorage.removeItem('mgmtRole'); TOKEN=''; NAME=''; showLogin(); };
 
@@ -167,8 +169,8 @@
     // ログイン画面の画像（設定で登録した画像を表示。getSettingsはログイン前でも公開）
     API.post('getSettings', {}).then(function(r){ var d=(r&&r.data)||{}; if(d.systemTopImageId){ var im=document.getElementById('loginPic'); if(im){ im.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; im.style.display='block'; } } }).catch(function(){});
     I18n.init({
-      ja: { title:'管理', logout:'ログアウト', loading:'読み込み中…', login:'ログイン', loginSub:'ログインIDとパスワードを入力', loginErr:'IDまたはパスワードが違います', ph_loginId:'ログインID', ph_pass:'パスワード', loginBtn:'🔓 ログイン', chgPwLink:'🔑 パスワードを変更', chgTitle:'パスワード変更', chgSub:'ログインIDと現在のパスワードで変更できます', ph_cpOld:'現在のパスワード', ph_cpNew:'新しいパスワード（6文字以上）', ph_cpNew2:'新しいパスワード（確認）', cpBtn:'🔑 変更する', backToLogin:'← ログインに戻る', m_needId:'ログインIDを入力してください', m_needOld:'現在のパスワードを入力してください', m_short:'新しいパスワードは6文字以上にしてください', m_mismatch:'新しいパスワードが一致しません', m_ok:'✅ 変更しました。新しいパスワードでログインしてください', m_wrong:'ログインIDまたは現在のパスワードが違います', m_err:'エラー: ' },
-      en: { title:'Management', logout:'Logout', loading:'Loading…', login:'Login', loginSub:'Enter your login ID and password', loginErr:'Incorrect ID or password', ph_loginId:'Login ID', ph_pass:'Password', loginBtn:'🔓 Login', chgPwLink:'🔑 Change password', chgTitle:'Change password', chgSub:'Change it with your login ID and current password', ph_cpOld:'Current password', ph_cpNew:'New password (6+ chars)', ph_cpNew2:'New password (confirm)', cpBtn:'🔑 Change', backToLogin:'← Back to login', m_needId:'Please enter your login ID', m_needOld:'Please enter your current password', m_short:'New password must be 6+ characters', m_mismatch:'New passwords do not match', m_ok:'✅ Changed. Please log in with your new password', m_wrong:'Login ID or current password is incorrect', m_err:'Error: ' }
+      ja: { title:'管理', logout:'ログアウト', loading:'読み込み中…', login:'ログイン', loginSub:'ログインIDとパスワードを入力', loginErr:'IDまたはパスワードが違います', needLogin:'ログインIDとパスワードを入力してください', ph_loginId:'ログインID', ph_pass:'パスワード', loginBtn:'🔓 ログイン', chgPwLink:'🔑 パスワードを変更', chgTitle:'パスワード変更', chgSub:'ログインIDと現在のパスワードで変更できます', ph_cpOld:'現在のパスワード', ph_cpNew:'新しいパスワード（6文字以上）', ph_cpNew2:'新しいパスワード（確認）', cpBtn:'🔑 変更する', backToLogin:'← ログインに戻る', m_needId:'ログインIDを入力してください', m_needOld:'現在のパスワードを入力してください', m_short:'新しいパスワードは6文字以上にしてください', m_mismatch:'新しいパスワードが一致しません', m_ok:'✅ 変更しました。新しいパスワードでログインしてください', m_wrong:'ログインIDまたは現在のパスワードが違います', m_err:'エラー: ' },
+      en: { title:'Management', logout:'Logout', loading:'Loading…', login:'Login', loginSub:'Enter your login ID and password', loginErr:'Incorrect ID or password', needLogin:'Please enter your login ID and password', ph_loginId:'Login ID', ph_pass:'Password', loginBtn:'🔓 Login', chgPwLink:'🔑 Change password', chgTitle:'Change password', chgSub:'Change it with your login ID and current password', ph_cpOld:'Current password', ph_cpNew:'New password (6+ chars)', ph_cpNew2:'New password (confirm)', cpBtn:'🔑 Change', backToLogin:'← Back to login', m_needId:'Please enter your login ID', m_needOld:'Please enter your current password', m_short:'New password must be 6+ characters', m_mismatch:'New passwords do not match', m_ok:'✅ Changed. Please log in with your new password', m_wrong:'Login ID or current password is incorrect', m_err:'Error: ' }
     }, function(){ if(!document.getElementById('hubView').classList.contains('hidden')) showHub(lastAllowed); });
     document.addEventListener('DOMContentLoaded', checkAndShow);
   </script>
