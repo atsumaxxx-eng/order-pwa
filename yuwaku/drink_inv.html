@@ -2,86 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <title>Drink Inventory</title>
-  <style>
-    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
-    *{ box-sizing:border-box; }
-    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
-    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
-    .head h1{ font-size:18px; margin:0; font-weight:900; }
-    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
-    .wrap{ padding:16px; max-width:800px; margin:0 auto; }
-    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
-    table{ width:100%; border-collapse:collapse; font-size:13px; }
-    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; }
-    th{ font-size:11px; color:var(--text-3); white-space:nowrap; }
-    input{ width:100%; padding:8px; border:1px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; background:var(--surface); }
-    .low td{ background:#fff4f4; }
-    .btn{ border:0; border-radius:11px; padding:13px; font-size:15px; font-weight:900; cursor:pointer; font-family:inherit; }
-    .btn-sec{ background:#eef2f7; color:var(--navy); width:100%; margin-top:10px; }
-    .btn-pri{ background:var(--navy); color:#fff; width:100%; margin-top:10px; }
-    .btn-sm{ background:#eef2f7; color:var(--navy); padding:8px 10px; border-radius:8px; font-weight:800; border:0; cursor:pointer; }
-    .alert{ margin-top:10px; display:none; padding:11px; border-radius:9px; font-size:14px; font-weight:700; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>在庫管理へ移動</title>
+  <script>location.replace('./inventory.html');</script>
 </head>
 <body>
-  <div class="head"><h1 data-t="title">🍺 ドリンク在庫</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
-  <div class="wrap"><div class="card">
-    <div style="overflow:auto;">
-      <table><thead><tr><th style="min-width:130px;" data-t="thName">商品名</th><th style="width:70px;" data-t="thUnit">単位</th><th style="width:90px;" data-t="thStock">在庫数</th><th style="width:100px;" data-t="thMin">最小在庫</th><th style="width:90px;" data-t="thCost">原価</th><th style="width:44px;"></th></tr></thead>
-      <tbody id="rows"><tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
-    </div>
-    <button class="btn btn-sec" onclick="addRow()" data-t="addRow">＋ 行を追加</button>
-    <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
-    <div class="alert" id="msg"></div>
-  </div></div>
-
-  <script src="./config.js"></script>
-  <script src="./api.js"></script>
-  <script src="./i18n.js"></script>
-  <script>
-    var TOKEN = localStorage.getItem('mgmtToken') || '';
-    if (!TOKEN) location.href = './manage.html';
-    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
-    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-    window.rows = [];
-
-    function render(){
-      var html = '';
-      window.rows.forEach(function(r,i){
-        var low = (Number(r.minimum)>0 && Number(r.stock)<=Number(r.minimum));
-        html += '<tr'+(low?' class="low"':'')+'>'+
-          '<td><input value="'+esc(r.name||'')+'" oninput="window.rows['+i+'].name=this.value"></td>'+
-          '<td><input value="'+esc(r.unit||'本')+'" oninput="window.rows['+i+'].unit=this.value"></td>'+
-          '<td><input type="number" step="any" value="'+(r.stock||0)+'" oninput="window.rows['+i+'].stock=Number(this.value)||0"></td>'+
-          '<td><input type="number" step="any" value="'+(r.minimum||0)+'" oninput="window.rows['+i+'].minimum=Number(this.value)||0"></td>'+
-          '<td><input type="number" step="any" value="'+(r.cost||0)+'" oninput="window.rows['+i+'].cost=Number(this.value)||0"></td>'+
-          '<td><button class="btn-sm" onclick="delRow('+i+')">🗑</button></td></tr>';
-      });
-      if (!window.rows.length) html = '<tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>';
-      document.getElementById('rows').innerHTML = html;
-    }
-    window.addRow = function(){ window.rows.push({ name:'', unit:'本', stock:0, minimum:0, cost:0 }); render(); };
-    window.delRow = function(i){ window.rows.splice(i,1); render(); };
-    window.save = function(){
-      var clean = window.rows.filter(function(r){ return (r.name||'').trim(); });
-      var btn = document.getElementById('saveBtn'); btn.disabled=true;
-      rpc('saveDrinkInventory',[clean]).then(function(){ btn.disabled=false; msg(I18n.t('saved'), true); })
-        .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
-    };
-    function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
-
-    var __loaded=false;
-    rpc('getDrinkInventory',[]).then(function(list){ window.rows=(list||[]).slice(); __loaded=true; render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
-
-    I18n.init({
-      ja:{ title:'🍺 ドリンク在庫', back:'← 管理へ', thName:'商品名', thUnit:'単位', thStock:'在庫数', thMin:'最小在庫', thCost:'原価', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'🍺 Drink Stock', back:'← Manage', thName:'Item', thUnit:'Unit', thStock:'Stock', thMin:'Min stock', thCost:'Cost', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
-    }, function(){ if(__loaded) render(); });
-  </script>
+  <p style="font-family:sans-serif;padding:20px;">「ドリンク在庫」は「在庫管理」に統合されました。移動します… <a href="./inventory.html">在庫管理を開く</a></p>
 </body>
 </html>

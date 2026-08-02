@@ -6,7 +6,7 @@
     en: { order:'Order', total:'Total', all:'All', send:'Order', empty:'Please select items',
       confirm:'Send this order?', okTitle:'Order sent', okMsg:'Your order was received.',
       queuedTitle:'Saved (offline)', queuedMsg:'No connection now. It will be sent automatically when back online.',
-      errTitle:'Error', ok:'OK', table:'Table', noTable:'No table number in the QR link.',
+      errTitle:'Error', ok:'OK', table:'Table', counter:'Counter', noTable:'No table number in the QR link.',
       offline:'Offline — orders will be sent automatically when back online', lang:'JP',
       svc:'Service', tax:'Tax',
       tblTitle:'Select your table', tblMsg:'Scan the QR at your table, or pick your table number.', tblGo:'Start',
@@ -17,7 +17,7 @@
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
-      errTitle:'エラー', ok:'OK', table:'卓', noTable:'QRリンクに卓番号がありません。',
+      errTitle:'エラー', ok:'OK', table:'卓', counter:'カウンター', noTable:'QRリンクに卓番号がありません。',
       offline:'オフライン — 復帰時に自動送信します', lang:'EN',
       svc:'サービス料', tax:'税',
       tblTitle:'テーブルを選択', tblMsg:'QRを読み取るか、テーブル番号を選んでください。', tblGo:'開始',
@@ -88,7 +88,7 @@
   function renderTexts() {
     var x = t();
     $('shopName').textContent = state.settings.shopName || x.order;
-    $('tableChip').textContent = x.table + ' ' + (state.table || '—');
+    $('tableChip').textContent = state.table ? seatLabel(state.table) : (x.table + ' —');
     $('langBtn').textContent = x.lang;
     $('totalLbl').textContent = x.total;
     $('sendLbl').textContent = x.send;
@@ -258,10 +258,17 @@
   }
 
   // テーブル未指定（QR無しアクセス）時に手動選択を促す
+  // 席ラベルを言語に合わせて表示（値自体は「テーブルN/カウンターM」のまま保存）
+  function seatLabel(v) {
+    var x = t(), s = String(v);
+    var m = s.match(/^テーブル(\d+)$/); if (m) return x.table + ' ' + m[1];
+    var c = s.match(/^カウンター(\d+)$/); if (c) return (x.counter || 'Counter') + ' ' + c[1];
+    return s;
+  }
   function showTablePicker(tables) {
     var sel = $('tableSelect');
     sel.innerHTML = '';
-    (tables || []).forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = 'Table ' + n; sel.appendChild(o); });
+    (tables || []).forEach(function (n) { var o = document.createElement('option'); o.value = n; o.textContent = seatLabel(n); sel.appendChild(o); });
     var x = t();
     $('tblTitle').textContent = x.tblTitle;
     $('tblMsg').textContent = x.tblMsg;
