@@ -22,4 +22,31 @@
     lang: lang,
     t: function (k) { var d = DICT[lang()] || {}; return d[k] != null ? d[k] : k; }
   };
+
+  // 入力欄でEnter→そのブロックの主ボタンを実行（フォーム未使用のため共通で補う）。
+  // api.js と i18n.js の両方に同じ処理を置くが、フラグで二重バインドを防止。
+  bindEnter();
+  function bindEnter() {
+    if (typeof window === 'undefined' || window.__izEnterBound) return;
+    window.__izEnterBound = true;
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229 || e.defaultPrevented) return;
+      var t = e.target;
+      if (!t || t.tagName !== 'INPUT') return;
+      var ty = (t.getAttribute('type') || 'text').toLowerCase();
+      if (['checkbox','radio','file','button','submit','reset','range','color','date','datetime-local','month','week','time'].indexOf(ty) >= 0) return;
+      if (t.hasAttribute('data-noenter')) return;
+      var scope = (t.closest && t.closest('.card, .login, form, .sheet, .box, section')) || document.body;
+      var btns = scope.querySelectorAll('button'), fb = null, i, b, cls;
+      for (i = 0; i < btns.length; i++) {
+        b = btns[i];
+        if (b.hasAttribute('data-tlang') || b.disabled) continue;
+        if (b.offsetParent === null && b.getClientRects().length === 0) continue;
+        if (!fb) fb = b;
+        cls = ' ' + b.className + ' ';
+        if (cls.indexOf(' btn-sec ') < 0 && cls.indexOf(' sec ') < 0 && cls.indexOf(' act-back ') < 0 && cls.indexOf(' close ') < 0) { fb = b; break; }
+      }
+      if (fb) { e.preventDefault(); fb.click(); }
+    }, false);
+  }
 })();

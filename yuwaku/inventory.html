@@ -40,7 +40,7 @@
       <input type="hidden" id="iId"><input type="hidden" id="iImg">
       <div class="grid2">
         <div class="fg"><label class="form-label" data-t="lblName">品名</label><input id="iName" class="fc"></div>
-        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label><input id="iCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label><select id="iCat" class="fc" onchange="onCatSel('iCat','iCatNew')"></select><input id="iCatNew" class="fc" style="display:none;margin-top:6px;" placeholder="新規カテゴリ名" data-tph="phNewCat"></div>
         <div class="fg"><label class="form-label" data-t="lblValue">価値</label><input id="iValue" type="number" min="0" class="fc"></div>
         <div class="fg"><label class="form-label" data-t="lblRemarks">備考</label><input id="iRemarks" class="fc"></div>
       </div>
@@ -65,10 +65,27 @@
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     var ITEMS = [], SYM='₱';
 
+    function fillCatSel(selId, cats){
+      var sel=document.getElementById(selId); var cur=sel.value;
+      var h='<option value="">'+I18n.t('catUnset')+'</option>';
+      cats.forEach(function(c){ h+='<option value="'+esc(c)+'">'+esc(c)+'</option>'; });
+      h+='<option value="__new__">'+I18n.t('catNew')+'</option>';
+      sel.innerHTML=h;
+      if(cur && cur!=='__new__' && cats.indexOf(cur)<0){ var o=document.createElement('option'); o.value=cur; o.textContent=cur; sel.insertBefore(o, sel.lastChild); }
+      sel.value=cur;
+    }
+    function setCatSel(selId, newId, val){
+      var sel=document.getElementById(selId), ni=document.getElementById(newId);
+      ni.style.display='none'; ni.value=''; val=val||'';
+      if(val && !Array.prototype.some.call(sel.options,function(o){return o.value===val;})){ var o=document.createElement('option'); o.value=val; o.textContent=val; sel.insertBefore(o, sel.lastChild); }
+      sel.value=val;
+    }
+    window.onCatSel=function(selId,newId){ var isNew=document.getElementById(selId).value==='__new__'; var ni=document.getElementById(newId); ni.style.display=isNew?'block':'none'; if(isNew) ni.focus(); };
+
     function render(){
       var cats = [];
       ITEMS.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); });
-      document.getElementById('catList').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
+      fillCatSel('iCat', cats);
       if (!ITEMS.length){ document.getElementById('list').innerHTML='<div class="muted">'+I18n.t('noItems')+'</div>'; return; }
       document.getElementById('list').innerHTML = ITEMS.map(function(m,i){
         var thumb = m.displayUrl ? '<img class="thumb" src="'+esc(m.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
@@ -83,19 +100,21 @@
       document.getElementById('iId').value = m['ID'];
       document.getElementById('iImg').value = m['画像URL']||'';
       document.getElementById('iName').value = m['品名'];
-      document.getElementById('iCat').value = m['カテゴリ']||'';
+      setCatSel('iCat','iCatNew', m['カテゴリ']||'');
       document.getElementById('iValue').value = Number(m['価値'])||0;
       document.getElementById('iRemarks').value = m['備考']||'';
       document.getElementById('iFile').value = '';
       window.scrollTo({top:0,behavior:'smooth'});
     };
-    window.clearForm = function(){ ['iId','iImg','iName','iCat','iValue','iRemarks','iFile'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('msg').style.display='none'; };
+    window.clearForm = function(){ ['iId','iImg','iName','iValue','iRemarks','iFile'].forEach(function(id){ document.getElementById(id).value=''; }); setCatSel('iCat','iCatNew',''); document.getElementById('msg').style.display='none'; };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
     window.save = function(){
       var name = document.getElementById('iName').value.trim();
       if (!name){ msg(I18n.t('needName'), false); return; }
-      var item = { id:document.getElementById('iId').value, name:name, category:document.getElementById('iCat').value,
+      var catSel=document.getElementById('iCat').value;
+      var category=(catSel==='__new__')?document.getElementById('iCatNew').value.trim():catSel;
+      var item = { id:document.getElementById('iId').value, name:name, category:category,
         value:document.getElementById('iValue').value, remarks:document.getElementById('iRemarks').value, currentImageUrl:document.getElementById('iImg').value };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('iFile').files[0];
@@ -122,8 +141,8 @@
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
 
     I18n.init({
-      ja:{ title:'📦 在庫管理', back:'← 管理へ', formTitle:'➕ 品目の追加 / 編集', lblName:'品名', lblCat:'カテゴリ', lblValue:'価値', lblRemarks:'備考', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'📦 在庫一覧', loading:'読み込み中…', noItems:'在庫がありません', edit:'編集', del:'削除', delConfirm:'削除しますか？', needName:'品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'📦 Inventory', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Item name', lblCat:'Category', lblValue:'Value', lblRemarks:'Remarks', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'📦 Inventory list', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete?', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+      ja:{ title:'📦 在庫管理', back:'← 管理へ', formTitle:'➕ 品目の追加 / 編集', lblName:'品名', lblCat:'カテゴリ', catUnset:'（未選択）', catNew:'＋ 新規カテゴリ…', phNewCat:'新規カテゴリ名', lblValue:'価値', lblRemarks:'備考', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'📦 在庫一覧', loading:'読み込み中…', noItems:'在庫がありません', edit:'編集', del:'削除', delConfirm:'削除しますか？', needName:'品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'📦 Inventory', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Item name', lblCat:'Category', catUnset:'(none)', catNew:'＋ New category…', phNewCat:'New category name', lblValue:'Value', lblRemarks:'Remarks', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'📦 Inventory list', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete?', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
     }, function(){ if(__loaded) render(); });
   </script>
 </body>

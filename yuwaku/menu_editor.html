@@ -41,10 +41,10 @@
       <div class="grid2">
         <div class="fg"><label class="form-label" data-t="lblName">商品名</label><input id="mName" class="fc"></div>
         <div class="fg"><label class="form-label" data-t="lblPrice">価格</label><input id="mPrice" type="number" min="0" class="fc"></div>
-        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label><input id="mCat" class="fc" list="catList"><datalist id="catList"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label><select id="mCat" class="fc" onchange="onCatSel('mCat','mCatNew')"></select><input id="mCatNew" class="fc" style="display:none;margin-top:6px;" placeholder="新規カテゴリ名" data-tph="phNewCat"></div>
         <div class="fg"><label class="form-label" data-t="lblStatus">ステータス</label><select id="mStatus" class="fc"><option value="販売中" data-t="onSale">販売中</option><option value="販売停止" data-t="stopped">販売停止</option></select></div>
         <div class="fg"><label class="form-label" data-t="lblNameEn">商品名（English）</label><input id="mNameEn" class="fc" placeholder="空欄なら自動翻訳" data-tph="phAuto"></div>
-        <div class="fg"><label class="form-label" data-t="lblCatEn">カテゴリ（English）</label><input id="mCatEn" class="fc" list="catListEn" placeholder="空欄なら自動翻訳" data-tph="phAuto"><datalist id="catListEn"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblCatEn">カテゴリ（English）</label><select id="mCatEn" class="fc" onchange="onCatSel('mCatEn','mCatEnNew')"></select><input id="mCatEnNew" class="fc" style="display:none;margin-top:6px;" placeholder="空欄なら自動翻訳" data-tph="phAuto"></div>
       </div>
       <div class="muted" style="margin:-2px 0 8px;" data-t="enHint">英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。</div>
       <div class="fg"><label class="form-label" data-t="lblImg">画像（任意・変更時のみ選択）</label><input id="mFile" type="file" accept="image/*" class="fc"></div>
@@ -68,11 +68,29 @@
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     var MENU = [];
 
+    // カテゴリ選択(select)を組み立てる。現在値は保持し、一覧にない値は追加。
+    function fillCatSel(selId, cats){
+      var sel=document.getElementById(selId); var cur=sel.value;
+      var h='<option value="">'+I18n.t('catUnset')+'</option>';
+      cats.forEach(function(c){ h+='<option value="'+esc(c)+'">'+esc(c)+'</option>'; });
+      h+='<option value="__new__">'+I18n.t('catNew')+'</option>';
+      sel.innerHTML=h;
+      if(cur && cur!=='__new__' && cats.indexOf(cur)<0){ var o=document.createElement('option'); o.value=cur; o.textContent=cur; sel.insertBefore(o, sel.lastChild); }
+      sel.value=cur;
+    }
+    function setCatSel(selId, newId, val){
+      var sel=document.getElementById(selId), ni=document.getElementById(newId);
+      ni.style.display='none'; ni.value=''; val=val||'';
+      if(val && !Array.prototype.some.call(sel.options,function(o){return o.value===val;})){ var o=document.createElement('option'); o.value=val; o.textContent=val; sel.insertBefore(o, sel.lastChild); }
+      sel.value=val;
+    }
+    window.onCatSel=function(selId,newId){ var isNew=document.getElementById(selId).value==='__new__'; var ni=document.getElementById(newId); ni.style.display=isNew?'block':'none'; if(isNew) ni.focus(); };
+
     function render(){
       var cats = [], catsEn = [];
       MENU.forEach(function(m){ var c=m['カテゴリ']; if(c && cats.indexOf(c)===-1) cats.push(c); var ce=m['カテゴリ_EN']; if(ce && catsEn.indexOf(ce)===-1) catsEn.push(ce); });
-      document.getElementById('catList').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
-      document.getElementById('catListEn').innerHTML = catsEn.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
+      fillCatSel('mCat', cats);
+      fillCatSel('mCatEn', catsEn);
       if (!MENU.length){ document.getElementById('list').innerHTML='<div class="muted">'+I18n.t('noItems')+'</div>'; return; }
       document.getElementById('list').innerHTML = MENU.map(function(m,i){
         var off = (m['ステータス']!=='販売中');
@@ -89,22 +107,26 @@
       document.getElementById('oldName').value = m['商品名'];
       document.getElementById('mName').value = m['商品名'];
       document.getElementById('mPrice').value = Number(m['価格'])||0;
-      document.getElementById('mCat').value = m['カテゴリ']||'';
+      setCatSel('mCat','mCatNew', m['カテゴリ']||'');
       document.getElementById('mStatus').value = (m['ステータス']==='販売中'?'販売中':'販売停止');
       document.getElementById('mNameEn').value = m['商品名_EN']||'';
-      document.getElementById('mCatEn').value = m['カテゴリ_EN']||'';
+      setCatSel('mCatEn','mCatEnNew', m['カテゴリ_EN']||'');
       document.getElementById('mFile').value = '';
       window.scrollTo({top:0,behavior:'smooth'});
     };
-    window.clearForm = function(){ ['oldName','mName','mPrice','mCat','mNameEn','mCatEn','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('mStatus').value='販売中'; document.getElementById('msg').style.display='none'; };
+    window.clearForm = function(){ ['oldName','mName','mPrice','mNameEn','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); setCatSel('mCat','mCatNew',''); setCatSel('mCatEn','mCatEnNew',''); document.getElementById('mStatus').value='販売中'; document.getElementById('msg').style.display='none'; };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
     window.save = function(){
       var name = document.getElementById('mName').value.trim();
       if (!name){ msg(I18n.t('needName'), false); return; }
+      var catSel=document.getElementById('mCat').value;
+      var category=(catSel==='__new__')?document.getElementById('mCatNew').value.trim():catSel;
+      var catEnSel=document.getElementById('mCatEn').value;
+      var categoryEn=(catEnSel==='__new__')?document.getElementById('mCatEnNew').value.trim():catEnSel;
       var item = { oldName:document.getElementById('oldName').value, name:name, price:document.getElementById('mPrice').value,
-        category:document.getElementById('mCat').value, status:document.getElementById('mStatus').value, desc:'',
-        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:document.getElementById('mCatEn').value.trim() };
+        category:category, status:document.getElementById('mStatus').value, desc:'',
+        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:categoryEn };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('mFile').files[0];
       function send(fd){
@@ -121,8 +143,8 @@
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
 
     I18n.init({
-      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', catUnset:'（未選択）', catNew:'＋ 新規カテゴリ…', phNewCat:'新規カテゴリ名', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', catUnset:'(none)', catNew:'＋ New category…', phNewCat:'New category name', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
     }, function(){ if(__loaded) render(); });
   </script>
 </body>
