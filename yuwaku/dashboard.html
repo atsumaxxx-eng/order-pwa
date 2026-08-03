@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Dashboard</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --green:#16a34a; --red:#c62828; --amber:#f59e0b; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:900px; margin:0 auto; }
+    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:14px; }
+    .kpi{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; }
+    .kpi .lb{ font-size:12px; color:var(--text-3); font-weight:700; }
+    .kpi .v{ font-size:24px; font-weight:900; margin-top:4px; font-variant-numeric:tabular-nums; }
+    .kpi .sub{ font-size:12px; color:var(--text-3); margin-top:2px; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:10px; }
+    .bar{ height:12px; border-radius:999px; background:#eef1f5; overflow:hidden; }
+    .bar > span{ display:block; height:12px; background:var(--green); }
+    .row{ display:flex; justify-content:space-between; padding:8px 2px; border-bottom:1px solid var(--border); font-size:14px; }
+    .row .amt{ font-weight:800; font-variant-numeric:tabular-nums; }
+    .pill{ font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; }
+    .g{ background:#dcfce7; color:#15803d; } .a{ background:#fef3c7; color:#b45309; } .r{ background:#fee2e2; color:#b91c1c; }
+    .fc{ padding:9px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; }
+    .muted{ color:var(--text-3); font-size:12px; }
+    .loading{ text-align:center; color:var(--text-3); padding:30px 0; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">📊 ダッシュボード</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap" id="wrap"><div class="loading" data-t="loading">読み込み中…</div></div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var SYM='₱', D=null;
+    function money(v){ return SYM+(Math.round(Number(v)||0)).toLocaleString(); }
+
+    window.saveTarget = function(){
+      var v = Number(document.getElementById('tgt').value)||0;
+      rpc('saveSettings',[{ salesTargetMonthly:v }]).then(function(){ if(D){ D.target=v; render(); } });
+    };
+
+    function render(){
+      if(!D){ return; }
+      var t=D.today||{}, m=D.month||{}, e=(m.exp||{});
+      var avgT = t.orders>0 ? t.revenue/t.orders : 0;
+      var cogs = m.cogsAuto||0, wages=m.wages||0;
+      var prime = cogs + wages;
+      var primeRate = m.revenue>0 ? Math.round(prime/m.revenue*1000)/10 : 0;
+      var expTotal = (e['賃料']||0)+(e['電気代']||0)+(e['水道代']||0)+(e['備品購入']||0)+(e['その他']||0);
+      var profit = (m.revenue||0) - (cogs + wages + expTotal);
+      var margin = m.revenue>0 ? Math.round(profit/m.revenue*1000)/10 : 0;
+      var tgt = D.target||0;
+      var tgtPct = tgt>0 ? Math.min(100, Math.round((m.revenue||0)/tgt*100)) : 0;
+      var primePill = primeRate<=60?'g':(primeRate<=70?'a':'r');
+
+      var html = '';
+      html += '<div class="grid">'
+        + '<div class="kpi"><div class="lb">'+I18n.t('todaySales')+'</div><div class="v" style="color:var(--green)">'+money(t.revenue)+'</div><div class="sub">'+(t.orders||0)+I18n.t('ordersU')+' ・ '+I18n.t('avg')+' '+money(avgT)+'</div></div>'
+        + '<div class="kpi"><div class="lb">'+I18n.t('monthSales')+'</div><div class="v">'+money(m.revenue)+'</div><div class="sub">'+(m.orders||0)+I18n.t('ordersU')+'</div></div>'
+        + '<div class="kpi"><div class="lb">'+I18n.t('grossProfit')+'</div><div class="v" style="color:'+(profit>=0?'var(--navy)':'var(--red)')+'">'+money(profit)+'</div><div class="sub">'+I18n.t('margin')+' '+margin+'%</div></div>'
+        + '<div class="kpi"><div class="lb">'+I18n.t('primeRate')+'</div><div class="v"><span class="pill '+primePill+'">'+primeRate+'%</span></div><div class="sub">'+I18n.t('primeSub')+'</div></div>'
+        + '</div>';
+
+      // 目標
+      html += '<div class="card"><div class="card-title">'+I18n.t('targetTitle')+'</div>';
+      if(tgt>0){
+        html += '<div class="row" style="border:0;padding-bottom:6px;"><span>'+I18n.t('monthVsTarget')+'</span><span class="amt">'+money(m.revenue)+' / '+money(tgt)+' ('+tgtPct+'%)</span></div>';
+        html += '<div class="bar"><span style="width:'+tgtPct+'%;'+(tgtPct>=100?'background:var(--green)':'')+'"></span></div>';
+      }
+      html += '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;"><span class="muted">'+I18n.t('setTarget')+'</span>'
+        + '<input id="tgt" type="number" min="0" class="fc" style="width:140px;" value="'+(tgt||'')+'">'
+        + '<button class="hbtn" style="background:var(--navy);" onclick="saveTarget()">'+I18n.t('save')+'</button></div></div>';
+
+      // 原価内訳
+      html += '<div class="card"><div class="card-title">'+I18n.t('costTitle')+'</div>'
+        + '<div class="row"><span>'+I18n.t('cogs')+'</span><span class="amt">'+money(cogs)+'</span></div>'
+        + '<div class="row"><span>'+I18n.t('wages')+'</span><span class="amt">'+money(wages)+'</span></div>'
+        + '<div class="row"><span>'+I18n.t('expenses')+'</span><span class="amt">'+money(expTotal)+'</span></div>'
+        + '<div class="muted" style="margin-top:8px;">'+I18n.t('costNote')+' <a href="./profit.html">'+I18n.t('toProfit')+'</a></div></div>';
+
+      // アラート
+      html += '<div class="grid">'
+        + '<div class="kpi"><div class="lb">'+I18n.t('lowStock')+'</div><div class="v" style="color:'+((D.lowStock||0)>0?'var(--red)':'var(--navy)')+'">'+(D.lowStock||0)+'</div><div class="sub"><a href="./inventory.html">'+I18n.t('toInv')+'</a></div></div>'
+        + '<div class="kpi"><div class="lb">'+I18n.t('menuAlert')+'</div><div class="v" style="color:'+((D.menuAlert||0)>0?'var(--amber)':'var(--navy)')+'">'+(D.menuAlert||0)+'</div><div class="sub"><a href="./sales.html">'+I18n.t('toSales')+'</a></div></div>'
+        + '</div>';
+
+      document.getElementById('wrap').innerHTML = html;
+    }
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; if(D) render(); }).catch(function(){});
+    rpc('getDashboard',[]).then(function(d){ D=d||null; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('wrap').innerHTML='<div style="color:#b91c1c;padding:14px;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
+
+    I18n.init({
+      ja:{ title:'📊 ダッシュボード', back:'← 管理へ', loading:'読み込み中…', todaySales:'本日の売上', monthSales:'今月の売上', ordersU:'件', avg:'客単価', grossProfit:'今月の粗利', margin:'粗利率', primeRate:'プライムコスト率', primeSub:'(原価+人件費)÷売上', targetTitle:'🎯 月間売上目標', monthVsTarget:'今月 / 目標', setTarget:'目標を設定:', save:'保存', costTitle:'💴 今月の原価内訳', cogs:'商品原価(自動)', wages:'従業員給与', expenses:'経費(固定費・備品・その他)', costNote:'詳細・仕入実績での計算は', toProfit:'月間粗利へ', lowStock:'低在庫アラート', toInv:'在庫管理へ', menuAlert:'要注意メニュー', toSales:'売上分析へ', loadErr:'読み込みエラー: ' },
+      en:{ title:'📊 Dashboard', back:'← Manage', loading:'Loading…', todaySales:"Today's sales", monthSales:'This month', ordersU:' orders', avg:'Avg/order', grossProfit:'Gross profit (month)', margin:'Margin', primeRate:'Prime cost %', primeSub:'(COGS+labor)÷sales', targetTitle:'🎯 Monthly sales target', monthVsTarget:'Month / Target', setTarget:'Set target:', save:'Save', costTitle:'💴 Cost breakdown (month)', cogs:'Product cost (auto)', wages:'Wages', expenses:'Expenses (fixed/supplies/other)', costNote:'For detail & purchase-based calc →', toProfit:'Gross profit', lowStock:'Low-stock alerts', toInv:'Inventory', menuAlert:'Menu to review', toSales:'Sales analytics', loadErr:'Load error: ' }
+    }, function(){ if(D) render(); });
+  </script>
+</body>
+</html>
