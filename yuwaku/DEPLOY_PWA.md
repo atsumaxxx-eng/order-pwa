@@ -19,13 +19,13 @@ GAS側は `code.js` の `doPost` に `?api=1` のJSON APIを追加済み(既存�
 
 ## ① 初回だけ: 公開リポジトリ order-pwa でPagesを有効化
 
-`Development` は非公開のため、フロント(`docs/`)だけを**公開リポジトリ `atsumaxxx-eng/order-pwa`** にミラーして配信する。
+`Development` は非公開のため、フロント(`docs/`)だけを**公開リポジトリ `izakanpai/order-pwa`** にミラーして配信する。
 `deploy.bat` が `docs/` を order-pwa のルートへ subtree push する。
 
 1. 先に一度 `deploy.bat` を実行して order-pwa に push（`main` ブランチが作られる）
-2. GitHub → `atsumaxxx-eng/order-pwa` → **Settings → Pages**
+2. GitHub → `izakanpai/order-pwa` → **Settings → Pages**
 3. Source: **Deploy from a branch** / Branch: **main** / Folder: **/(root)** → **Save**
-4. 数分後、公開URL: `https://atsumaxxx-eng.github.io/order-pwa/`
+4. 数分後、公開URL: `https://izakanpai.com/yuwaku/`
 
 ## ② デプロイ（毎回）
 
@@ -37,8 +37,8 @@ GitHub PagesとGASの両方が更新されます。ログは `deploy.log`。
 
 新PWAの注文URLは卓番号つき:
 ```
-https://atsumaxxx-eng.github.io/order-pwa/?table=1
-https://atsumaxxx-eng.github.io/order-pwa/?table=2 …
+https://izakanpai.com/yuwaku/?table=1
+https://izakanpai.com/yuwaku/?table=2 …
 ```
 各卓のQRをこのURLで作り直すと、客はPWAで注文できます(旧GAS版QRも当面併用可)。
 
