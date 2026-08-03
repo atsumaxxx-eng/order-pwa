@@ -92,12 +92,15 @@
       fillCatSel('mCat', cats);
       fillCatSel('mCatEn', catsEn);
       if (!MENU.length){ document.getElementById('list').innerHTML='<div class="muted">'+I18n.t('noItems')+'</div>'; return; }
+      var en = (window.I18n && I18n.lang()==='en');
       document.getElementById('list').innerHTML = MENU.map(function(m,i){
         var off = (m['ステータス']!=='販売中');
         var st = off ? I18n.t('stopped') : I18n.t('onSale');
+        var nm = (en && m['商品名_EN']) ? m['商品名_EN'] : m['商品名'];
+        var cat = (en && m['カテゴリ_EN']) ? m['カテゴリ_EN'] : (m['カテゴリ']||'');
         var thumb = m.displayUrl ? '<img class="thumb" src="'+esc(m.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
-        return '<div class="mi'+(off?' off':'')+'">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(m['商品名'])+'</div>'+
-          '<div class="meta">'+esc(m['カテゴリ']||'')+' ・ '+(SYM)+(Number(m['価格'])||0).toLocaleString()+' ・ '+st+'</div></div>'+
+        return '<div class="mi'+(off?' off':'')+'">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(nm)+'</div>'+
+          '<div class="meta">'+esc(cat)+' ・ '+(SYM)+(Number(m['価格'])||0).toLocaleString()+' ・ '+st+'</div></div>'+
           '<button class="btn-sm" onclick="edit('+i+')">'+I18n.t('edit')+'</button>'+
           '<button class="btn-sm" style="background:#fee2e2;color:#b91c1c;margin-left:6px;" onclick="del('+i+')">'+I18n.t('del')+'</button></div>';
       }).join('');
