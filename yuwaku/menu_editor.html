@@ -130,7 +130,7 @@
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('mFile').files[0];
       function send(fd){
-        rpc('saveMenuItem',[item, fd]).then(function(){ btn.disabled=false; msg(I18n.t('saved'), true); clearForm(); return rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; render(); }); })
+        rpc('saveMenuItem',[item, fd]).then(function(res){ btn.disabled=false; if(String(res).indexOf('Error')===0){ msg(I18n.t('errPrefix')+res, false); return; } msg(I18n.t('saved'), true); clearForm(); return rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; render(); }); })
           .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
       }
       if (file){ var reader=new FileReader(); reader.onload=function(e){ send({ data:e.target.result.split(',')[1], type:file.type, name:file.name }); }; reader.readAsDataURL(file); }
