@@ -71,6 +71,7 @@
     <button id="autoBtn" class="auto-toggle" onclick="toggleAuto()">—</button>
     <div class="int-group" id="intGroup"></div>
     <button class="int-btn" onclick="load()" id="manualBtn">↻</button>
+    <a class="int-btn" href="./receipts.html" style="text-decoration:none;display:inline-flex;align-items:center;">🧾 <span id="histLbl" style="margin-left:4px;">履歴</span></a>
   </div>
   <div class="wrap" id="callsWrap" style="display:none;"></div>
   <div class="wrap" id="list"><div class="empty" id="loadMsg">読み込み中…</div></div>
@@ -192,7 +193,7 @@
     }
 
     window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); render(); renderCalls(); renderAuto(); };
-    function applyLang(){ document.getElementById('title').innerText=t().title; document.getElementById('langBtn').innerText=t().lang; }
+    function applyLang(){ document.getElementById('title').innerText=t().title; document.getElementById('langBtn').innerText=t().lang; var hl=document.getElementById('histLbl'); if(hl) hl.innerText=(lang==='en'?'History':'履歴'); }
 
     function dwellStr(ms){
       var m = Math.floor(ms/60000); if(m<1) return '';

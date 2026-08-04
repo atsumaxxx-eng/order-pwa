@@ -153,6 +153,19 @@
 
   window.API = API;
 
+  // ---- Service Worker 自動更新（更新後に一度だけ自動リロード）----
+  // デプロイ後に古いキャッシュのまま動くのを防ぐ。初回制御取得では再読み込みしない。
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      var _hadController = !!navigator.serviceWorker.controller;
+      var _reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (_reloading) return; _reloading = true;
+        if (_hadController) { try { window.location.reload(); } catch (e) {} }
+      });
+    } catch (e) {}
+  }
+
   // 入力欄でEnter→そのブロックの主ボタンを実行（フォーム未使用のため共通で補う）。
   // i18n.js を読まないページ（注文/KDS/テイクアウト等）でもここで有効化。二重バインドは防止。
   if (typeof window !== 'undefined' && !window.__izEnterBound) {
