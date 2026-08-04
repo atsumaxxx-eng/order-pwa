@@ -1,6 +1,6 @@
 // Service Worker: アプリシェルをキャッシュし、オフラインでも起動できるようにする。
 // API（script.google.com）へのPOSTは横取りせず素通しする。
-const CACHE = 'yuwaku-pos-v40';
+const CACHE = 'yuwaku-pos-v41';
 const SHELL = [
   './',
   './index.html',
@@ -23,6 +23,7 @@ const SHELL = [
   './profit.html',
   './dashboard.html',
   './register.html',
+  './audit.html',
   './styles.css',
   './config.js',
   './api.js',

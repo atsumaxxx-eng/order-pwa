@@ -44,6 +44,11 @@
     .pbtn{ border:0; padding:15px; font-size:15px; font-weight:800; border-radius:12px; cursor:pointer; color:#fff; font-family:inherit; width:100%; margin-bottom:10px; }
     .cancel{ width:100%; padding:11px; background:none; border:1.5px solid #ddd; border-radius:9px; color:#888; font-size:14px; cursor:pointer; font-weight:700; font-family:inherit; }
     .alert{ display:none; padding:11px; border-radius:9px; font-size:13px; margin-bottom:10px; text-align:left; line-height:1.5; }
+    .calls-box{ background:#fffbeb; border:1px solid #fcd34d; border-radius:12px; padding:10px 12px; }
+    .calls-h{ font-weight:900; font-size:13px; color:#92400e; margin-bottom:6px; }
+    .call-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; font-size:14px; font-weight:700; border-top:1px solid #fde68a; }
+    .call-row:first-of-type{ border-top:0; }
+    .dwell{ font-size:11px; font-weight:800; color:#0f766e; background:#ccfbf1; border-radius:6px; padding:1px 6px; }
   </style>
 </head>
 <body>
@@ -56,6 +61,7 @@
       <button class="hbtn" onclick="load()">↻</button>
     </div>
   </div>
+  <div class="wrap" id="callsWrap" style="display:none;"></div>
   <div class="wrap" id="list"><div class="empty" id="loadMsg">読み込み中…</div></div>
 
   <!-- Payment modal -->
@@ -119,10 +125,26 @@
     </div>
   </div>
 
+  <!-- Void (cancel) modal -->
+  <div class="ov" id="voidModal">
+    <div class="card">
+      <div style="font-size:17px;font-weight:900;margin-bottom:6px;" id="vdT">注文の取消</div>
+      <div id="vdItem" style="font-size:13px;color:#475569;margin-bottom:10px;"></div>
+      <label style="font-size:12px;font-weight:800;" id="vdReasonL">取消理由</label>
+      <input id="vdReason" style="width:100%;padding:9px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;margin:4px 0 10px;box-sizing:border-box;">
+      <div style="font-size:12px;font-weight:800;margin-bottom:4px;" id="vdApprL">承認者（責任者ログイン）</div>
+      <input id="vdLogin" placeholder="ログインID" autocomplete="off" style="width:100%;padding:9px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;margin-bottom:6px;box-sizing:border-box;">
+      <input id="vdPass" type="password" placeholder="パスワード" autocomplete="off" style="width:100%;padding:9px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;margin-bottom:10px;box-sizing:border-box;">
+      <div class="alert" id="vdAlert"></div>
+      <button class="pbtn" style="background:#b91c1c;" onclick="doVoid()" id="vdGo">取消を承認</button>
+      <button class="cancel" onclick="closeVoid()" id="vdCxl">キャンセル</button>
+    </div>
+  </div>
+
   <script src="./config.js"></script>
   <script src="./api.js"></script>
   <script>
-    var SETTINGS = {}, PAYMONGO = false, orders = [];
+    var SETTINGS = {}, PAYMONGO = false, orders = [], calls = [], voidId = '';
     var lang = (localStorage.getItem('lang') || '').match(/^(ja|en)$/) ? localStorage.getItem('lang') : 'ja';
     var payTable = '', payTotal = 0, payCheckoutId = null, payMethod = 'cash', paySub = 0, payBase = null, payOrderIds = null, partTable = '';
 
@@ -132,13 +154,15 @@
             openPay:'支払いページを開く', checkBtn:'支払い確認', checking:'確認中…', notYet:'まだ支払いが確認できません。',
             noKey:'オンライン決済は未設定です。', cashRecv:'現金を受け取りましたか？', confirmed:'支払い完了', done:'完了（会計済にする）', processing:'処理中…', lang:'EN',
             disc:'シニア/PWD割引', senior:'シニア', idPh:'ID番号', eligPh:'対象額', discLine:'割引', vatNote:'うちVAT', orLbl:'レシート番号', printBtn:'🖨️ レシート印刷', close:'閉じる', tableW:'卓', totalW:'合計',
-            partial:'🧾 一部会計', partTitle:'一部会計 — 明細を選択', selected:'選択', selPay:'選択分を会計', splitLbl:'割り勘 ÷', each:'/人' },
+            partial:'🧾 一部会計', partTitle:'一部会計 — 明細を選択', selected:'選択', selPay:'選択分を会計', splitLbl:'割り勘 ÷', each:'/人',
+            callHdr:'🔔 呼び出し', callLbl:'スタッフ呼出', billLbl:'お会計希望', resolve:'対応済', agoMin:'分前', stay:'滞在', voidBtn:'取消', voidT:'注文の取消', reason:'取消理由', approver:'承認者（責任者ログイン）', loginPh:'ログインID', passPh:'パスワード', voidGo:'取消を承認', needReason:'取消理由を入力してください', authFail:'ログインIDまたはパスワードが違います', voided:'取消しました', alreadySettled:'会計済のため取消できません' },
       en: { title:'Orders', served:'✓ Served', servedBtn:'Mark served', pay:'💳 Checkout', noOrder:'No open orders',
             cash:'Cash', card:'Card', cancel:'Cancel', pTitle:'Payment', sub:'Subtotal', svc:'Service', tax:'Tax',
             openPay:'Open payment page', checkBtn:'Check status', checking:'Checking…', notYet:'Payment not confirmed yet.',
             noKey:'Online payment is not set up.', cashRecv:'Cash received?', confirmed:'Paid', done:'Done (settle)', processing:'Processing…', lang:'JP',
             disc:'Senior/PWD discount', senior:'Senior', idPh:'ID no.', eligPh:'Eligible amt', discLine:'Discount', vatNote:'incl. VAT', orLbl:'Receipt no.', printBtn:'🖨️ Print receipt', close:'Close', tableW:'Table', totalW:'TOTAL',
-            partial:'🧾 Partial', partTitle:'Partial checkout — select items', selected:'Selected', selPay:'Checkout selected', splitLbl:'Split ÷', each:'/person' }
+            partial:'🧾 Partial', partTitle:'Partial checkout — select items', selected:'Selected', selPay:'Checkout selected', splitLbl:'Split ÷', each:'/person',
+            callHdr:'🔔 Requests', callLbl:'Call staff', billLbl:'Bill please', resolve:'Done', agoMin:'m ago', stay:'Seated', voidBtn:'Void', voidT:'Void order', reason:'Reason', approver:'Approver (manager login)', loginPh:'Login ID', passPh:'Password', voidGo:'Approve void', needReason:'Please enter a reason', authFail:'Wrong login ID or password', voided:'Order voided', alreadySettled:'Cannot void a settled order' }
     };
     function t(){ return i18n[lang]; }
     function sym(){ return SETTINGS.currencySymbol || '₱'; }
@@ -152,27 +176,38 @@
       return { sub:s, service:svc, tax:tax, total:s+svc+tax };
     }
 
-    window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); render(); };
+    window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); render(); renderCalls(); };
     function applyLang(){ document.getElementById('title').innerText=t().title; document.getElementById('langBtn').innerText=t().lang; }
 
+    function dwellStr(ms){
+      var m = Math.floor(ms/60000); if(m<1) return '';
+      var h = Math.floor(m/60), mm = m%60;
+      return (h>0 ? h+'h'+('0'+mm).slice(-2) : m+'m');
+    }
     function render(){
-      var active = orders.filter(function(o){ return o.status !== '会計済'; });
+      var active = orders.filter(function(o){ return o.status !== '会計済' && o.status !== '取消'; });
       document.getElementById('cnt').innerText = active.length;
       var el = document.getElementById('list');
       if (!active.length){ el.innerHTML = '<div class="empty">✅ '+t().noOrder+'</div>'; return; }
       var map = {}, order = [];
       active.slice().reverse().forEach(function(o){ var k=String(o.table); if(!map[k]){ map[k]=[]; order.push(k); } map[k].push(o); });
+      var now = Date.now();
       var html = '';
       order.forEach(function(tn){
         var rows = map[tn];
         var total = rows.reduce(function(s,o){ return s + (Number(o.price)||0); }, 0);
-        html += '<div class="tg"><div class="tg-h"><div class="ti">🪑 '+esc(tn)+'</div><div class="to">'+money(total)+'</div></div>';
+        // 滞在タイマー：この卓の最古の注文時刻から経過
+        var minT = Infinity; rows.forEach(function(o){ var d=new Date(o.date).getTime(); if(!isNaN(d)&&d<minT) minT=d; });
+        var dwell = (minT!==Infinity) ? dwellStr(now-minT) : '';
+        var dwellTag = dwell ? ' <span class="dwell">⏱ '+t().stay+' '+dwell+'</span>' : '';
+        html += '<div class="tg"><div class="tg-h"><div class="ti">🪑 '+esc(tn)+dwellTag+'</div><div class="to">'+money(total)+'</div></div>';
         rows.forEach(function(o){
           var served = o.status === '提供済';
           html += '<div class="row'+(served?' served':'')+'"><div class="m"><div class="tm">🕐 '+fmtTime(o.date)+'</div>'+
             '<div class="it">'+esc(o.details)+(o.paid?' <span class="prepaid">💳前払い</span>':'')+'</div></div>'+
             '<div class="rt"><span class="pr">'+money(o.price||0)+'</span>'+
             (served?('<span class="served-lbl">'+t().served+'</span>'):('<button class="b-xs b-warn" onclick="setServed(\''+o.id+'\')">'+t().servedBtn+'</button>'))+
+            '<button class="b-xs" style="background:#fee2e2;color:#b91c1c;margin-left:4px;" onclick="askVoid(\''+o.id+'\')">'+t().voidBtn+'</button>'+
             '</div></div>';
         });
         html += '<div class="tg-a"><button class="b-pay" onclick="openPay(\''+esc(tn).replace(/'/g,"\\'")+'\','+total+')">'+t().pay+' '+money(total)+'</button>'+
@@ -180,6 +215,57 @@
       });
       el.innerHTML = html;
     }
+
+    // ── スタッフ呼び出し ──
+    function renderCalls(){
+      var w = document.getElementById('callsWrap');
+      if (!calls.length){ w.style.display='none'; w.innerHTML=''; return; }
+      w.style.display='block';
+      var html = '<div class="calls-box"><div class="calls-h">'+t().callHdr+'</div>';
+      calls.forEach(function(c){
+        var lbl = c.type==='bill' ? ('🧾 '+t().billLbl) : ('🔔 '+t().callLbl);
+        var age = c.ageMin>0 ? (' · '+c.ageMin+t().agoMin) : '';
+        html += '<div class="call-row"><span>🪑 '+esc(c.table)+' — '+lbl+age+'</span>'+
+          '<button class="b-xs" style="background:#0f766e;color:#fff;" onclick="resolveCall(\''+esc(c.id).replace(/'/g,"\\'")+'\')">'+t().resolve+'</button></div>';
+      });
+      w.innerHTML = html + '</div>';
+    }
+    window.resolveCall = function(id){ API.post('resolveCall', { id:id }).then(loadCalls).catch(function(){}); };
+    function loadCalls(){ return API.post('getStaffCalls', {}).then(function(r){ calls = r.data || []; renderCalls(); }).catch(function(){}); }
+
+    // ── 注文取消（承認制） ──
+    window.askVoid = function(id){
+      var o = null; for(var i=0;i<orders.length;i++){ if(String(orders[i].id)===String(id)){ o=orders[i]; break; } }
+      if(!o) return;
+      voidId = id;
+      document.getElementById('vdT').innerText = t().voidT;
+      document.getElementById('vdItem').innerText = '🪑 '+o.table+' · '+o.details+' · '+money(o.price||0);
+      document.getElementById('vdReasonL').innerText = t().reason;
+      document.getElementById('vdApprL').innerText = t().approver;
+      document.getElementById('vdReason').value='';
+      document.getElementById('vdLogin').value=''; document.getElementById('vdLogin').placeholder=t().loginPh;
+      document.getElementById('vdPass').value=''; document.getElementById('vdPass').placeholder=t().passPh;
+      document.getElementById('vdGo').innerText = t().voidGo; document.getElementById('vdCxl').innerText = t().cancel;
+      var a=document.getElementById('vdAlert'); a.style.display='none';
+      document.getElementById('voidModal').classList.add('on');
+    };
+    window.closeVoid = function(){ document.getElementById('voidModal').classList.remove('on'); voidId=''; };
+    function vdErr(msg){ var a=document.getElementById('vdAlert'); a.style.display='block'; a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText=msg; }
+    window.doVoid = function(){
+      var reason = document.getElementById('vdReason').value.trim();
+      if(!reason){ vdErr(t().needReason); return; }
+      var login = document.getElementById('vdLogin').value.trim();
+      var pass = document.getElementById('vdPass').value;
+      var btn = document.getElementById('vdGo'); btn.disabled=true;
+      API.post('voidOrder', { id:voidId, reason:reason, approverLogin:login, approverPass:pass }).then(function(r){
+        btn.disabled=false; var d=r.data||{};
+        if(d.error==='auth'){ vdErr(t().authFail); return; }
+        if(d.error==='no_reason'){ vdErr(t().needReason); return; }
+        if(d.error==='already_settled'){ vdErr(t().alreadySettled); return; }
+        if(d.error){ vdErr('Error: '+d.error); return; }
+        closeVoid(); load();
+      }).catch(function(e){ btn.disabled=false; vdErr('Error: '+(e.message||e)); });
+    };
 
     window.setServed = function(id){ API.post('updateOrderStatus', { id:id, status:'提供済' }).then(load).catch(load); };
     window.load = function(){
@@ -331,7 +417,9 @@
       applyLang();
       API.post('bootstrap', {}).then(function(r){ SETTINGS = r.settings || {}; PAYMONGO = !!r.paymongo; load(); })
         .catch(function(){ load(); });
+      loadCalls();
       setInterval(load, 10000);
+      setInterval(loadCalls, 8000);
       if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
     }
     document.addEventListener('DOMContentLoaded', boot);

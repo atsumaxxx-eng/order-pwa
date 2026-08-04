@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Audit log</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:960px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    th{ font-size:11px; color:var(--text-3); white-space:nowrap; }
+    td.num,th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+    .muted{ color:var(--text-3); }
+    .badge{ display:inline-block; background:#fee2e2; color:#b91c1c; border-radius:6px; padding:1px 7px; font-size:11px; font-weight:800; }
+    .appr{ font-weight:800; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">🧾 監査ログ</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><button class="hbtn" onclick="reload()" data-t="reload">↻ 更新</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+    <div class="card">
+      <div style="overflow:auto;">
+        <table><thead><tr>
+          <th data-t="thTime">日時</th><th data-t="thAction">操作</th><th data-t="thTable">卓</th>
+          <th data-t="thDetails">明細</th><th class="num" data-t="thAmount">金額</th>
+          <th data-t="thReason">理由</th><th data-t="thApprover">承認者</th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var ROWS = [], SYM='₱', __loaded=false;
+
+    function fmt(ts){ try{ return new Date(ts).toLocaleString(); }catch(e){ return esc(ts); } }
+    function render(){
+      if(!ROWS.length){ document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = ROWS.map(function(r){
+        return '<tr><td class="muted" style="white-space:nowrap;">'+esc(fmt(r.ts))+'</td>'+
+          '<td><span class="badge">'+esc(r.action)+'</span></td>'+
+          '<td>'+esc(r.table)+'</td>'+
+          '<td>'+esc(r.details)+'</td>'+
+          '<td class="num">'+SYM+(Number(r.price)||0).toLocaleString()+'</td>'+
+          '<td>'+esc(r.reason)+'</td>'+
+          '<td class="appr">'+esc(r.approver)+(r.role?(' <span class="muted">('+esc(r.role)+')</span>'):'')+'</td></tr>';
+      }).join('');
+    }
+    window.reload = function(){ rpc('getAuditLog',[200]).then(function(l){ ROWS=l||[]; render(); }).catch(function(){}); };
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
+    rpc('getAuditLog',[200]).then(function(l){ ROWS=l||[]; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'🧾 監査ログ', back:'← 管理へ', reload:'↻ 更新', thTime:'日時', thAction:'操作', thTable:'卓', thDetails:'明細', thAmount:'金額', thReason:'理由', thApprover:'承認者', loading:'読み込み中…', empty:'記録はありません', loadErr:'読み込みエラー: ' },
+      en:{ title:'🧾 Audit log', back:'← Manage', reload:'↻ Reload', thTime:'Time', thAction:'Action', thTable:'Table', thDetails:'Details', thAmount:'Amount', thReason:'Reason', thApprover:'Approver', loading:'Loading…', empty:'No records', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
+  </script>
+</body>
+</html>
