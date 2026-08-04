@@ -123,7 +123,7 @@
       { grp:'system', key:'backup', ic:'💾', tt:'バックアップ', ds:'全データ複製・CSV書出', ttEn:'Backup', dsEn:'Copy all · CSV export', url:'./backup.html', active:true },
       { grp:'system', key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true }
     ];
-    var curTab = null;
+    var curTab = (function(){ try { return localStorage.getItem('mgmtTab') || null; } catch(e){ return null; } })();
 
     function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; var _lc=document.getElementById('loginCard'); if(_lc)_lc.classList.remove('hidden'); var _cc=document.getElementById('chgPwCard'); if(_cc)_cc.classList.add('hidden'); }
     function showHub(allowed){
@@ -159,7 +159,7 @@
       });
       document.getElementById('tiles').innerHTML = html;
     }
-    window.selectTab = function(id){ curTab = id; renderHub(); };
+    window.selectTab = function(id){ curTab = id; try{ localStorage.setItem('mgmtTab', id); }catch(e){} renderHub(); };
 
     window.doLogin = function(){
       var idEl = document.getElementById('loginId'), passEl = document.getElementById('loginPass');

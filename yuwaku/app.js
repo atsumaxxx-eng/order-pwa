@@ -17,6 +17,7 @@
       optChoose:'Choose options', optAdd:'Add to order', optQty:'Qty', optRequired:'required', optPick:'Please choose the required options.', optInCart:'In your order', optClose:'Close',
       soldOut:'Sold out', notNow:'Not available now', allergen:'Allergens',
       callTitle:'Staff called', callMsg:'A staff member will be with you shortly.', billTitle:'Bill requested', billMsg:'A staff member will bring your bill shortly.',
+      callConfirm:'Call a staff member to your table?', billConfirm:'Request your bill?',
       fbTitle:'How was it?', fbSub:'Your rating helps us improve.', fbComment:'Comment (optional)', fbSend:'Send', fbPick:'Please tap the stars to rate.', fbThanks:'Thank you!', fbThanksMsg:'Thanks for your feedback.',
       bdayLbl:'🎂 Register your birthday for a treat', bdaySave:'Save', bdaySaved:'Saved! 🎉', bdayBad:'Enter as MM-DD (e.g. 08-15)' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
@@ -33,6 +34,7 @@
       optChoose:'オプションを選ぶ', optAdd:'注文に追加', optQty:'数量', optRequired:'必須', optPick:'必須オプションを選択してください。', optInCart:'注文内', optClose:'閉じる',
       soldOut:'本日売切', notNow:'提供時間外', allergen:'アレルゲン',
       callTitle:'スタッフを呼びました', callMsg:'まもなくスタッフが伺います。', billTitle:'お会計を依頼しました', billMsg:'まもなくスタッフがお会計に伺います。',
+      callConfirm:'スタッフを呼びますか？', billConfirm:'お会計を依頼しますか？',
       fbTitle:'ご感想は？', fbSub:'評価は今後の改善に役立ちます。', fbComment:'コメント（任意）', fbSend:'送信', fbPick:'星をタップして評価してください。', fbThanks:'ありがとうございます！', fbThanksMsg:'ご意見ありがとうございました。',
       bdayLbl:'🎂 お誕生日を登録すると特典があります', bdaySave:'登録', bdaySaved:'登録しました！🎉', bdayBad:'MM-DD 形式で入力（例: 08-15）' }
   };
@@ -305,6 +307,7 @@
   function requestStaff(type) {
     var x = t();
     if (!state.table) { showErr(x.noTable); return; }
+    if (!confirm(type === 'bill' ? x.billConfirm : x.callConfirm)) return;
     API.post('callStaff', { table: state.table, type: type }).then(function () {
       showOk(type === 'bill' ? x.billTitle : x.callTitle, type === 'bill' ? x.billMsg : x.callMsg, type === 'bill' ? '🧾' : '🔔');
     }).catch(function (e) { showErr(String(e && e.message || e)); });

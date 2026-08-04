@@ -49,6 +49,12 @@
     .call-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:5px 0; font-size:14px; font-weight:700; border-top:1px solid #fde68a; }
     .call-row:first-of-type{ border-top:0; }
     .dwell{ font-size:11px; font-weight:800; color:#0f766e; background:#ccfbf1; border-radius:6px; padding:1px 6px; }
+    .ctlbar{ display:flex; align-items:center; gap:10px; padding:10px 16px; flex-wrap:wrap; position:sticky; top:0; z-index:15; background:var(--bg,#f6f7f9); border-bottom:1px solid #e5e7eb; }
+    .auto-toggle{ border:0; border-radius:12px; padding:12px 20px; font-size:16px; font-weight:900; cursor:pointer; font-family:inherit; min-width:150px; }
+    .auto-toggle.on{ background:#16a34a; color:#fff; } .auto-toggle.off{ background:#e2e8f0; color:#64748b; }
+    .int-group{ display:flex; gap:6px; }
+    .int-btn{ border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:9px; padding:9px 13px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; }
+    .int-btn.on{ background:#0f172a; color:#fff; border-color:#0f172a; }
   </style>
 </head>
 <body>
@@ -60,6 +66,11 @@
       <button class="hbtn" id="langBtn" onclick="toggleLang()">EN</button>
       <button class="hbtn" onclick="load()">↻</button>
     </div>
+  </div>
+  <div class="ctlbar">
+    <button id="autoBtn" class="auto-toggle" onclick="toggleAuto()">—</button>
+    <div class="int-group" id="intGroup"></div>
+    <button class="int-btn" onclick="load()" id="manualBtn">↻</button>
   </div>
   <div class="wrap" id="callsWrap" style="display:none;"></div>
   <div class="wrap" id="list"><div class="empty" id="loadMsg">読み込み中…</div></div>
@@ -145,7 +156,10 @@
   <script src="./config.js"></script>
   <script src="./api.js"></script>
   <script>
-    var SETTINGS = {}, PAYMONGO = false, orders = [], calls = [], voidId = '';
+    var SETTINGS = {}, PAYMONGO = false, orders = [], calls = [], voidId = '', MENU_MAP = {};
+    var autoOn = (function(){ try{ var v=localStorage.getItem('adminAuto'); return v===null?true:(v==='1'); }catch(e){ return true; } })();
+    var refreshSec = (function(){ try{ var v=parseInt(localStorage.getItem('adminRefreshSec'),10); return (v===10||v===30||v===60)?v:30; }catch(e){ return 30; } })();
+    var refreshTimer = null;
     var lang = (localStorage.getItem('lang') || '').match(/^(ja|en)$/) ? localStorage.getItem('lang') : 'ja';
     var payTable = '', payTotal = 0, payCheckoutId = null, payMethod = 'cash', paySub = 0, payBase = null, payOrderIds = null, partTable = '';
 
@@ -177,7 +191,7 @@
       return { sub:s, service:svc, tax:tax, total:s+svc+tax };
     }
 
-    window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); render(); renderCalls(); };
+    window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); render(); renderCalls(); renderAuto(); };
     function applyLang(){ document.getElementById('title').innerText=t().title; document.getElementById('langBtn').innerText=t().lang; }
 
     function dwellStr(ms){
@@ -205,7 +219,7 @@
         rows.forEach(function(o){
           var served = o.status === '提供済';
           html += '<div class="row'+(served?' served':'')+'"><div class="m"><div class="tm">🕐 '+fmtTime(o.date)+'</div>'+
-            '<div class="it">'+esc(o.details)+(o.paid?' <span class="prepaid">💳前払い</span>':'')+'</div></div>'+
+            '<div class="it">'+esc(transDetails(o.details))+(o.paid?' <span class="prepaid">💳前払い</span>':'')+'</div></div>'+
             '<div class="rt"><span class="pr">'+money(o.price||0)+'</span>'+
             (served?('<span class="served-lbl">'+t().served+'</span>'):('<button class="b-xs b-warn" onclick="setServed(\''+o.id+'\')">'+t().servedBtn+'</button>'))+
             '<button class="b-xs" style="background:#fee2e2;color:#b91c1c;margin-left:4px;" onclick="askVoid(\''+o.id+'\')">'+t().voidBtn+'</button>'+
@@ -273,9 +287,40 @@
       API.post('getOrders', {}).then(function(r){ orders = r.data || []; render(); })
         .catch(function(){ var lm=document.getElementById('loadMsg'); if(lm) lm.innerText='接続できません（自動再試行します）'; });
     };
+    // 明細の商品名を英語表示（メニューのEN対応。オプション括弧は原文のまま）
+    function baseName(nm){ return String(nm||'').replace(/\s*[（(][^（(]*[)）]\s*$/,'').trim(); }
+    function transDetails(details){
+      if (lang!=='en') return details;
+      return String(details||'').split(',').map(function(tok){
+        var m = tok.trim().match(/^(.+?)x(\d+)$/); if(!m) return tok;
+        var nm = m[1].trim(); var base = baseName(nm); var en = MENU_MAP[base];
+        if(!en) return tok;
+        var opt = nm.slice(base.length); // 「 (大盛り)」などの括弧部
+        return en + opt + 'x' + m[2];
+      }).join(',');
+    }
+    // ── 自動更新（間隔設定・ON/OFF・会計中は停止） ──
+    function paused(){ return document.getElementById('payModal').classList.contains('on')
+      || document.getElementById('partModal').classList.contains('on')
+      || document.getElementById('voidModal').classList.contains('on'); }
+    function tick(){ if(!autoOn) return; if(paused()) return; load(); }
+    function resetTimer(){ if(refreshTimer) clearInterval(refreshTimer); refreshTimer = setInterval(tick, refreshSec*1000); }
+    function renderAuto(){
+      var b=document.getElementById('autoBtn');
+      var en=(window.I18n && I18n.lang()==='en');
+      b.className='auto-toggle '+(autoOn?'on':'off');
+      b.innerText=(autoOn?(en?'🔄 Auto: ON':'🔄 自動更新: ON'):(en?'⏸ Auto: OFF':'⏸ 自動更新: OFF'));
+      var g=document.getElementById('intGroup');
+      g.style.opacity = autoOn?'1':'.4';
+      g.innerHTML=[10,30,60].map(function(s){ return '<button class="int-btn'+(s===refreshSec?' on':'')+'" onclick="setInt('+s+')">'+s+'s</button>'; }).join('');
+    }
+    window.toggleAuto=function(){ autoOn=!autoOn; try{localStorage.setItem('adminAuto',autoOn?'1':'0');}catch(e){} renderAuto(); resetTimer(); };
+    window.setInt=function(s){ refreshSec=s; try{localStorage.setItem('adminRefreshSec',String(s));}catch(e){} renderAuto(); resetTimer(); };
 
     // ── Payment ──
     window.openPay = function(tn, subtotal, orderIds){
+      resetPs3();
+      payMethod = 'cash';
       payTable = tn; payCheckoutId = null; payOrderIds = (orderIds && orderIds.length) ? orderIds : null; paySub = Number(subtotal)||0; payBase = breakdown(paySub);
       document.getElementById('dcOn').checked = false; document.getElementById('dcId').value=''; document.getElementById('dcElig').value='';
       var _pe=document.getElementById('payEmail'); if(_pe){ _pe.value=''; _pe.placeholder=t().eReceipt; }
@@ -326,7 +371,7 @@
       document.getElementById('partList').innerHTML = rows.map(function(o){
         return '<label style="display:flex;gap:8px;align-items:center;padding:9px 2px;border-bottom:1px solid #eee;cursor:pointer;">'
           + '<input type="checkbox" class="pchk" data-id="'+esc(o.id)+'" data-price="'+(Number(o.price)||0)+'" onchange="updPart()">'
-          + '<span style="flex:1;">'+esc(o.details)+'</span><span style="font-weight:800;">'+money(o.price||0)+'</span></label>';
+          + '<span style="flex:1;">'+esc(transDetails(o.details))+'</span><span style="font-weight:800;">'+money(o.price||0)+'</span></label>';
       }).join('') || '<div style="color:#aaa;padding:14px;">-</div>';
       document.getElementById('partT').innerText = t().partTitle;
       document.getElementById('partSelLbl').innerText = t().selected;
@@ -368,8 +413,16 @@
         + '<scr'+'ipt>window.print();<\/scr'+'ipt></body></html>');
       w.document.close();
     };
-    window.closePay = function(){ document.getElementById('payModal').classList.remove('on'); payCheckoutId=null; };
+    window.closePay = function(){ document.getElementById('payModal').classList.remove('on'); payCheckoutId=null; resetPs3(); };
     function step(n){ [1,2,3].forEach(function(i){ document.getElementById('ps'+i).style.display = (i===n)?'block':'none'; }); }
+    // レシート表示でps3の中身を差し替えるため、会計開始時に標準スケルトンへ復元（#doneBtn等の消失防止）
+    function resetPs3(){
+      document.getElementById('ps3').innerHTML =
+        '<div style="font-size:40px;">✅</div>'
+        + '<div id="ps3lbl" style="font-weight:800;margin:8px 0;"></div>'
+        + '<div id="ps3amt" style="font-size:20px;font-weight:900;color:var(--green);margin-bottom:16px;"></div>'
+        + '<button class="pbtn" style="background:var(--green);" onclick="finalize()" id="doneBtn">'+t().done+'</button>';
+    }
 
     window.cashPay = function(){
       payMethod = 'cash';
@@ -418,10 +471,14 @@
 
     function boot(){
       applyLang();
-      API.post('bootstrap', {}).then(function(r){ SETTINGS = r.settings || {}; PAYMONGO = !!r.paymongo; load(); })
-        .catch(function(){ load(); });
+      renderAuto();
+      API.post('bootstrap', {}).then(function(r){
+        SETTINGS = r.settings || {}; PAYMONGO = !!r.paymongo;
+        (r.menu||[]).forEach(function(m){ var jp=m['商品名'], en=m['商品名_EN']; if(jp && en) MENU_MAP[String(jp)]=String(en); });
+        load();
+      }).catch(function(){ load(); });
       loadCalls();
-      setInterval(load, 10000);
+      resetTimer();
       setInterval(loadCalls, 8000);
       if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
     }
