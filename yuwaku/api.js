@@ -113,7 +113,9 @@
       return 'queued';
     }
     try {
-      await API.post('submitOrder', { order: order });
+      const res = await API.post('submitOrder', { order: order });
+      const d = res && res.data;
+      if (d && d !== 'OK') { return 'rejected:' + d; }   // サーバが拒否（例: Invalid table）。キューせず即エラー通知
       return 'sent';
     } catch (err) {
       await API.queuePut({ id: order.clientId, order: order, ts: Date.now(), attempts: 0 });

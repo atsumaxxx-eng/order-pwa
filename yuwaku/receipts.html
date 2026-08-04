@@ -28,7 +28,7 @@
   </style>
 </head>
 <body>
-  <div class="head"><h1 data-t="title">🧾 会計履歴</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="head"><h1 data-t="title">🧾 会計履歴</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./admin.html" data-t="toOrders">← 注文一覧</a><a class="hbtn" href="./manage.html" data-t="back">管理へ</a></div></div>
   <div class="wrap"><div class="card">
     <div class="bar">
       <div><label class="form-label" data-t="month">対象月</label><input id="month" type="month" class="fc"></div>
@@ -75,8 +75,8 @@
     __loaded=true; load();
 
     I18n.init({
-      ja:{ title:'🧾 会計履歴', back:'← 管理へ', month:'対象月', monthTotal:'月合計', bills:'件', thTime:'日時', thOr:'OR番号', thTable:'卓', thTotal:'合計', thMethod:'支払', thDisc:'割引', reprint:'🖨️ 再印刷', sent:'印刷キューに送信しました', loading:'読み込み中…', empty:'この月の会計はありません', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'🧾 Receipts', back:'← Manage', month:'Target month', monthTotal:'Month total', bills:'bills', thTime:'Time', thOr:'OR no.', thTable:'Table', thTotal:'Total', thMethod:'Paid', thDisc:'Discount', reprint:'🖨️ Reprint', sent:'Sent to print queue', loading:'Loading…', empty:'No receipts this month', errPrefix:'Error: ', loadErr:'Load error: ' }
+      ja:{ title:'🧾 会計履歴', back:'管理へ', toOrders:'← 注文一覧', month:'対象月', monthTotal:'月合計', bills:'件', thTime:'日時', thOr:'OR番号', thTable:'卓', thTotal:'合計', thMethod:'支払', thDisc:'割引', reprint:'🖨️ 再印刷', sent:'印刷キューに送信しました', loading:'読み込み中…', empty:'この月の会計はありません', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🧾 Receipts', back:'Manage', toOrders:'← Orders', month:'Target month', monthTotal:'Month total', bills:'bills', thTime:'Time', thOr:'OR no.', thTable:'Table', thTotal:'Total', thMethod:'Paid', thDisc:'Discount', reprint:'🖨️ Reprint', sent:'Sent to print queue', loading:'Loading…', empty:'No receipts this month', errPrefix:'Error: ', loadErr:'Load error: ' }
     }, function(){ if(__loaded) render(); });
   </script>
 </body>

@@ -19,6 +19,7 @@
     <button class="lang-btn" id="couponBtn">🎟️</button>
     <button class="lang-btn" id="callBtn" title="Call staff">🔔</button>
     <button class="lang-btn" id="billBtn" title="Bill">🧾</button>
+    <button class="lang-btn" id="statusBtn" title="My orders">📋</button>
     <button class="lang-btn" id="fbBtn" title="Feedback">⭐</button>
     <button class="lang-btn" id="langBtn">JP</button>
   </div>
@@ -144,6 +145,20 @@
       <button class="btn-send ok" id="pmCheck" style="width:100%;margin-top:8px;background:var(--green);">I've paid — check</button>
       <div id="pmStatus" style="margin-top:10px;font-size:13px;font-weight:700;"></div>
       <button id="pmCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- My orders / status -->
+  <div class="overlay" id="statusModal">
+    <div class="sheet" style="max-height:80vh;overflow:auto;text-align:left;">
+      <div class="emoji" style="text-align:center;">📋</div>
+      <h3 id="stTitle" style="text-align:center;">My orders</h3>
+      <div id="stBody" style="margin:8px 0;"></div>
+      <div id="stTotalRow" style="display:flex;justify-content:space-between;font-weight:900;font-size:17px;border-top:2px solid var(--border);padding-top:10px;margin-top:6px;">
+        <span id="stTotalLbl">Unpaid total</span><span id="stTotalVal">—</span>
+      </div>
+      <button class="btn-send ok" id="stRefresh" style="width:100%;margin-top:12px;">Refresh</button>
+      <button id="stClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
     </div>
   </div>
 

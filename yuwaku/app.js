@@ -19,7 +19,8 @@
       callTitle:'Staff called', callMsg:'A staff member will be with you shortly.', billTitle:'Bill requested', billMsg:'A staff member will bring your bill shortly.',
       callConfirm:'Call a staff member to your table?', billConfirm:'Request your bill?',
       fbTitle:'How was it?', fbSub:'Your rating helps us improve.', fbComment:'Comment (optional)', fbSend:'Send', fbPick:'Please tap the stars to rate.', fbThanks:'Thank you!', fbThanksMsg:'Thanks for your feedback.',
-      bdayLbl:'🎂 Register your birthday for a treat', bdaySave:'Save', bdaySaved:'Saved! 🎉', bdayBad:'Enter as MM-DD (e.g. 08-15)' },
+      bdayLbl:'🎂 Register your birthday for a treat', bdaySave:'Save', bdaySaved:'Saved! 🎉', bdayBad:'Enter as MM-DD (e.g. 08-15)',
+      stTitle:'My orders', stTotalLbl:'Unpaid total', stRefresh:'Refresh', stEmpty:'No orders yet for this table.', stPending:'Preparing', stServed:'Served' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -36,7 +37,8 @@
       callTitle:'スタッフを呼びました', callMsg:'まもなくスタッフが伺います。', billTitle:'お会計を依頼しました', billMsg:'まもなくスタッフがお会計に伺います。',
       callConfirm:'スタッフを呼びますか？', billConfirm:'お会計を依頼しますか？',
       fbTitle:'ご感想は？', fbSub:'評価は今後の改善に役立ちます。', fbComment:'コメント（任意）', fbSend:'送信', fbPick:'星をタップして評価してください。', fbThanks:'ありがとうございます！', fbThanksMsg:'ご意見ありがとうございました。',
-      bdayLbl:'🎂 お誕生日を登録すると特典があります', bdaySave:'登録', bdaySaved:'登録しました！🎉', bdayBad:'MM-DD 形式で入力（例: 08-15）' }
+      bdayLbl:'🎂 お誕生日を登録すると特典があります', bdaySave:'登録', bdaySaved:'登録しました！🎉', bdayBad:'MM-DD 形式で入力（例: 08-15）',
+      stTitle:'注文状況', stTotalLbl:'未会計 合計', stRefresh:'更新', stEmpty:'この卓の注文はまだありません。', stPending:'準備中', stServed:'提供済み' }
   };
 
   var state = {
@@ -303,6 +305,39 @@
     $('sendBtn').disabled = b.sub <= 0;
   }
 
+  // ---- 注文状況（自分の卓の注文・提供状況・未会計合計） ----
+  function openStatus() {
+    var x = t();
+    $('stTitle').textContent = x.stTitle;
+    $('stTotalLbl').textContent = x.stTotalLbl;
+    $('stRefresh').textContent = x.stRefresh;
+    $('stClose').textContent = x.close;
+    $('statusModal').classList.add('show');
+    loadStatus();
+  }
+  function loadStatus() {
+    var x = t();
+    $('stBody').innerHTML = '<div style="text-align:center;color:var(--text-2);padding:14px;">…</div>';
+    $('stTotalVal').textContent = '—';
+    if (!state.table) { $('stBody').innerHTML = '<div style="text-align:center;color:var(--text-2);padding:14px;">' + escHtml(x.noTable) + '</div>'; return; }
+    API.post('getOrdersByTable', { table: state.table }).then(function (r) {
+      var list = (r && r.data) || [];
+      if (!list.length) { $('stBody').innerHTML = '<div style="text-align:center;color:var(--text-2);padding:14px;">' + escHtml(x.stEmpty) + '</div>'; $('stTotalVal').textContent = money(0); return; }
+      var total = 0, html = '';
+      list.forEach(function (o) {
+        total += Number(o.price) || 0;
+        var served = o.status === '提供済';
+        var badge = served ? ('<span style="background:#dcfce7;color:#15803d;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:800;">✓ ' + escHtml(x.stServed) + '</span>')
+                           : ('<span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:800;">🍳 ' + escHtml(x.stPending) + '</span>');
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div style="flex:1;"><div style="font-size:11px;color:var(--text-2);">🕐 ' + escHtml(o.time || '') + '</div><div>' + escHtml(o.details || '') + '</div></div>' +
+          '<div style="text-align:right;white-space:nowrap;"><div>' + money(o.price || 0) + '</div>' + badge + '</div></div>';
+      });
+      $('stBody').innerHTML = html;
+      $('stTotalVal').textContent = money(total);
+    }).catch(function (e) { $('stBody').innerHTML = '<div style="text-align:center;color:var(--red);padding:14px;">' + escHtml(String(e && e.message || e)) + '</div>'; });
+  }
+
   // ---- 接客（スタッフ呼び出し / お会計） ----
   function requestStaff(type) {
     var x = t();
@@ -369,6 +404,12 @@
     order.paid = !!paid;
     var btn = $('sendBtn'); btn.disabled = true;
     API.submitOrder(order).then(function (result) {
+      // サーバ拒否（例: テーブル未選択/不正）はカートを消さずにエラー表示
+      if (typeof result === 'string' && result.indexOf('rejected:') === 0) {
+        var reason = result.slice(9);
+        showErr(x.errTitle + ': ' + (reason === 'Invalid table' ? x.noTable : reason));
+        return;
+      }
       var earnedTxt = '';
       if (order.phone) {
         var rate = Number(state.settings.loyaltyEarnRate) || 20;
@@ -628,6 +669,9 @@
     $('optClose').addEventListener('click', closeOpt);
     $('callBtn').addEventListener('click', function () { requestStaff('call'); });
     $('billBtn').addEventListener('click', function () { requestStaff('bill'); });
+    $('statusBtn').addEventListener('click', openStatus);
+    $('stRefresh').addEventListener('click', loadStatus);
+    $('stClose').addEventListener('click', function () { $('statusModal').classList.remove('show'); });
     $('fbBtn').addEventListener('click', openFeedback);
     $('fbSend').addEventListener('click', sendFeedback);
     $('fbClose').addEventListener('click', function () { $('fbModal').classList.remove('show'); });
