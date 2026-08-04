@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Birthdays</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:820px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    .bar{ display:flex; gap:12px; align-items:flex-end; margin-bottom:12px; flex-wrap:wrap; }
+    .fc{ padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .muted{ color:var(--text-3); font-size:12px; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; }
+    th{ font-size:11px; color:var(--text-3); }
+    .btn-sm{ background:#0f172a; color:#fff; border:0; border-radius:8px; padding:7px 11px; font-weight:800; cursor:pointer; }
+    .code{ font-family:monospace; font-weight:800; color:#15803d; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">🎂 誕生日クーポン</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap"><div class="card">
+    <div class="bar">
+      <div><label class="form-label" data-t="month">対象月</label><input id="month" type="month" class="fc"></div>
+    </div>
+    <div class="muted" data-t="hint" style="margin-bottom:10px;">対象月が誕生月の会員一覧です。「クーポン発行」で当月末まで有効・1回限りのクーポンを作成します。金額は設定 birthdayCouponAmount（既定 ₱100）。</div>
+    <div style="overflow:auto;">
+      <table><thead><tr><th data-t="thName">氏名</th><th data-t="thPhone">電話</th><th data-t="thBday">誕生日</th><th data-t="thVisits">来店</th><th></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="muted" style="padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+    </div>
+  </div></div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var ROWS=[], ISSUED={}, __loaded=false;
+
+    function render(){
+      if(!ROWS.length){ document.getElementById('rows').innerHTML='<tr><td colspan="5" class="muted" style="padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = ROWS.map(function(r){
+        var iss = ISSUED[r.phone];
+        var cell = iss ? ('<span class="code">'+esc(iss.code)+'</span> <span class="muted">'+I18n.t('expTil')+' '+esc(iss.expiry||'')+'</span>')
+                       : ('<button class="btn-sm" onclick="issue(\''+esc(r.phone).replace(/'/g,"\\'")+'\')">'+I18n.t('issue')+'</button>');
+        return '<tr><td style="font-weight:800;">'+esc(r.name||'-')+'</td><td class="muted">'+esc(r.phone)+'</td><td>'+esc(r.birthday)+'</td><td class="muted">'+r.visits+'</td><td>'+cell+'</td></tr>';
+      }).join('');
+    }
+    window.issue = function(phone){ rpc('issueBirthdayCoupon',[phone]).then(function(d){ d=d||{}; if(d.ok){ ISSUED[phone]=d; render(); } else { alert(I18n.t('errPrefix')+(d.error||'error')); } }).catch(function(e){ alert(I18n.t('errPrefix')+(e.message||e)); }); };
+    function load(){ var mo=document.getElementById('month').value; rpc('getBirthdayMembers',[mo]).then(function(l){ ROWS=l||[]; render(); }).catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="5" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; }); }
+    document.getElementById('month').value = new Date().toISOString().slice(0,7);
+    document.getElementById('month').addEventListener('change', function(){ ISSUED={}; load(); });
+
+    __loaded=true; load();
+    I18n.init({
+      ja:{ title:'🎂 誕生日クーポン', back:'← 管理へ', month:'対象月', hint:'対象月が誕生月の会員一覧です。「クーポン発行」で当月末まで有効・1回限りのクーポンを作成します。金額は設定 birthdayCouponAmount（既定 ₱100）。', thName:'氏名', thPhone:'電話', thBday:'誕生日', thVisits:'来店', issue:'クーポン発行', expTil:'〜', loading:'読み込み中…', empty:'対象の会員はいません', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🎂 Birthday coupons', back:'← Manage', month:'Target month', hint:'Members whose birthday is in the selected month. “Issue coupon” creates a one-time coupon valid until month end. Amount = setting birthdayCouponAmount (default ₱100).', thName:'Name', thPhone:'Phone', thBday:'Birthday', thVisits:'Visits', issue:'Issue coupon', expTil:'until', loading:'Loading…', empty:'No matching members', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
+  </script>
+</body>
+</html>

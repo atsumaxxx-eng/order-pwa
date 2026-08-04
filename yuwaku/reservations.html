@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Reservations</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:960px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    th{ font-size:11px; color:var(--text-3); white-space:nowrap; }
+    .muted{ color:var(--text-3); }
+    .st{ display:inline-block; border-radius:6px; padding:1px 7px; font-size:11px; font-weight:800; }
+    .s-recv{ background:#e0e7ff; color:#3730a3; } .s-ok{ background:#dcfce7; color:#15803d; } .s-came{ background:#f1f5f9; color:#475569; } .s-cxl{ background:#fee2e2; color:#b91c1c; }
+    select.mini{ padding:5px; border:1px solid var(--border); border-radius:7px; font-family:inherit; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">🗓️ 予約管理</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><button class="hbtn" onclick="reload()" data-t="reload">↻</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap"><div class="card">
+    <div style="overflow:auto;">
+      <table><thead><tr>
+        <th data-t="thWhen">予約日時</th><th class="num" data-t="thPeople">人数</th><th data-t="thName">氏名</th>
+        <th data-t="thPhone">電話</th><th data-t="thSeat">席</th><th data-t="thNotes">備考</th><th data-t="thStatus">状態</th>
+      </tr></thead>
+      <tbody id="rows"><tr><td colspan="7" class="muted" style="padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+    </div>
+  </div></div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var ROWS=[], __loaded=false;
+    var STATUSES=['受付','確定','来店済','キャンセル'];
+    var STCLS={ '受付':'s-recv','確定':'s-ok','来店済':'s-came','キャンセル':'s-cxl' };
+    function stLabel(s){ var k={'受付':'stRecv','確定':'stOk','来店済':'stCame','キャンセル':'stCxl'}[s]; return k?I18n.t(k):s; }
+
+    function render(){
+      if(!ROWS.length){ document.getElementById('rows').innerHTML='<tr><td colspan="7" class="muted" style="padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = ROWS.map(function(r){
+        var opts = STATUSES.map(function(s){ return '<option value="'+s+'"'+(s===r.status?' selected':'')+'>'+esc(stLabel(s))+'</option>'; }).join('');
+        return '<tr><td style="white-space:nowrap;font-weight:800;">'+esc(r.datetime)+'</td><td class="num">'+r.people+'</td><td>'+esc(r.name)+'</td>'+
+          '<td class="muted">'+esc(r.phone)+'</td><td>'+esc(r.seat)+'</td><td class="muted">'+esc(r.notes)+'</td>'+
+          '<td><span class="st '+(STCLS[r.status]||'')+'" style="margin-right:6px;">'+esc(stLabel(r.status))+'</span><select class="mini" onchange="setStatus(\''+r.id+'\',this.value)">'+opts+'</select></td></tr>';
+      }).join('');
+    }
+    window.setStatus = function(id, status){ rpc('updateReservationStatus',[id,status]).then(function(){ return reload(); }).catch(function(){}); };
+    window.reload = function(){ return rpc('getReservations',[]).then(function(l){ ROWS=l||[]; render(); }); };
+    rpc('getReservations',[]).then(function(l){ ROWS=l||[]; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'🗓️ 予約管理', back:'← 管理へ', reload:'↻', thWhen:'予約日時', thPeople:'人数', thName:'氏名', thPhone:'電話', thSeat:'席', thNotes:'備考', thStatus:'状態', loading:'読み込み中…', empty:'予約はありません', loadErr:'読み込みエラー: ', stRecv:'受付', stOk:'確定', stCame:'来店済', stCxl:'キャンセル' },
+      en:{ title:'🗓️ Reservations', back:'← Manage', reload:'↻', thWhen:'Date & time', thPeople:'Party', thName:'Name', thPhone:'Phone', thSeat:'Seat', thNotes:'Notes', thStatus:'Status', loading:'Loading…', empty:'No reservations', loadErr:'Load error: ', stRecv:'Received', stOk:'Confirmed', stCame:'Arrived', stCxl:'Cancelled' }
+    }, function(){ if(__loaded) render(); });
+  </script>
+</body>
+</html>

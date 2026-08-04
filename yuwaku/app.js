@@ -17,7 +17,8 @@
       optChoose:'Choose options', optAdd:'Add to order', optQty:'Qty', optRequired:'required', optPick:'Please choose the required options.', optInCart:'In your order', optClose:'Close',
       soldOut:'Sold out', notNow:'Not available now', allergen:'Allergens',
       callTitle:'Staff called', callMsg:'A staff member will be with you shortly.', billTitle:'Bill requested', billMsg:'A staff member will bring your bill shortly.',
-      fbTitle:'How was it?', fbSub:'Your rating helps us improve.', fbComment:'Comment (optional)', fbSend:'Send', fbPick:'Please tap the stars to rate.', fbThanks:'Thank you!', fbThanksMsg:'Thanks for your feedback.' },
+      fbTitle:'How was it?', fbSub:'Your rating helps us improve.', fbComment:'Comment (optional)', fbSend:'Send', fbPick:'Please tap the stars to rate.', fbThanks:'Thank you!', fbThanksMsg:'Thanks for your feedback.',
+      bdayLbl:'🎂 Register your birthday for a treat', bdaySave:'Save', bdaySaved:'Saved! 🎉', bdayBad:'Enter as MM-DD (e.g. 08-15)' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -32,7 +33,8 @@
       optChoose:'オプションを選ぶ', optAdd:'注文に追加', optQty:'数量', optRequired:'必須', optPick:'必須オプションを選択してください。', optInCart:'注文内', optClose:'閉じる',
       soldOut:'本日売切', notNow:'提供時間外', allergen:'アレルゲン',
       callTitle:'スタッフを呼びました', callMsg:'まもなくスタッフが伺います。', billTitle:'お会計を依頼しました', billMsg:'まもなくスタッフがお会計に伺います。',
-      fbTitle:'ご感想は？', fbSub:'評価は今後の改善に役立ちます。', fbComment:'コメント（任意）', fbSend:'送信', fbPick:'星をタップして評価してください。', fbThanks:'ありがとうございます！', fbThanksMsg:'ご意見ありがとうございました。' }
+      fbTitle:'ご感想は？', fbSub:'評価は今後の改善に役立ちます。', fbComment:'コメント（任意）', fbSend:'送信', fbPick:'星をタップして評価してください。', fbThanks:'ありがとうございます！', fbThanksMsg:'ご意見ありがとうございました。',
+      bdayLbl:'🎂 お誕生日を登録すると特典があります', bdaySave:'登録', bdaySaved:'登録しました！🎉', bdayBad:'MM-DD 形式で入力（例: 08-15）' }
   };
 
   var state = {
@@ -479,7 +481,24 @@
     $('memName').textContent = state.member.name || '';
     $('memPoints').textContent = state.member.points + ' ' + x.points;
     $('memUse').checked = !!state.usePoints;
+    $('memBdayLbl').textContent = x.bdayLbl;
+    $('memBdaySave').textContent = x.bdaySave;
+    $('memBday').value = state.member.birthday || '';
+    $('memBdayMsg').textContent = '';
     $('memInfo').style.display = 'block';
+  }
+  function saveMemberBirthday() {
+    var x = t();
+    if (!state.member || !state.member.phone) return;
+    var bd = $('memBday').value.trim();
+    if (!/^\d{2}-\d{2}$/.test(bd)) { var m = $('memBdayMsg'); m.style.color = '#b91c1c'; m.textContent = x.bdayBad; return; }
+    $('memBdaySave').disabled = true;
+    API.post('setMemberBirthday', { phone: state.member.phone, birthday: bd, name: state.member.name }).then(function (r) {
+      var d = r.data || {};
+      var msg = $('memBdayMsg');
+      if (d.error) { msg.style.color = '#b91c1c'; msg.textContent = x.bdayBad; return; }
+      state.member.birthday = bd; msg.style.color = '#15803d'; msg.textContent = x.bdaySaved;
+    }).catch(function () {}).then(function () { $('memBdaySave').disabled = false; });
   }
   function lookupMember() {
     var phone = $('memPhone').value.trim();
@@ -601,6 +620,7 @@
     $('cpClose').addEventListener('click', function () { $('couponModal').classList.remove('show'); });
     $('memUse').addEventListener('change', function () { state.usePoints = this.checked; updateTotal(); });
     $('memClose').addEventListener('click', function () { $('memberModal').classList.remove('show'); });
+    $('memBdaySave').addEventListener('click', saveMemberBirthday);
     $('optAdd').addEventListener('click', addOptLine);
     $('optClose').addEventListener('click', closeOpt);
     $('callBtn').addEventListener('click', function () { requestStaff('call'); });
