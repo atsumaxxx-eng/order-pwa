@@ -48,6 +48,10 @@
       </div>
       <div class="muted" style="margin:-2px 0 8px;" data-t="enHint">英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。</div>
       <div class="fg"><label class="form-label" data-t="lblImg">画像（任意・変更時のみ選択）</label><input id="mFile" type="file" accept="image/*" class="fc"></div>
+      <div class="form-label" style="margin-top:6px;" data-t="optTitle">🎛️ オプション（サイズ・トッピング等）</div>
+      <div class="muted" style="margin:2px 0 6px;" data-t="optHint">例）サイズ＝単一選択、トッピング＝複数選択。追加料金は差額（+のみ）。</div>
+      <div id="optWrap"></div>
+      <button class="btn btn-sec" type="button" onclick="addGroup()" data-t="addGroup">＋ オプショングループ追加</button>
       <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
       <button class="btn btn-sec" onclick="clearForm()" data-t="clear">クリア</button>
       <div class="alert" id="msg"></div>
@@ -85,6 +89,38 @@
       sel.value=val;
     }
     window.onCatSel=function(selId,newId){ var isNew=document.getElementById(selId).value==='__new__'; var ni=document.getElementById(newId); ni.style.display=isNew?'block':'none'; if(isNew) ni.focus(); };
+
+    // ── オプション（サイズ・トッピング等） ──
+    var curOpts = [];
+    function renderOpts(){
+      var w = document.getElementById('optWrap');
+      w.innerHTML = curOpts.map(function(g, gi){
+        var choices = (g.choices||[]).map(function(c, ci){
+          return '<div style="display:flex;gap:6px;margin-top:4px;">'
+            + '<input value="'+esc(c.label||'')+'" oninput="curOpts['+gi+'].choices['+ci+'].label=this.value" placeholder="'+I18n.t('phChoice')+'" style="flex:1;padding:7px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">'
+            + '<input type="number" step="any" value="'+(c.price||0)+'" oninput="curOpts['+gi+'].choices['+ci+'].price=Number(this.value)||0" placeholder="+0" style="width:88px;padding:7px;border:1px solid var(--border);border-radius:8px;font-family:inherit;">'
+            + '<button type="button" class="btn-sm" style="background:#fee2e2;color:#b91c1c;" onclick="delChoice('+gi+','+ci+')">🗑</button></div>';
+        }).join('');
+        return '<div style="border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:8px;">'
+          + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
+          + '<input value="'+esc(g.name||'')+'" oninput="curOpts['+gi+'].name=this.value" placeholder="'+I18n.t('phGroup')+'" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--border);border-radius:8px;font-weight:700;font-family:inherit;">'
+          + '<select onchange="curOpts['+gi+'].type=this.value" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-family:inherit;"><option value="single"'+(g.type!=='multi'?' selected':'')+'>'+I18n.t('single')+'</option><option value="multi"'+(g.type==='multi'?' selected':'')+'>'+I18n.t('multi')+'</option></select>'
+          + '<label style="font-size:12px;display:flex;gap:3px;align-items:center;"><input type="checkbox" '+(g.required?'checked':'')+' onchange="curOpts['+gi+'].required=this.checked"> '+I18n.t('required')+'</label>'
+          + '<button type="button" class="btn-sm" style="background:#fee2e2;color:#b91c1c;" onclick="delGroup('+gi+')">🗑</button></div>'
+          + choices
+          + '<button type="button" class="btn-sm" style="margin-top:6px;" onclick="addChoice('+gi+')">＋ '+I18n.t('addChoice')+'</button></div>';
+      }).join('');
+    }
+    window.addGroup=function(){ curOpts.push({name:'',type:'single',required:false,choices:[{label:'',price:0}]}); renderOpts(); };
+    window.delGroup=function(gi){ curOpts.splice(gi,1); renderOpts(); };
+    window.addChoice=function(gi){ curOpts[gi].choices.push({label:'',price:0}); renderOpts(); };
+    window.delChoice=function(gi,ci){ curOpts[gi].choices.splice(ci,1); renderOpts(); };
+    function cleanOpts(){
+      return curOpts.map(function(g){
+        var ch=(g.choices||[]).filter(function(c){ return (c.label||'').trim(); }).map(function(c){ return {label:c.label.trim(), price:Number(c.price)||0}; });
+        return { name:(g.name||'').trim(), type:(g.type==='multi'?'multi':'single'), required:!!g.required, choices:ch };
+      }).filter(function(g){ return g.name && g.choices.length; });
+    }
 
     function render(){
       var cats = [], catsEn = [];
@@ -125,9 +161,11 @@
       document.getElementById('mNameEn').value = m['商品名_EN']||'';
       setCatSel('mCatEn','mCatEnNew', m['カテゴリ_EN']||'');
       document.getElementById('mFile').value = '';
+      try { curOpts = JSON.parse(m['オプション']||'[]')||[]; } catch(e){ curOpts=[]; }
+      renderOpts();
       window.scrollTo({top:0,behavior:'smooth'});
     };
-    window.clearForm = function(){ ['oldName','mName','mPrice','mNameEn','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); setCatSel('mCat','mCatNew',''); setCatSel('mCatEn','mCatEnNew',''); document.getElementById('mStatus').value='販売中'; document.getElementById('msg').style.display='none'; };
+    window.clearForm = function(){ ['oldName','mName','mPrice','mNameEn','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); setCatSel('mCat','mCatNew',''); setCatSel('mCatEn','mCatEnNew',''); document.getElementById('mStatus').value='販売中'; curOpts=[]; renderOpts(); document.getElementById('msg').style.display='none'; };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
     window.save = function(){
@@ -139,7 +177,7 @@
       var categoryEn=(catEnSel==='__new__')?document.getElementById('mCatEnNew').value.trim():catEnSel;
       var item = { oldName:document.getElementById('oldName').value, name:name, price:document.getElementById('mPrice').value,
         category:category, status:document.getElementById('mStatus').value, desc:'',
-        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:categoryEn };
+        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:categoryEn, options:JSON.stringify(cleanOpts()) };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('mFile').files[0];
       function send(fd){
@@ -156,8 +194,8 @@
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
 
     I18n.init({
-      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', catUnset:'（未選択）', catNew:'＋ 新規カテゴリ…', phNewCat:'新規カテゴリ名', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', del:'削除', delConfirm:'この商品を削除しますか？', deleted:'✅ 削除しました', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', catUnset:'(none)', catNew:'＋ New category…', phNewCat:'New category name', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete this item?', deleted:'✅ Deleted', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', catUnset:'（未選択）', catNew:'＋ 新規カテゴリ…', phNewCat:'新規カテゴリ名', optTitle:'🎛️ オプション（サイズ・トッピング等）', optHint:'例）サイズ＝単一選択、トッピング＝複数選択。追加料金は差額（+のみ）。', addGroup:'＋ オプショングループ追加', phGroup:'グループ名（例: サイズ）', phChoice:'選択肢（例: 大盛り）', single:'単一選択', multi:'複数選択', required:'必須', addChoice:'選択肢を追加', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', del:'削除', delConfirm:'この商品を削除しますか？', deleted:'✅ 削除しました', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', catUnset:'(none)', catNew:'＋ New category…', phNewCat:'New category name', optTitle:'🎛️ Options (size, toppings, etc.)', optHint:'e.g. Size = single choice, Toppings = multiple. Extra charge = price delta (+ only).', addGroup:'＋ Add option group', phGroup:'Group name (e.g. Size)', phChoice:'Choice (e.g. Large)', single:'Single', multi:'Multiple', required:'Required', addChoice:'Add choice', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete this item?', deleted:'✅ Deleted', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
     }, function(){ if(__loaded) render(); });
   </script>
 </body>
