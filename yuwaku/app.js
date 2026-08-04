@@ -16,7 +16,8 @@
       cpApplied:'Applied', cpEmpty:'Enter a code', cpNotfound:'Code not found', cpInactive:'Not available', cpExpired:'Expired', cpLimit:'Usage limit reached', cpMin:'Minimum order not met', cpInvalid:'Invalid code',
       optChoose:'Choose options', optAdd:'Add to order', optQty:'Qty', optRequired:'required', optPick:'Please choose the required options.', optInCart:'In your order', optClose:'Close',
       soldOut:'Sold out', notNow:'Not available now', allergen:'Allergens',
-      callTitle:'Staff called', callMsg:'A staff member will be with you shortly.', billTitle:'Bill requested', billMsg:'A staff member will bring your bill shortly.' },
+      callTitle:'Staff called', callMsg:'A staff member will be with you shortly.', billTitle:'Bill requested', billMsg:'A staff member will bring your bill shortly.',
+      fbTitle:'How was it?', fbSub:'Your rating helps us improve.', fbComment:'Comment (optional)', fbSend:'Send', fbPick:'Please tap the stars to rate.', fbThanks:'Thank you!', fbThanksMsg:'Thanks for your feedback.' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -30,7 +31,8 @@
       cpApplied:'適用しました', cpEmpty:'コードを入力してください', cpNotfound:'コードが見つかりません', cpInactive:'利用できません', cpExpired:'期限切れ', cpLimit:'利用上限に達しています', cpMin:'最低注文額に達していません', cpInvalid:'無効なコード',
       optChoose:'オプションを選ぶ', optAdd:'注文に追加', optQty:'数量', optRequired:'必須', optPick:'必須オプションを選択してください。', optInCart:'注文内', optClose:'閉じる',
       soldOut:'本日売切', notNow:'提供時間外', allergen:'アレルゲン',
-      callTitle:'スタッフを呼びました', callMsg:'まもなくスタッフが伺います。', billTitle:'お会計を依頼しました', billMsg:'まもなくスタッフがお会計に伺います。' }
+      callTitle:'スタッフを呼びました', callMsg:'まもなくスタッフが伺います。', billTitle:'お会計を依頼しました', billMsg:'まもなくスタッフがお会計に伺います。',
+      fbTitle:'ご感想は？', fbSub:'評価は今後の改善に役立ちます。', fbComment:'コメント（任意）', fbSend:'送信', fbPick:'星をタップして評価してください。', fbThanks:'ありがとうございます！', fbThanksMsg:'ご意見ありがとうございました。' }
   };
 
   var state = {
@@ -306,6 +308,37 @@
     }).catch(function (e) { showErr(String(e && e.message || e)); });
   }
 
+  // ---- フィードバック（評価） ----
+  var fbRating = 0;
+  function openFeedback() {
+    var x = t();
+    fbRating = 0;
+    $('fbTitle').textContent = x.fbTitle;
+    $('fbSub').textContent = x.fbSub;
+    $('fbComment').value = '';
+    $('fbComment').placeholder = x.fbComment;
+    $('fbSend').textContent = x.fbSend;
+    $('fbClose').textContent = x.close;
+    paintStars(0);
+    $('fbModal').classList.add('show');
+  }
+  function paintStars(n) {
+    Array.prototype.forEach.call($('fbStars').querySelectorAll('span'), function (s) {
+      s.textContent = (Number(s.getAttribute('data-v')) <= n) ? '★' : '☆';
+      s.style.color = (Number(s.getAttribute('data-v')) <= n) ? '#f59e0b' : '#cbd5e1';
+    });
+  }
+  function sendFeedback() {
+    var x = t();
+    if (fbRating < 1) { showErr(x.fbPick); return; }
+    var btn = $('fbSend'); btn.disabled = true;
+    API.post('submitFeedback', { table: state.table, rating: fbRating, comment: $('fbComment').value }).then(function () {
+      $('fbModal').classList.remove('show');
+      showOk(x.fbThanks, x.fbThanksMsg, '⭐');
+    }).catch(function (e) { showErr(String(e && e.message || e)); })
+      .then(function () { btn.disabled = false; });
+  }
+
   // ---- 送信 ----
   var pendingOrder = null, payCheckoutId = null, payPoll = null;
 
@@ -572,6 +605,12 @@
     $('optClose').addEventListener('click', closeOpt);
     $('callBtn').addEventListener('click', function () { requestStaff('call'); });
     $('billBtn').addEventListener('click', function () { requestStaff('bill'); });
+    $('fbBtn').addEventListener('click', openFeedback);
+    $('fbSend').addEventListener('click', sendFeedback);
+    $('fbClose').addEventListener('click', function () { $('fbModal').classList.remove('show'); });
+    Array.prototype.forEach.call($('fbStars').querySelectorAll('span'), function (s) {
+      s.addEventListener('click', function () { fbRating = Number(s.getAttribute('data-v')); paintStars(fbRating); });
+    });
 
     window.addEventListener('online', function () { document.body.classList.remove('offline'); API.flush().then(refreshPending); });
     window.addEventListener('offline', function () { document.body.classList.add('offline'); });

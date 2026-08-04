@@ -19,6 +19,7 @@
     <button class="lang-btn" id="couponBtn">🎟️</button>
     <button class="lang-btn" id="callBtn" title="Call staff">🔔</button>
     <button class="lang-btn" id="billBtn" title="Bill">🧾</button>
+    <button class="lang-btn" id="fbBtn" title="Feedback">⭐</button>
     <button class="lang-btn" id="langBtn">JP</button>
   </div>
 
@@ -135,6 +136,21 @@
       <button class="btn-send ok" id="pmCheck" style="width:100%;margin-top:8px;background:var(--green);">I've paid — check</button>
       <div id="pmStatus" style="margin-top:10px;font-size:13px;font-weight:700;"></div>
       <button id="pmCancel" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="overlay" id="fbModal">
+    <div class="sheet">
+      <div class="emoji">⭐</div>
+      <h3 id="fbTitle">How was it?</h3>
+      <p id="fbSub" style="font-size:13px;color:var(--text-2);"></p>
+      <div id="fbStars" style="font-size:38px;letter-spacing:6px;margin:8px 0;user-select:none;">
+        <span data-v="1" style="cursor:pointer;">☆</span><span data-v="2" style="cursor:pointer;">☆</span><span data-v="3" style="cursor:pointer;">☆</span><span data-v="4" style="cursor:pointer;">☆</span><span data-v="5" style="cursor:pointer;">☆</span>
+      </div>
+      <textarea id="fbComment" rows="3" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);font-size:15px;box-sizing:border-box;font-family:inherit;"></textarea>
+      <button class="btn-send ok" id="fbSend" style="width:100%;margin-top:10px;">Send</button>
+      <button id="fbClose" style="width:100%;margin-top:10px;background:#f1f5f9;color:#475569;border:none;padding:12px;border-radius:12px;font-weight:700;cursor:pointer;">Close</button>
     </div>
   </div>
 

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Feedback</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:900px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    .kpi{ display:flex; gap:14px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .avg{ font-size:34px; font-weight:900; } .avg small{ font-size:15px; color:var(--text-3); font-weight:700; }
+    .bar{ display:flex; align-items:center; gap:6px; font-size:12px; margin:2px 0; }
+    .bar .track{ flex:1; height:8px; background:#eef2f7; border-radius:6px; overflow:hidden; } .bar .fill{ height:100%; background:#f59e0b; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+    th{ font-size:11px; color:var(--text-3); white-space:nowrap; }
+    .muted{ color:var(--text-3); }
+    .stars{ color:#f59e0b; white-space:nowrap; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">⭐ お客様の声</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><button class="hbtn" onclick="reload()" data-t="reload">↻</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="kpi" id="kpi"></div>
+      <div style="overflow:auto;">
+        <table><thead><tr><th data-t="thTime">日時</th><th data-t="thTable">卓</th><th data-t="thRating">評価</th><th data-t="thComment">コメント</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="4" class="muted" style="padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var DATA = { avg:0, count:0, dist:{}, rows:[] }, __loaded=false;
+    function stars(n){ var o=''; for(var i=1;i<=5;i++) o+=(i<=n?'★':'☆'); return o; }
+    function fmt(ts){ try{ return new Date(ts).toLocaleString(); }catch(e){ return esc(ts); } }
+    function render(){
+      var d = DATA;
+      var bars='';
+      for(var v=5; v>=1; v--){ var c=(d.dist&&d.dist[v])||0; var pct=d.count?Math.round(c/d.count*100):0; bars+='<div class="bar"><span class="stars">'+v+'★</span><div class="track"><div class="fill" style="width:'+pct+'%"></div></div><span class="muted">'+c+'</span></div>'; }
+      document.getElementById('kpi').innerHTML = '<div><div class="avg">'+(d.avg||0)+' <small>/ 5</small></div><div class="muted">'+I18n.t('count')+': '+(d.count||0)+'</div></div><div style="flex:1;min-width:200px;">'+bars+'</div>';
+      if(!d.rows.length){ document.getElementById('rows').innerHTML='<tr><td colspan="4" class="muted" style="padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = d.rows.map(function(r){
+        return '<tr><td class="muted" style="white-space:nowrap;">'+esc(fmt(r.ts))+'</td><td>'+esc(r.table)+'</td><td class="stars">'+stars(r.rating)+'</td><td>'+esc(r.comment)+'</td></tr>';
+      }).join('');
+    }
+    window.reload = function(){ rpc('getFeedback',[200]).then(function(d){ DATA=d||DATA; render(); }).catch(function(){}); };
+    rpc('getFeedback',[200]).then(function(d){ DATA=d||DATA; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="4" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'⭐ お客様の声', back:'← 管理へ', reload:'↻', count:'件数', thTime:'日時', thTable:'卓', thRating:'評価', thComment:'コメント', loading:'読み込み中…', empty:'まだフィードバックはありません', loadErr:'読み込みエラー: ' },
+      en:{ title:'⭐ Customer feedback', back:'← Manage', reload:'↻', count:'Responses', thTime:'Time', thTable:'Table', thRating:'Rating', thComment:'Comment', loading:'Loading…', empty:'No feedback yet', loadErr:'Load error: ' }
+    }, function(){ if(__loaded) render(); });
+  </script>
+</body>
+</html>
