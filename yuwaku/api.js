@@ -41,7 +41,7 @@
   API.loading = _load; // 手動利用も可（API.loading.show('...') / .hide()）
 
   // 定期ポーリング等、待機表示を出さない（点滅防止）アクション
-  const BG_ACTIONS = { checkToken: 1, getOrders: 1, checkoutStatus: 1, bootstrap: 1, getSettings: 1 };
+  const BG_ACTIONS = { checkToken: 1, getOrders: 1, checkoutStatus: 1, bootstrap: 1, getSettings: 1, getStaffCalls: 1 };
   const BG_RPC = { getPrintQueue: 1, getPrintQueueCounts: 1, getSettings: 1 };
 
   // ---- 低レベル POST ----

@@ -479,7 +479,7 @@
       }).catch(function(){ load(); });
       loadCalls();
       resetTimer();
-      setInterval(loadCalls, 8000);
+      setInterval(function(){ if(autoOn && !paused()) loadCalls(); }, 8000);   // 自動更新OFF・会計中は呼び出しポーリングも停止
       if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
     }
     document.addEventListener('DOMContentLoaded', boot);

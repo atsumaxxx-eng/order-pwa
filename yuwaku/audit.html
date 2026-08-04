@@ -37,6 +37,16 @@
         <tbody id="rows"><tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
       </div>
     </div>
+    <div class="card" style="margin-top:14px;">
+      <div style="font-weight:900;font-size:15px;margin-bottom:8px;" data-t="opTitle">🛡️ 操作ログ</div>
+      <div class="muted" data-t="opHint" style="font-size:12px;margin-bottom:8px;">誰が・いつ・どの変更操作を行ったかの記録です。</div>
+      <div style="overflow:auto;">
+        <table><thead><tr>
+          <th data-t="thTime">日時</th><th data-t="opWho">実行者</th><th data-t="opRole">ロール</th><th data-t="opAct">操作</th><th data-t="opSum">概要</th>
+        </tr></thead>
+        <tbody id="opRows"><tr><td colspan="5" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+      </div>
+    </div>
   </div>
 
   <script src="./config.js"></script>
@@ -62,16 +72,28 @@
           '<td class="appr">'+esc(r.approver)+(r.role?(' <span class="muted">('+esc(r.role)+')</span>'):'')+'</td></tr>';
       }).join('');
     }
-    window.reload = function(){ rpc('getAuditLog',[200]).then(function(l){ ROWS=l||[]; render(); }).catch(function(){}); };
+    var OPS = [];
+    function renderOps(){
+      if(!OPS.length){ document.getElementById('opRows').innerHTML='<tr><td colspan="5" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('opRows').innerHTML = OPS.map(function(r){
+        return '<tr><td class="muted" style="white-space:nowrap;">'+esc(fmt(r.ts))+'</td>'+
+          '<td style="font-weight:700;">'+esc(r.actor)+'</td><td class="muted">'+esc(r.role)+'</td>'+
+          '<td><span class="badge" style="background:#e0e7ff;color:#3730a3;">'+esc(r.fn)+'</span></td>'+
+          '<td class="muted" style="max-width:360px;overflow:hidden;text-overflow:ellipsis;">'+esc(r.summary)+'</td></tr>';
+      }).join('');
+    }
+    function loadOps(){ rpc('getOpLog',[300]).then(function(l){ OPS=l||[]; renderOps(); }).catch(function(){}); }
+    window.reload = function(){ rpc('getAuditLog',[200]).then(function(l){ ROWS=l||[]; render(); }).catch(function(){}); loadOps(); };
 
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
     rpc('getAuditLog',[200]).then(function(l){ ROWS=l||[]; __loaded=true; render(); })
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+    loadOps();
 
     I18n.init({
-      ja:{ title:'🧾 監査ログ', back:'← 管理へ', reload:'↻ 更新', thTime:'日時', thAction:'操作', thTable:'卓', thDetails:'明細', thAmount:'金額', thReason:'理由', thApprover:'承認者', loading:'読み込み中…', empty:'記録はありません', loadErr:'読み込みエラー: ' },
-      en:{ title:'🧾 Audit log', back:'← Manage', reload:'↻ Reload', thTime:'Time', thAction:'Action', thTable:'Table', thDetails:'Details', thAmount:'Amount', thReason:'Reason', thApprover:'Approver', loading:'Loading…', empty:'No records', loadErr:'Load error: ' }
-    }, function(){ if(__loaded) render(); });
+      ja:{ title:'🧾 監査ログ', back:'← 管理へ', reload:'↻ 更新', thTime:'日時', thAction:'操作', thTable:'卓', thDetails:'明細', thAmount:'金額', thReason:'理由', thApprover:'承認者', loading:'読み込み中…', empty:'記録はありません', loadErr:'読み込みエラー: ', opTitle:'🛡️ 操作ログ', opHint:'誰が・いつ・どの変更操作を行ったかの記録です。', opWho:'実行者', opRole:'ロール', opAct:'操作', opSum:'概要' },
+      en:{ title:'🧾 Audit log', back:'← Manage', reload:'↻ Reload', thTime:'Time', thAction:'Action', thTable:'Table', thDetails:'Details', thAmount:'Amount', thReason:'Reason', thApprover:'Approver', loading:'Loading…', empty:'No records', loadErr:'Load error: ', opTitle:'🛡️ Operation log', opHint:'Record of who changed what and when.', opWho:'User', opRole:'Role', opAct:'Action', opSum:'Summary' }
+    }, function(){ if(__loaded){ render(); renderOps(); } });
   </script>
 </body>
 </html>
