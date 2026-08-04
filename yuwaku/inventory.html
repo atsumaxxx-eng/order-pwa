@@ -60,12 +60,30 @@
         <button class="btn-sm mv-tab" data-k="waste" onclick="mvTab('waste')" id="mvTabWaste">− 廃棄</button>
         <button class="btn-sm mv-tab" data-k="count" onclick="mvTab('count')" id="mvTabCount">棚卸</button>
       </div>
-      <div class="fg" style="margin-bottom:8px;"><label class="form-label" id="mvQtyL" style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">数量</label><input id="mvQty" type="number" step="any" min="0"></div>
+      <div class="fg" style="margin-bottom:8px;"><label class="form-label" id="mvQtyL" style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">数量</label>
+        <div style="display:flex;gap:8px;"><input id="mvQty" type="number" step="any" min="0" style="flex:1;"><button type="button" class="btn-sm" id="camBtn" style="background:#0f172a;color:#fff;padding:8px 12px;" onclick="camOpen()">📷</button></div>
+      </div>
       <div class="fg" id="mvCostWrap" style="margin-bottom:8px;"><label class="form-label" id="mvCostL" style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">原価（任意・単価更新）</label><input id="mvCost" type="number" step="any" min="0"></div>
       <div class="fg" id="mvReasonWrap" style="margin-bottom:8px;display:none;"><label class="form-label" id="mvReasonL" style="font-size:12px;font-weight:700;display:block;margin-bottom:4px;">理由</label><input id="mvReason"></div>
       <div class="alert" id="mvAlert" style="display:none;"></div>
       <button class="btn btn-pri" style="margin-top:6px;" id="mvGo" onclick="doMove()">実行</button>
       <button class="btn btn-sec" id="mvCxl" onclick="closeMove()">閉じる</button>
+    </div>
+  </div>
+
+  <!-- Camera tap-to-count -->
+  <div id="camOv" style="display:none;position:fixed;inset:0;background:#000;z-index:60;flex-direction:column;">
+    <div id="camHint" style="color:#fff;text-align:center;font-size:13px;padding:8px;background:#111;"></div>
+    <div style="flex:1;position:relative;overflow:hidden;">
+      <video id="camVid" autoplay playsinline muted style="width:100%;height:100%;object-fit:contain;background:#000;"></video>
+      <canvas id="camCan" style="position:absolute;inset:0;width:100%;height:100%;display:none;touch-action:none;"></canvas>
+      <div id="camCount" style="position:absolute;top:10px;left:10px;background:rgba(15,23,42,.75);color:#fff;padding:6px 14px;border-radius:12px;font-weight:900;font-size:20px;">0</div>
+    </div>
+    <div style="display:flex;gap:8px;padding:12px;background:#111;">
+      <button class="btn btn-pri" id="camShotBtn" onclick="camShot()" style="flex:2;">📸</button>
+      <button class="btn btn-sec" id="camUndoBtn" onclick="camUndo()" style="flex:1;">↩</button>
+      <button class="btn" id="camDoneBtn" onclick="camDone()" style="flex:2;background:#16a34a;color:#fff;">✓</button>
+      <button class="btn btn-sec" onclick="camClose()" style="flex:1;">✕</button>
     </div>
   </div>
 
@@ -81,11 +99,16 @@
 
     function render(){
       var html = '';
+      var EN = (window.I18n && I18n.lang && I18n.lang()==='en');
       window.rows.forEach(function(r,i){
         var low = (Number(r.minimum)>0 && Number(r.stock)<=Number(r.minimum));
+        var nmVal = EN ? (r.nameEn||r.name||'') : (r.name||'');
+        var catVal = EN ? (r.categoryEn||r.category||'') : (r.category||'');
+        var nmT = EN ? 'nameEn' : 'name';
+        var catT = EN ? 'categoryEn' : 'category';
         html += '<tr'+(low?' class="low"':'')+'>'+
-          '<td><input value="'+esc(r.name||'')+'" oninput="window.rows['+i+'].name=this.value"></td>'+
-          '<td><input value="'+esc(r.category||'')+'" oninput="window.rows['+i+'].category=this.value" list="catList"></td>'+
+          '<td><input value="'+esc(nmVal)+'" oninput="window.rows['+i+'].'+nmT+'=this.value"></td>'+
+          '<td><input value="'+esc(catVal)+'" oninput="window.rows['+i+'].'+catT+'=this.value" list="catList"></td>'+
           '<td><input value="'+esc(r.supplier||'')+'" oninput="window.rows['+i+'].supplier=this.value" list="supList"></td>'+
           '<td><input value="'+esc(r.unit||'本')+'" oninput="window.rows['+i+'].unit=this.value"></td>'+
           '<td><input type="number" step="any" value="'+(r.stock||0)+'" oninput="window.rows['+i+'].stock=Number(this.value)||0"></td>'+
@@ -103,10 +126,11 @@
       var sl = document.getElementById('supList'); if(sl) sl.innerHTML = sups.map(function(s){ return '<option value="'+esc(s)+'">'; }).join('');
     }
     var SUPPLIERS = [];
-    window.addRow = function(){ window.rows.push({ name:'', category:'', supplier:'', unit:'本', stock:0, minimum:0, cost:0 }); render(); };
+    window.addRow = function(){ window.rows.push({ name:'', category:'', supplier:'', unit:'本', stock:0, minimum:0, cost:0, nameEn:'', categoryEn:'' }); render(); };
     window.delRow = function(i){ window.rows.splice(i,1); render(); };
     window.save = function(){
-      var clean = window.rows.filter(function(r){ return (r.name||'').trim(); });
+      var clean = window.rows.filter(function(r){ return ((r.name||'')+(r.nameEn||'')).trim(); })
+        .map(function(r){ if(!(r.name||'').trim() && (r.nameEn||'').trim()){ r.name=r.nameEn; } return r; });
       var btn = document.getElementById('saveBtn'); btn.disabled=true;
       rpc('saveDrinkInventory',[clean]).then(function(){ btn.disabled=false; msg(I18n.t('saved'), true); })
         .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
@@ -160,14 +184,62 @@
       }).catch(function(e){ go.disabled=false; mvErr(I18n.t('errPrefix')+(e.message||e)); });
     };
 
+    // ── カメラでタップ計数（棚卸補助） ──
+    var camStream=null, camDots=[], camFrozen=false, camBase=null;
+    window.camOpen=function(){
+      camDots=[]; camFrozen=false; camBase=null;
+      document.getElementById('camCount').innerText='0';
+      var can=document.getElementById('camCan'), vid=document.getElementById('camVid');
+      can.style.display='none'; vid.style.display='';
+      document.getElementById('camHint').innerText=I18n.t('camHintShoot');
+      document.getElementById('camOv').style.display='flex';
+      if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ document.getElementById('camHint').innerText=I18n.t('camNoCam'); return; }
+      navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' } }, audio:false })
+        .then(function(s){ camStream=s; vid.srcObject=s; })
+        .catch(function(){ document.getElementById('camHint').innerText=I18n.t('camNoCam'); });
+    };
+    function camStop(){ if(camStream){ camStream.getTracks().forEach(function(t){ t.stop(); }); camStream=null; } }
+    window.camClose=function(){ camStop(); document.getElementById('camOv').style.display='none'; };
+    window.camShot=function(){
+      var v=document.getElementById('camVid'), can=document.getElementById('camCan');
+      var w=v.videoWidth||640, h=v.videoHeight||480; can.width=w; can.height=h;
+      var ctx=can.getContext('2d'); ctx.drawImage(v,0,0,w,h);
+      camBase=ctx.getImageData(0,0,w,h);
+      v.style.display='none'; can.style.display='block'; camStop(); camFrozen=true; camDots=[];
+      document.getElementById('camHint').innerText=I18n.t('camHintTap'); camRedraw();
+    };
+    function camRedraw(){
+      var can=document.getElementById('camCan'); if(!camBase) return; var ctx=can.getContext('2d');
+      ctx.putImageData(camBase,0,0);
+      var r=Math.max(9, can.width*0.014), fs=Math.max(12, can.width*0.024);
+      camDots.forEach(function(d,i){
+        ctx.beginPath(); ctx.arc(d.x,d.y,r,0,Math.PI*2); ctx.fillStyle='rgba(22,163,74,.85)'; ctx.fill();
+        ctx.fillStyle='#fff'; ctx.font='bold '+fs+'px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(String(i+1), d.x, d.y);
+      });
+      document.getElementById('camCount').innerText=String(camDots.length);
+    }
+    window.camUndo=function(){ if(camDots.length){ camDots.pop(); camRedraw(); } };
+    window.camDone=function(){ var q=document.getElementById('mvQty'); q.value=camDots.length; camClose(); };
+    (function(){ var can=document.getElementById('camCan'); if(!can) return;
+      can.addEventListener('click', function(e){
+        if(!camFrozen) return; var rect=can.getBoundingClientRect();
+        var scale=Math.min(rect.width/can.width, rect.height/can.height);
+        var dispW=can.width*scale, dispH=can.height*scale;
+        var offX=(rect.width-dispW)/2, offY=(rect.height-dispH)/2;
+        var x=(e.clientX-rect.left-offX)/scale, y=(e.clientY-rect.top-offY)/scale;
+        if(x<0||y<0||x>can.width||y>can.height) return;
+        camDots.push({x:x,y:y}); camRedraw();
+      });
+    })();
+
     rpc('getSuppliers',[]).then(function(l){ SUPPLIERS=(l||[]).map(function(s){ return s.name; }); render(); }).catch(function(){});
     var __loaded=false;
     rpc('getDrinkInventory',[]).then(function(list){ window.rows=(list||[]).slice(); __loaded=true; render(); })
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="8" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
 
     I18n.init({
-      ja:{ title:'📦 在庫管理', back:'← 管理へ', movesLink:'📋 変動履歴', hint:'ドリンク・食材・備品などをまとめて数量管理できます。最小在庫を下回ると赤く表示され、日報・レポートに低在庫として通知。レシピ（材料名一致）で注文時に自動減算されます。「変動」から入荷・廃棄・棚卸を記録すると履歴に残ります。', thName:'商品名', thCat:'カテゴリ', thSupplier:'仕入先', thUnit:'単位', thStock:'在庫数', thMin:'最小在庫', thCost:'原価', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', moveBtn:'変動', mvIn:'＋ 入荷', mvWaste:'− 廃棄', mvCount:'棚卸', mvQty:'数量', mvCounted:'実棚卸数', mvCostL:'原価（任意・単価更新）', mvReasonL:'理由', mvStockNow:'現在庫', mvGo:'実行', mvClose:'閉じる', mvDone:'✅ 記録しました', mvBad:'数量を確認してください', mvNeedSave:'先に「保存」で商品を登録してください' },
-      en:{ title:'📦 Inventory', back:'← Manage', movesLink:'📋 History', hint:'Track drinks, ingredients and supplies together by quantity. Rows below the minimum turn red and appear as low-stock in reports. Auto-deducted on orders via recipes (material-name match). Use “Move” to log receiving, waste and stocktake — all kept in history.', thName:'Item', thCat:'Category', thSupplier:'Supplier', thUnit:'Unit', thStock:'Stock', thMin:'Min stock', thCost:'Cost', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ', moveBtn:'Move', mvIn:'＋ Receive', mvWaste:'− Waste', mvCount:'Stocktake', mvQty:'Quantity', mvCounted:'Counted qty', mvCostL:'Cost (optional, updates unit cost)', mvReasonL:'Reason', mvStockNow:'Current', mvGo:'Apply', mvClose:'Close', mvDone:'✅ Recorded', mvBad:'Please check the quantity', mvNeedSave:'Please save the item first' }
+      ja:{ title:'📦 在庫管理', back:'← 管理へ', movesLink:'📋 変動履歴', hint:'ドリンク・食材・備品などをまとめて数量管理できます。最小在庫を下回ると赤く表示され、日報・レポートに低在庫として通知。レシピ（材料名一致）で注文時に自動減算されます。「変動」から入荷・廃棄・棚卸を記録すると履歴に残ります。', thName:'商品名', thCat:'カテゴリ', thSupplier:'仕入先', thUnit:'単位', thStock:'在庫数', thMin:'最小在庫', thCost:'原価', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', moveBtn:'変動', mvIn:'＋ 入荷', mvWaste:'− 廃棄', mvCount:'棚卸', mvQty:'数量', mvCounted:'実棚卸数', mvCostL:'原価（任意・単価更新）', mvReasonL:'理由', mvStockNow:'現在庫', mvGo:'実行', mvClose:'閉じる', mvDone:'✅ 記録しました', mvBad:'数量を確認してください', mvNeedSave:'先に「保存」で商品を登録してください', camHintShoot:'📸を押して撮影 → 写真を1つずつタップして数えます', camHintTap:'商品を1つずつタップ。↩で取消、✓で数量を採用', camNoCam:'カメラを利用できません（権限/対応をご確認ください）' },
+      en:{ title:'📦 Inventory', back:'← Manage', movesLink:'📋 History', hint:'Track drinks, ingredients and supplies together by quantity. Rows below the minimum turn red and appear as low-stock in reports. Auto-deducted on orders via recipes (material-name match). Use “Move” to log receiving, waste and stocktake — all kept in history.', thName:'Item', thCat:'Category', thSupplier:'Supplier', thUnit:'Unit', thStock:'Stock', thMin:'Min stock', thCost:'Cost', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ', moveBtn:'Move', mvIn:'＋ Receive', mvWaste:'− Waste', mvCount:'Stocktake', mvQty:'Quantity', mvCounted:'Counted qty', mvCostL:'Cost (optional, updates unit cost)', mvReasonL:'Reason', mvStockNow:'Current', mvGo:'Apply', mvClose:'Close', mvDone:'✅ Recorded', mvBad:'Please check the quantity', mvNeedSave:'Please save the item first', camHintShoot:'Tap 📸 to capture, then tap each item to count', camHintTap:'Tap each item. ↩ to undo, ✓ to use the count', camNoCam:'Camera unavailable (check permission/support)' }
     }, function(){ if(__loaded) render(); });
   </script>
   <datalist id="catList"></datalist>
