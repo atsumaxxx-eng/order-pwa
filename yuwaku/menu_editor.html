@@ -48,6 +48,14 @@
       </div>
       <div class="muted" style="margin:-2px 0 8px;" data-t="enHint">英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。</div>
       <div class="fg"><label class="form-label" data-t="lblImg">画像（任意・変更時のみ選択）</label><input id="mFile" type="file" accept="image/*" class="fc"></div>
+      <div class="form-label" style="margin-top:6px;" data-t="availTitle">⏰ 提供時間帯・タグ</div>
+      <div class="muted" style="margin:2px 0 6px;" data-t="availHint">提供時間は空欄なら常時提供。深夜跨ぎ（例 22:00〜02:00）も可。</div>
+      <div style="display:flex;gap:8px;">
+        <div class="fg" style="flex:1;"><label class="form-label" data-t="lblSvcStart">提供開始</label><input id="mSvcStart" type="time" class="fc"></div>
+        <div class="fg" style="flex:1;"><label class="form-label" data-t="lblSvcEnd">提供終了</label><input id="mSvcEnd" type="time" class="fc"></div>
+      </div>
+      <div class="fg"><label class="form-label" data-t="lblAllerg">アレルゲン（任意・カンマ区切り）</label><input id="mAllergens" class="fc" data-tph="phAllerg" placeholder="例: 卵, 小麦, えび"></div>
+      <div class="fg"><label class="form-label" data-t="lblSpicy">辛さ</label><select id="mSpicy" class="fc"><option value="0" data-t="spicy0">なし</option><option value="1">🌶×1</option><option value="2">🌶×2</option><option value="3">🌶×3</option><option value="4">🌶×4</option><option value="5">🌶×5</option></select></div>
       <div class="form-label" style="margin-top:6px;" data-t="optTitle">🎛️ オプション（サイズ・トッピング等）</div>
       <div class="muted" style="margin:2px 0 6px;" data-t="optHint">例）サイズ＝単一選択、トッピング＝複数選択。追加料金は差額（+のみ）。</div>
       <div id="optWrap"></div>
@@ -135,12 +143,29 @@
         var nm = (en && m['商品名_EN']) ? m['商品名_EN'] : m['商品名'];
         var cat = (en && m['カテゴリ_EN']) ? m['カテゴリ_EN'] : (m['カテゴリ']||'');
         var thumb = m.displayUrl ? '<img class="thumb" src="'+esc(m.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
-        return '<div class="mi'+(off?' off':'')+'">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(nm)+'</div>'+
-          '<div class="meta">'+esc(cat)+' ・ '+(SYM)+(Number(m['価格'])||0).toLocaleString()+' ・ '+st+'</div></div>'+
-          '<button class="btn-sm" onclick="edit('+i+')">'+I18n.t('edit')+'</button>'+
+        var sold = isSoldToday(m['売切日']);
+        var tags = '';
+        var sp = Number(m['辛さ'])||0; if(sp>0) tags += ' ・ '+repeat('🌶',sp);
+        if(m['アレルゲン']) tags += ' ・ ⚠'+esc(String(m['アレルゲン']));
+        if(m['提供開始']&&m['提供終了']) tags += ' ・ ⏰'+esc(m['提供開始'])+'-'+esc(m['提供終了']);
+        var soldBtn = '<button class="btn-sm" style="margin-left:6px;background:'+(sold?'#fee2e2':'#dcfce7')+';color:'+(sold?'#b91c1c':'#15803d')+';" onclick="toggleSold('+i+')">'+(sold?I18n.t('markAvail'):I18n.t('markSold'))+'</button>';
+        return '<div class="mi'+(off?' off':'')+'">'+thumb+'<div style="flex:1;"><div class="nm">'+esc(nm)+(sold?' <span style="color:#b91c1c;font-size:12px;">('+I18n.t('soldOut')+')</span>':'')+'</div>'+
+          '<div class="meta">'+esc(cat)+' ・ '+(SYM)+(Number(m['価格'])||0).toLocaleString()+' ・ '+st+tags+'</div></div>'+
+          soldBtn+
+          '<button class="btn-sm" style="margin-left:6px;" onclick="edit('+i+')">'+I18n.t('edit')+'</button>'+
           '<button class="btn-sm" style="background:#fee2e2;color:#b91c1c;margin-left:6px;" onclick="del('+i+')">'+I18n.t('del')+'</button></div>';
       }).join('');
     }
+    function repeat(s,n){ var o=''; for(var k=0;k<n;k++) o+=s; return o; }
+    function isSoldToday(v){ if(!v) return false; var t=new Date(); var today=t.getFullYear()+'-'+('0'+(t.getMonth()+1)).slice(-2)+'-'+('0'+t.getDate()).slice(-2); var d=String(v).slice(0,10); return d===today; }
+    window.toggleSold = function(i){
+      var m = MENU[i]; if(!m) return;
+      var makeSold = !isSoldToday(m['売切日']);
+      rpc('setSoldOut',[m['商品名'], makeSold]).then(function(res){
+        if(String(res).indexOf('Error')===0){ msg(I18n.t('errPrefix')+res, false); return; }
+        return rpc('getAllMenuForAdmin',[]).then(function(l){ MENU=l||[]; render(); });
+      }).catch(function(e){ msg(I18n.t('errPrefix')+(e.message||e), false); });
+    };
     var SYM='₱';
     window.del = function(i){
       var m = MENU[i]; if(!m) return;
@@ -161,11 +186,15 @@
       document.getElementById('mNameEn').value = m['商品名_EN']||'';
       setCatSel('mCatEn','mCatEnNew', m['カテゴリ_EN']||'');
       document.getElementById('mFile').value = '';
+      document.getElementById('mSvcStart').value = m['提供開始']||'';
+      document.getElementById('mSvcEnd').value = m['提供終了']||'';
+      document.getElementById('mAllergens').value = m['アレルゲン']||'';
+      document.getElementById('mSpicy').value = String(Number(m['辛さ'])||0);
       try { curOpts = JSON.parse(m['オプション']||'[]')||[]; } catch(e){ curOpts=[]; }
       renderOpts();
       window.scrollTo({top:0,behavior:'smooth'});
     };
-    window.clearForm = function(){ ['oldName','mName','mPrice','mNameEn','mFile'].forEach(function(id){ document.getElementById(id).value=''; }); setCatSel('mCat','mCatNew',''); setCatSel('mCatEn','mCatEnNew',''); document.getElementById('mStatus').value='販売中'; curOpts=[]; renderOpts(); document.getElementById('msg').style.display='none'; };
+    window.clearForm = function(){ ['oldName','mName','mPrice','mNameEn','mFile','mSvcStart','mSvcEnd','mAllergens'].forEach(function(id){ document.getElementById(id).value=''; }); setCatSel('mCat','mCatNew',''); setCatSel('mCatEn','mCatEnNew',''); document.getElementById('mStatus').value='販売中'; document.getElementById('mSpicy').value='0'; curOpts=[]; renderOpts(); document.getElementById('msg').style.display='none'; };
     function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
 
     window.save = function(){
@@ -177,7 +206,9 @@
       var categoryEn=(catEnSel==='__new__')?document.getElementById('mCatEnNew').value.trim():catEnSel;
       var item = { oldName:document.getElementById('oldName').value, name:name, price:document.getElementById('mPrice').value,
         category:category, status:document.getElementById('mStatus').value, desc:'',
-        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:categoryEn, options:JSON.stringify(cleanOpts()) };
+        nameEn:document.getElementById('mNameEn').value.trim(), categoryEn:categoryEn, options:JSON.stringify(cleanOpts()),
+        svcStart:document.getElementById('mSvcStart').value, svcEnd:document.getElementById('mSvcEnd').value,
+        allergens:document.getElementById('mAllergens').value.trim(), spicy:document.getElementById('mSpicy').value };
       var btn=document.getElementById('saveBtn'); btn.disabled=true;
       var file = document.getElementById('mFile').files[0];
       function send(fd){
@@ -194,8 +225,8 @@
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('list').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
 
     I18n.init({
-      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', catUnset:'（未選択）', catNew:'＋ 新規カテゴリ…', phNewCat:'新規カテゴリ名', optTitle:'🎛️ オプション（サイズ・トッピング等）', optHint:'例）サイズ＝単一選択、トッピング＝複数選択。追加料金は差額（+のみ）。', addGroup:'＋ オプショングループ追加', phGroup:'グループ名（例: サイズ）', phChoice:'選択肢（例: 大盛り）', single:'単一選択', multi:'複数選択', required:'必須', addChoice:'選択肢を追加', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', del:'削除', delConfirm:'この商品を削除しますか？', deleted:'✅ 削除しました', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', catUnset:'(none)', catNew:'＋ New category…', phNewCat:'New category name', optTitle:'🎛️ Options (size, toppings, etc.)', optHint:'e.g. Size = single choice, Toppings = multiple. Extra charge = price delta (+ only).', addGroup:'＋ Add option group', phGroup:'Group name (e.g. Size)', phChoice:'Choice (e.g. Large)', single:'Single', multi:'Multiple', required:'Required', addChoice:'Add choice', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete this item?', deleted:'✅ Deleted', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ' }
+      ja:{ title:'🍽️ メニュー編集', back:'← 管理へ', formTitle:'➕ 商品の追加 / 編集', lblName:'商品名', lblPrice:'価格', lblCat:'カテゴリ', lblStatus:'ステータス', onSale:'販売中', stopped:'販売停止', lblNameEn:'商品名（English）', lblCatEn:'カテゴリ（English）', phAuto:'空欄なら自動翻訳', catUnset:'（未選択）', catNew:'＋ 新規カテゴリ…', phNewCat:'新規カテゴリ名', optTitle:'🎛️ オプション（サイズ・トッピング等）', optHint:'例）サイズ＝単一選択、トッピング＝複数選択。追加料金は差額（+のみ）。', addGroup:'＋ オプショングループ追加', phGroup:'グループ名（例: サイズ）', phChoice:'選択肢（例: 大盛り）', single:'単一選択', multi:'複数選択', required:'必須', addChoice:'選択肢を追加', enHint:'英語欄は空でも保存時に自動翻訳され初期値が入ります（あとで編集可）。', lblImg:'画像（任意・変更時のみ選択）', save:'💾 保存', clear:'クリア', listTitle:'🍽️ 商品一覧', loading:'読み込み中…', noItems:'商品がありません', edit:'編集', del:'削除', delConfirm:'この商品を削除しますか？', deleted:'✅ 削除しました', needName:'商品名を入力してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', availTitle:'⏰ 提供時間帯・タグ', availHint:'提供時間は空欄なら常時提供。深夜跨ぎ（例 22:00〜02:00）も可。', lblSvcStart:'提供開始', lblSvcEnd:'提供終了', lblAllerg:'アレルゲン（任意・カンマ区切り）', phAllerg:'例: 卵, 小麦, えび', lblSpicy:'辛さ', spicy0:'なし', soldOut:'本日売切', markSold:'売切にする', markAvail:'売切解除' },
+      en:{ title:'🍽️ Menu Editor', back:'← Manage', formTitle:'➕ Add / Edit item', lblName:'Name', lblPrice:'Price', lblCat:'Category', lblStatus:'Status', onSale:'On sale', stopped:'Stopped', lblNameEn:'Name (English)', lblCatEn:'Category (English)', phAuto:'Auto-translated if blank', catUnset:'(none)', catNew:'＋ New category…', phNewCat:'New category name', optTitle:'🎛️ Options (size, toppings, etc.)', optHint:'e.g. Size = single choice, Toppings = multiple. Extra charge = price delta (+ only).', addGroup:'＋ Add option group', phGroup:'Group name (e.g. Size)', phChoice:'Choice (e.g. Large)', single:'Single', multi:'Multiple', required:'Required', addChoice:'Add choice', enHint:'English fields are auto-translated on save if left blank (editable later).', lblImg:'Image (optional, only to change)', save:'💾 Save', clear:'Clear', listTitle:'🍽️ Menu items', loading:'Loading…', noItems:'No items', edit:'Edit', del:'Delete', delConfirm:'Delete this item?', deleted:'✅ Deleted', needName:'Please enter an item name', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ', availTitle:'⏰ Service hours & tags', availHint:'Leave times blank for always-available. Overnight (e.g. 22:00–02:00) supported.', lblSvcStart:'Serve from', lblSvcEnd:'Serve until', lblAllerg:'Allergens (optional, comma-separated)', phAllerg:'e.g. egg, wheat, shrimp', lblSpicy:'Spiciness', spicy0:'None', soldOut:'Sold out today', markSold:'Mark sold out', markAvail:'Undo sold out' }
     }, function(){ if(__loaded) render(); });
   </script>
 </body>

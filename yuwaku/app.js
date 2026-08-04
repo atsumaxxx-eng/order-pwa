@@ -14,7 +14,8 @@
       memberTitle:'Member (points)', memberSub:'Enter your phone to earn / use points.', check:'Check', usePoints:'Use points', points:'pts', discountLbl:'Points', earned:'pts earned',
       couponTitle:'Coupon / Voucher', couponSub:'Enter a code to get a discount.', apply:'Apply', remove:'Remove coupon', close:'Close', couponLbl:'Coupon',
       cpApplied:'Applied', cpEmpty:'Enter a code', cpNotfound:'Code not found', cpInactive:'Not available', cpExpired:'Expired', cpLimit:'Usage limit reached', cpMin:'Minimum order not met', cpInvalid:'Invalid code',
-      optChoose:'Choose options', optAdd:'Add to order', optQty:'Qty', optRequired:'required', optPick:'Please choose the required options.', optInCart:'In your order', optClose:'Close' },
+      optChoose:'Choose options', optAdd:'Add to order', optQty:'Qty', optRequired:'required', optPick:'Please choose the required options.', optInCart:'In your order', optClose:'Close',
+      soldOut:'Sold out', notNow:'Not available now', allergen:'Allergens' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -25,7 +26,9 @@
       payTitle:'お支払い方法', payLater:'👤 店員に支払う（後会計）', payCard:'💳 カード', payProcessing:'準備中…', payScan:'QRを読み取ってお支払い', payNotYet:'まだ支払いが確認できません。', payNoKey:'オンライン決済は未設定です。', paidTitle:'支払い完了・注文しました', paidMsg:'お支払いを受け付けました。注文を送信しました。', cancel:'キャンセル',
       memberTitle:'会員（ポイント）', memberSub:'電話番号を入力するとポイントが貯まる/使えます。', check:'確認', usePoints:'ポイントを使う', points:'pt', discountLbl:'ポイント割引', earned:'pt 獲得',
       couponTitle:'クーポン／バウチャー', couponSub:'コードを入力すると割引されます。', apply:'適用', remove:'クーポンを外す', close:'閉じる', couponLbl:'クーポン',
-      cpApplied:'適用しました', cpEmpty:'コードを入力してください', cpNotfound:'コードが見つかりません', cpInactive:'利用できません', cpExpired:'期限切れ', cpLimit:'利用上限に達しています', cpMin:'最低注文額に達していません', cpInvalid:'無効なコード' }
+      cpApplied:'適用しました', cpEmpty:'コードを入力してください', cpNotfound:'コードが見つかりません', cpInactive:'利用できません', cpExpired:'期限切れ', cpLimit:'利用上限に達しています', cpMin:'最低注文額に達していません', cpInvalid:'無効なコード',
+      optChoose:'オプションを選ぶ', optAdd:'注文に追加', optQty:'数量', optRequired:'必須', optPick:'必須オプションを選択してください。', optInCart:'注文内', optClose:'閉じる',
+      soldOut:'本日売切', notNow:'提供時間外', allergen:'アレルゲン' }
   };
 
   var state = {
@@ -137,8 +140,19 @@
       var thumb = it.displayUrl
         ? '<img class="thumb" src="' + escAttr(it.displayUrl) + '" loading="lazy" alt="">'
         : '<div class="no-thumb"></div>';
+      // タグ（辛さ・アレルゲン）
+      var tags = '';
+      var sp = Number(it['辛さ']) || 0;
+      if (sp > 0) { var pep = ''; for (var s = 0; s < sp; s++) pep += '🌶'; tags += '<span class="tag-spicy">' + pep + '</span>'; }
+      if (it['アレルゲン']) tags += '<span class="tag-allg">⚠ ' + escHtml(String(it['アレルゲン'])) + '</span>';
+      var tagsHtml = tags ? '<div class="tags">' + tags + '</div>' : '';
+      // 可用性（本日売切／提供時間外）
+      var unavail = it.soldOut === true || it.available === false;
       var ctrl;
-      if (itemOpts(it).length) {
+      if (unavail) {
+        var badge = it.soldOut ? t().soldOut : t().notNow;
+        ctrl = '<div class="qty"><span class="unavail-tag">' + escHtml(badge) + '</span></div>';
+      } else if (itemOpts(it).length) {
         // オプション付き：選択ボタン＋合計数量バッジ
         var oq = optQty(key);
         ctrl = '<div class="qty">' +
@@ -153,9 +167,10 @@
             '<button class="plus" data-n="' + escAttr(key) + '" data-d="1">＋</button>' +
           '</div>';
       }
-      html += '<div class="card">' + thumb +
+      html += '<div class="card' + (unavail ? ' unavail' : '') + '">' + thumb +
         '<div class="body">' +
           '<div class="name">' + escHtml(name) + '</div>' +
+          tagsHtml +
           '<div class="price">' + money(it['価格']) + '</div>' +
           ctrl +
         '</div>' +

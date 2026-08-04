@@ -31,6 +31,11 @@
     .stp button{ width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:var(--surface); font-size:20px; font-weight:900; cursor:pointer; line-height:1; }
     .stp button.add{ background:var(--navy); color:#fff; border-color:var(--navy); }
     .stp .q{ min-width:20px; text-align:center; font-weight:900; font-size:16px; }
+    .mi.tk-off{ opacity:.55; } .mi.tk-off .thumb{ filter:grayscale(1); }
+    .tk-unavail{ display:inline-block; background:#e2e8f0; color:#64748b; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:800; }
+    .tk-tags{ display:flex; flex-wrap:wrap; gap:4px; margin:2px 0; }
+    .tk-spicy{ font-size:12px; }
+    .tk-allg{ font-size:11px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; border-radius:6px; padding:1px 5px; font-weight:700; }
     .cartbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--surface); border-top:1px solid var(--border); padding:12px 16px; box-shadow:0 -4px 16px rgba(0,0,0,.08); }
     .cartbtn{ width:100%; border:0; border-radius:12px; padding:15px; font-size:16px; font-weight:900; color:#fff; background:var(--navy); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
     .cartbtn[disabled]{ opacity:.45; }
@@ -149,10 +154,17 @@
       document.getElementById('menu').innerHTML = list.map(function(it){
         var nm = it['商品名']; var q = cart[nm]||0;
         var thumb = it.displayUrl ? '<img class="thumb" src="'+esc(it.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
-        var stepper = q>0
-          ? '<button onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',-1)">−</button><span class="q">'+q+'</span><button class="add" onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',1)">＋</button>'
-          : '<button class="add" onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',1)">＋</button>';
-        return '<div class="mi">'+thumb+'<div class="info"><div class="nm">'+esc(nm)+'</div>'+
+        var unavail = it.soldOut===true || it.available===false;
+        var tags = '';
+        var sp = Number(it['辛さ'])||0; if(sp>0){ var pep=''; for(var s=0;s<sp;s++) pep+='🌶'; tags += '<span class="tk-spicy">'+pep+'</span>'; }
+        if(it['アレルゲン']) tags += '<span class="tk-allg">⚠ '+esc(String(it['アレルゲン']))+'</span>';
+        var stepper = unavail
+          ? '<span class="tk-unavail">'+(it.soldOut?(lang==='ja'?'本日売切':'Sold out'):(lang==='ja'?'時間外':'Not now'))+'</span>'
+          : (q>0
+            ? '<button onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',-1)">−</button><span class="q">'+q+'</span><button class="add" onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',1)">＋</button>'
+            : '<button class="add" onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',1)">＋</button>');
+        return '<div class="mi'+(unavail?' tk-off':'')+'">'+thumb+'<div class="info"><div class="nm">'+esc(nm)+'</div>'+
+          (tags?'<div class="tk-tags">'+tags+'</div>':'')+
           (it['説明']?'<div class="ds">'+esc(it['説明'])+'</div>':'')+
           '<div class="pr">'+money(it['価格'])+'</div></div><div class="stp">'+stepper+'</div></div>';
       }).join('') || '<div class="loadwrap">—</div>';
