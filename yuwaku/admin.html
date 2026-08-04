@@ -64,6 +64,20 @@
       <div id="ps1">
         <div style="font-size:17px;font-weight:900;margin-bottom:12px;" id="ps1t">お会計</div>
         <div class="sum" id="paySum"></div>
+        <div id="payDisc" style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-bottom:10px;font-size:13px;">
+          <label style="display:flex;gap:8px;align-items:center;font-weight:800;cursor:pointer;"><input type="checkbox" id="dcOn" onchange="recompPay()"><span id="dcLbl">シニア/PWD割引</span></label>
+          <div id="dcBody" style="display:none;margin-top:8px;">
+            <div style="display:flex;gap:14px;margin-bottom:6px;">
+              <label style="cursor:pointer;"><input type="radio" name="dcType" value="senior" checked onchange="recompPay()"><span id="dcSenior"> シニア</span></label>
+              <label style="cursor:pointer;"><input type="radio" name="dcType" value="pwd" onchange="recompPay()"> PWD</label>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <input id="dcId" placeholder="ID番号" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;">
+              <input id="dcElig" type="number" min="0" step="any" placeholder="対象額" style="width:120px;padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;" oninput="recompPay()">
+            </div>
+            <div id="dcNote" style="color:#64748b;margin-top:6px;"></div>
+          </div>
+        </div>
         <button class="pbtn" style="background:linear-gradient(135deg,#0f4c81,#1565c0);" onclick="startOnline('gcash')">📱 GCash</button>
         <button class="pbtn" style="background:linear-gradient(135deg,#2e7d32,#43a047);" onclick="startOnline('card')">💳 Card</button>
         <button class="pbtn" style="background:#334155;" onclick="cashPay()">💴 <span id="cashLbl">現金</span></button>
@@ -94,17 +108,19 @@
   <script>
     var SETTINGS = {}, PAYMONGO = false, orders = [];
     var lang = (localStorage.getItem('lang') || '').match(/^(ja|en)$/) ? localStorage.getItem('lang') : 'ja';
-    var payTable = '', payTotal = 0, payCheckoutId = null;
+    var payTable = '', payTotal = 0, payCheckoutId = null, payMethod = 'cash', paySub = 0, payBase = null;
 
     var i18n = {
       ja: { title:'注文管理', served:'✓ 提供済', servedBtn:'提供済にする', pay:'💳 会計する', noOrder:'未会計の注文はありません',
             cash:'現金', card:'Card', cancel:'キャンセル', pTitle:'お会計', sub:'小計', svc:'サービス料', tax:'税',
             openPay:'支払いページを開く', checkBtn:'支払い確認', checking:'確認中…', notYet:'まだ支払いが確認できません。',
-            noKey:'オンライン決済は未設定です。', cashRecv:'現金を受け取りましたか？', confirmed:'支払い完了', done:'完了（会計済にする）', processing:'処理中…', lang:'EN' },
+            noKey:'オンライン決済は未設定です。', cashRecv:'現金を受け取りましたか？', confirmed:'支払い完了', done:'完了（会計済にする）', processing:'処理中…', lang:'EN',
+            disc:'シニア/PWD割引', senior:'シニア', idPh:'ID番号', eligPh:'対象額', discLine:'割引', vatNote:'うちVAT', orLbl:'レシート番号', printBtn:'🖨️ レシート印刷', close:'閉じる', tableW:'卓', totalW:'合計' },
       en: { title:'Orders', served:'✓ Served', servedBtn:'Mark served', pay:'💳 Checkout', noOrder:'No open orders',
             cash:'Cash', card:'Card', cancel:'Cancel', pTitle:'Payment', sub:'Subtotal', svc:'Service', tax:'Tax',
             openPay:'Open payment page', checkBtn:'Check status', checking:'Checking…', notYet:'Payment not confirmed yet.',
-            noKey:'Online payment is not set up.', cashRecv:'Cash received?', confirmed:'Paid', done:'Done (settle)', processing:'Processing…', lang:'JP' }
+            noKey:'Online payment is not set up.', cashRecv:'Cash received?', confirmed:'Paid', done:'Done (settle)', processing:'Processing…', lang:'JP',
+            disc:'Senior/PWD discount', senior:'Senior', idPh:'ID no.', eligPh:'Eligible amt', discLine:'Discount', vatNote:'incl. VAT', orLbl:'Receipt no.', printBtn:'🖨️ Print receipt', close:'Close', tableW:'Table', totalW:'TOTAL' }
     };
     function t(){ return i18n[lang]; }
     function sym(){ return SETTINGS.currencySymbol || '₱'; }
@@ -154,32 +170,82 @@
 
     // ── Payment ──
     window.openPay = function(tn, subtotal){
-      payTable = tn; payCheckoutId = null;
-      var b = breakdown(subtotal); payTotal = b.total;
-      var html = '<div style="font-weight:900;font-size:15px;margin-bottom:8px;">🪑 '+esc(tn)+'</div>';
-      if (b.service>0||b.tax>0){
-        html += '<div class="sr"><span>'+t().sub+'</span><span>'+money(b.sub)+'</span></div>';
-        if (b.service>0) html += '<div class="sr"><span>'+t().svc+'</span><span>'+money(b.service)+'</span></div>';
-        if (b.tax>0) html += '<div class="sr"><span>'+t().tax+'</span><span>'+money(b.tax)+'</span></div>';
-      }
-      html += '<div class="big">'+money(payTotal)+'</div>';
-      document.getElementById('paySum').innerHTML = html;
+      payTable = tn; payCheckoutId = null; paySub = Number(subtotal)||0; payBase = breakdown(paySub);
+      document.getElementById('dcOn').checked = false; document.getElementById('dcId').value=''; document.getElementById('dcElig').value='';
       document.getElementById('ps1t').innerText = t().pTitle;
       document.getElementById('cashLbl').innerText = t().cash;
       document.getElementById('cxl1').innerText = t().cancel;
+      document.getElementById('dcLbl').innerText = t().disc;
+      document.getElementById('dcSenior').innerText = ' '+t().senior;
+      document.getElementById('dcId').placeholder = t().idPh;
+      document.getElementById('dcElig').placeholder = t().eligPh;
+      recompPay();
       step(1);
       document.getElementById('payModal').classList.add('on');
+    };
+    window.recompPay = function(){
+      if (!payBase) return;
+      var on = document.getElementById('dcOn').checked;
+      document.getElementById('dcBody').style.display = on ? 'block' : 'none';
+      var sub = paySub, b = payBase, disc = 0, eligible = 0, dtype = '';
+      if (on){
+        var sel = document.querySelector('input[name=dcType]:checked'); dtype = sel ? sel.value : 'senior';
+        var ei = Number(document.getElementById('dcElig').value);
+        eligible = (ei>0) ? Math.min(ei, sub) : sub;
+        disc = Math.round(eligible - eligible/1.12*0.8);   // VAT免除＋20%引き
+      }
+      var total = Math.max(0, (b.total||0) - disc);
+      payTotal = total;
+      var vatBase = sub - eligible; var vat = Math.round(vatBase - vatBase/1.12);
+      window._bill = { subtotal: sub, vat: vat, service: b.service, discountType: on?dtype:'', discountId: on?document.getElementById('dcId').value:'', discountAmount: disc, total: total };
+      var html = '<div style="font-weight:900;font-size:15px;margin-bottom:8px;">🪑 '+esc(payTable)+'</div>';
+      html += '<div class="sr"><span>'+t().sub+'</span><span>'+money(sub)+'</span></div>';
+      if (b.service>0) html += '<div class="sr"><span>'+t().svc+'</span><span>'+money(b.service)+'</span></div>';
+      if (b.tax>0) html += '<div class="sr"><span>'+t().tax+'</span><span>'+money(b.tax)+'</span></div>';
+      if (disc>0) html += '<div class="sr" style="color:#b91c1c;"><span>'+t().discLine+' ('+(dtype==='pwd'?'PWD':t().senior)+')</span><span>− '+money(disc)+'</span></div>';
+      html += '<div class="big">'+money(total)+'</div>';
+      document.getElementById('paySum').innerHTML = html;
+      document.getElementById('dcNote').innerText = on ? (t().vatNote+' '+money(vat)) : '';
+    };
+    function showReceipt(orNo, bill){
+      var html = '<div style="font-size:40px;">✅</div>';
+      html += '<div style="font-weight:800;margin:6px 0;">'+t().orLbl+': <b>'+esc(orNo)+'</b></div>';
+      html += '<div style="font-size:20px;font-weight:900;color:var(--green);margin-bottom:6px;">'+money(bill.total)+' — '+esc(bill.table)+'</div>';
+      if (bill.discountAmount>0) html += '<div style="font-size:13px;color:#64748b;">'+t().discLine+' '+money(bill.discountAmount)+(bill.discountId?(' / ID '+esc(bill.discountId)):'')+'</div>';
+      html += '<div style="display:flex;gap:8px;margin-top:14px;"><button class="pbtn" style="background:#334155;flex:1;margin:0;" onclick="printReceipt(\''+esc(orNo)+'\')">'+t().printBtn+'</button><button class="pbtn" style="background:var(--green);flex:1;margin:0;" onclick="closePay();load();">'+t().close+'</button></div>';
+      document.getElementById('ps3').innerHTML = html;
+      window._lastBill = { orNo: orNo, bill: bill };
+      step(3);
+    }
+    window.printReceipt = function(orNo){
+      var b = (window._lastBill&&window._lastBill.bill) || window._bill || {};
+      var shop = SETTINGS.shopName || 'Shop'; var now = new Date().toLocaleString();
+      var lines = '<div>'+t().sub+': '+money(b.subtotal)+'</div>';
+      if (b.service>0) lines += '<div>'+t().svc+': '+money(b.service)+'</div>';
+      if (b.discountAmount>0) lines += '<div>'+t().discLine+': -'+money(b.discountAmount)+(b.discountId?(' (ID '+esc(b.discountId)+')'):'')+'</div>';
+      lines += '<div>'+t().vatNote+': '+money(b.vat)+'</div>';
+      var w = window.open('', '_blank', 'width=320,height=520'); if(!w) return;
+      w.document.write('<html><head><meta charset="utf-8"><title>'+esc(orNo)+'</title></head><body style="font-family:monospace;padding:10px;width:280px;">'
+        + '<div style="text-align:center;font-weight:bold;font-size:16px;">'+esc(shop)+'</div>'
+        + '<div style="text-align:center;font-size:12px;margin-bottom:8px;">'+esc(orNo)+'<br>'+esc(now)+'<br>'+t().tableW+' '+esc(b.table||'')+'</div>'
+        + '<hr>'+lines+'<hr>'
+        + '<div style="font-weight:bold;font-size:15px;display:flex;justify-content:space-between;"><span>'+t().totalW+'</span><span>'+money(b.total)+'</span></div>'
+        + '<div style="font-size:11px;margin-top:6px;">'+esc(b.method||'')+'</div>'
+        + '<scr'+'ipt>window.print();<\/scr'+'ipt></body></html>');
+      w.document.close();
     };
     window.closePay = function(){ document.getElementById('payModal').classList.remove('on'); payCheckoutId=null; };
     function step(n){ [1,2,3].forEach(function(i){ document.getElementById('ps'+i).style.display = (i===n)?'block':'none'; }); }
 
     window.cashPay = function(){
+      payMethod = 'cash';
       document.getElementById('ps3lbl').innerText = t().cashRecv;
       document.getElementById('ps3amt').innerText = money(payTotal)+' — '+payTable;
       document.getElementById('doneBtn').innerText = t().done;
       step(3);
     };
     window.startOnline = function(method){
+      payMethod = method;
       document.getElementById('ps2t').innerText = method==='gcash'?'GCash':t().card;
       document.getElementById('payQr').style.display='none';
       document.getElementById('ps2loading').style.display='block';
@@ -210,7 +276,8 @@
     };
     window.finalize = function(){
       var btn = document.getElementById('doneBtn'); btn.disabled=true; btn.innerText=t().processing;
-      API.post('updateTableOrders', { table: payTable, status: '会計済' }).then(function(){ btn.disabled=false; closePay(); load(); })
+      var bill = Object.assign({}, window._bill||{}, { table: payTable, method: payMethod });
+      API.post('finalizeBill', bill).then(function(r){ btn.disabled=false; btn.innerText=t().done; var d=r.data||{}; showReceipt(d.orNo||'', bill); })
         .catch(function(e){ btn.disabled=false; btn.innerText=t().done; alert('Error: '+(e.message||e)); });
     };
 
