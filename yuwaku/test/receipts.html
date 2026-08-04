@@ -52,17 +52,7 @@
     if (!TOKEN) location.href = './manage.html';
     function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-    var ROWS=[], SYM='₱', __loaded=false, MENU_EN={};
-    function seatLabel(v){ var s=String(v==null?'':v); var en=(window.I18n&&I18n.lang&&I18n.lang()==='en'); var m=s.match(/^テーブル(\d+)$/); if(m) return (en?'Table ':'テーブル')+m[1]; var c=s.match(/^カウンター(\d+)$/); if(c) return (en?'Counter ':'カウンター')+c[1]; return s; }
-    function transDetails(details){
-      if (!(window.I18n && I18n.lang && I18n.lang()==='en')) return details;
-      return String(details||'').split(',').map(function(tok){
-        var m=tok.trim().match(/^(.+?)x(\d+)$/); if(!m) return tok;
-        var nm=m[1].trim(); var base=nm.replace(/\s*[（(][^（(]*[)）]\s*$/,'').trim();
-        var en=MENU_EN[base]; if(!en) return tok;
-        return en + nm.slice(base.length) + 'x' + m[2];
-      }).join(', ');
-    }
+    var ROWS=[], SYM='₱', __loaded=false;
 
     function render(){
       var total=0; ROWS.forEach(function(r){ total+=Number(r.total)||0; });
@@ -71,13 +61,9 @@
       if(!ROWS.length){ document.getElementById('rows').innerHTML='<tr><td colspan="7" class="muted" style="padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
       document.getElementById('rows').innerHTML = ROWS.map(function(r){
         var disc = (Number(r.discountAmount)>0) ? ('-'+SYM+(Number(r.discountAmount)||0).toLocaleString()+(r.discountType?(' '+esc(r.discountType)):'')) : '';
-        var main = '<tr><td class="muted">'+esc(r.datetime)+'</td><td style="font-weight:800;">'+esc(r.orNo)+'</td><td>'+esc(seatLabel(r.table))+'</td>'+
+        return '<tr><td class="muted">'+esc(r.datetime)+'</td><td style="font-weight:800;">'+esc(r.orNo)+'</td><td>'+esc(r.table)+'</td>'+
           '<td class="num" style="font-weight:800;">'+SYM+(Number(r.total)||0).toLocaleString()+'</td><td>'+esc(r.method)+'</td><td class="muted">'+disc+'</td>'+
           '<td><button class="btn-sm" onclick="reprint(\''+esc(r.orNo).replace(/'/g,"\\'")+'\')">'+I18n.t('reprint')+'</button></td></tr>';
-        // 明細（あれば2行目に表示）
-        var det = (r.details||'').trim();
-        var detRow = det ? ('<tr><td></td><td colspan="6" class="muted" style="white-space:normal;padding-top:0;font-size:12px;">🧾 '+esc(transDetails(det))+'</td></tr>') : '';
-        return main + detRow;
       }).join('');
     }
     window.reprint = function(orNo){ rpc('reprintReceipt',[orNo]).then(function(d){ d=d||{}; if(d.ok){ alert(I18n.t('sent')); } else { alert(I18n.t('errPrefix')+(d.error||'error')); } }).catch(function(e){ alert(I18n.t('errPrefix')+(e.message||e)); }); };
@@ -86,7 +72,6 @@
     document.getElementById('month').addEventListener('change', load);
 
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
-    rpc('getAllMenuForAdmin',[]).then(function(l){ (l||[]).forEach(function(m){ if(m['商品名']&&m['商品名_EN']) MENU_EN[String(m['商品名'])]=String(m['商品名_EN']); }); render(); }).catch(function(){});
     __loaded=true; load();
 
     I18n.init({

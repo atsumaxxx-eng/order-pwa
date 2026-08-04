@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Printers</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --surface-2:#f1f5f9; --border:#e5e7eb; --navy:#0f172a; --text-1:#0f172a; --text-3:#64748b; --green:#22c55e; --green-lt:#dcfce7; --green-dk:#15803d; --red:#c62828; --amber:#f59e0b; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--text-1); }
+    .header{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .header h1{ font-size:18px; margin:0; font-weight:900; }
+    .header-actions{ display:flex; gap:8px; }
+    .lang-btn,.back-btn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; font-family:inherit; }
+    .container{ padding:16px; max-width:760px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .form-group{ margin-bottom:12px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .form-control{ width:100%; padding:11px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-family:inherit; }
+    .form-hint{ font-size:11px; color:var(--text-3); margin-top:4px; }
+    .btn{ border:0; border-radius:10px; padding:11px 14px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; color:#fff; background:var(--navy); }
+    .btn-primary{ background:var(--navy); } .btn-secondary{ background:#eef2f7; color:var(--navy); }
+    .btn-outline{ background:#fff; color:var(--navy); border:1px solid var(--border); }
+    .btn-danger{ background:#fee2e2; color:#b91c1c; } .btn-warning{ background:#fff7ed; color:#c2410c; }
+    .btn-sm{ padding:8px 11px; font-size:12px; } .btn-xs{ padding:6px 9px; font-size:11px; border-radius:8px; margin-left:4px; } .btn-block{ width:100%; }
+    .toggle-row{ display:flex; align-items:center; justify-content:space-between; }
+    .switch{ position:relative; width:54px; height:30px; flex-shrink:0; }
+    .switch input{ opacity:0; width:0; height:0; }
+    .slider{ position:absolute; inset:0; background:#cbd5e1; border-radius:30px; transition:.2s; cursor:pointer; }
+    .slider:before{ content:""; position:absolute; width:24px; height:24px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+    .switch input:checked + .slider{ background:var(--green); }
+    .switch input:checked + .slider:before{ transform:translateX(24px); }
+    .url-box{ background:var(--surface-2); border:1px dashed var(--border); border-radius:10px; padding:11px 12px; font-family:monospace; font-size:12px; word-break:break-all; }
+    .cnt-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+    .cnt{ text-align:center; border-radius:10px; padding:10px 4px; }
+    .cnt .n{ font-size:22px; font-weight:900; } .cnt .l{ font-size:11px; font-weight:700; }
+    .c-pend{ background:#fff7ed; color:#c2410c; } .c-prog{ background:#eff6ff; color:#2563eb; }
+    .c-done{ background:var(--green-lt); color:var(--green-dk); } .c-fail{ background:#fee2e2; color:#b91c1c; }
+    .cat-chip{ display:inline-flex; align-items:center; gap:5px; margin:0 6px 6px 0; padding:5px 10px; border:1px solid var(--border); border-radius:999px; font-size:12px; cursor:pointer; user-select:none; }
+    .cat-chip.on{ background:var(--navy); color:#fff; border-color:var(--navy); }
+    .pr-row{ display:flex; align-items:center; gap:8px; padding:10px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+    .pr-row .nm{ font-weight:700; } .pr-row .mac{ font-family:monospace; font-size:11px; color:var(--text-3); }
+    .st-badge{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
+    .s-pend{ background:#fff7ed; color:#c2410c; } .s-prog{ background:#eff6ff; color:#2563eb; } .s-done{ background:var(--green-lt); color:var(--green-dk); } .s-fail{ background:#fee2e2; color:#b91c1c; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; } th,td{ padding:7px 6px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; } th{ font-size:10px; color:var(--text-3); }
+    .alert{ margin-top:10px; padding:10px 12px; border-radius:9px; font-size:13px; font-weight:700; }
+    .alert-success{ background:var(--green-lt); color:var(--green-dk); } .alert-error{ background:#fee2e2; color:#b91c1c; }
+    .loading{ text-align:center; color:var(--text-3); padding:16px; font-size:13px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="page-title">Printers</h1>
+    <div class="header-actions">
+      <button class="lang-btn" id="langToggle" onclick="toggleLang()">JP/EN</button>
+      <a class="back-btn" href="./manage.html">← 管理</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="toggle-row">
+        <div>
+          <div class="card-title" style="margin:0;">🖨️ <span id="t-enable">Printing</span></div>
+          <div class="form-hint" id="enable-state" style="margin-top:2px;"></div>
+        </div>
+        <label class="switch"><input type="checkbox" id="enableToggle" onchange="saveEnabled()"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row" style="margin-top:14px;border-top:1px solid #e5e7eb;padding-top:14px;">
+        <div>
+          <div class="card-title" style="margin:0;">🧾 <span id="t-receipt">Auto-print receipt on checkout</span></div>
+          <div class="form-hint" id="t-receipt-hint" style="margin-top:2px;"></div>
+        </div>
+        <label class="switch"><input type="checkbox" id="receiptToggle" onchange="saveReceipt()"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🔗 <span id="t-url">CloudPRNT Server URL</span></div>
+      <div class="form-hint" id="url-help" style="margin-bottom:8px;line-height:1.7;"></div>
+      <div class="url-box" id="cpUrl">—</div>
+      <button class="btn btn-outline" style="margin-top:8px;" id="btn-copy" onclick="copyUrl()">📋 <span id="t-copy">Copy</span></button>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>📋 <span id="t-queue">Print Queue</span></span>
+        <span style="font-size:11px;color:var(--text-3);" id="t-auto">auto ⟳</span>
+      </div>
+      <div class="cnt-grid">
+        <div class="cnt c-pend"><div class="n" id="c-pend">0</div><div class="l" id="l-pend">Pending</div></div>
+        <div class="cnt c-prog"><div class="n" id="c-prog">0</div><div class="l" id="l-prog">Printing</div></div>
+        <div class="cnt c-done"><div class="n" id="c-done">0</div><div class="l" id="l-done">Done</div></div>
+        <div class="cnt c-fail"><div class="n" id="c-fail">0</div><div class="l" id="l-fail">Failed</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <button class="btn btn-warning btn-sm" id="btn-reall" onclick="reprintAll()">🔁 <span id="t-reall">Reprint failed</span></button>
+        <button class="btn btn-secondary btn-sm" id="btn-clear" onclick="clearDone()">🧹 <span id="t-clear">Clear done</span></button>
+      </div>
+      <div style="overflow:auto;max-height:340px;">
+        <table id="qTable"><tbody><tr><td style="text-align:center;color:#aaa;padding:20px;" id="q-empty">—</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">➕ <span id="t-prform">Add / Edit Printer</span></div>
+      <input type="hidden" id="prId">
+      <div class="form-group">
+        <label class="form-label" id="lbl-prname">Printer Name</label>
+        <input type="text" id="prName" class="form-control" placeholder="Kitchen">
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="lbl-prmac">MAC Address</label>
+        <input type="text" id="prMac" class="form-control" placeholder="00:11:62:xx:xx:xx">
+        <div class="form-hint" id="hint-mac"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="lbl-prcat">Categories</label>
+        <div id="catChips" style="margin:6px 0;"></div>
+        <div class="form-hint" id="hint-cat"></div>
+      </div>
+      <div class="form-group toggle-row" style="max-width:220px;">
+        <label class="form-label" id="lbl-prenabled" style="margin:0;">Enabled</label>
+        <label class="switch"><input type="checkbox" id="prEnabled" checked><span class="slider"></span></label>
+      </div>
+      <button class="btn btn-primary" id="btn-pr-save" onclick="savePr()">💾 <span id="t-save">Save</span></button>
+      <button class="btn btn-secondary btn-block" style="margin-top:8px;" id="btn-pr-clear" onclick="clearPrForm()">Clear</button>
+      <div id="pr-msg" class="alert" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🖨️ <span id="t-prlist">Printers</span></div>
+      <div id="prList"><div class="loading">…</div></div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function onErr(e){ if(String(e&&(e.message||e)).indexOf('unauthorized')>=0){ location.href='./manage.html'; } }
+
+    var currentLang = (localStorage.getItem('lang')==='en') ? 'en' : 'ja';
+    var allPrinters = [], allCategories = [], selectedCats = [], refreshTimer = null, lastQueue = [];
+
+    var i18n = {
+      ja: { title:'プリンタ設定', langBtn:'EN', enable:'プリンタ印刷', on:'✅ 有効（注文が自動で印刷されます）', off:'⛔ 無効（印刷しません）', receipt:'会計時にレシートを自動印刷', receiptHint:'会計確定時に登録プリンタへレシートを送信します',
+        url:'CloudPRNT サーバーURL', copy:'コピー', copied:'✅ コピーしました',
+        urlHelp:'Starプリンタの CloudPRNT 設定画面で、下記URLを「Server URL」に登録してください（各プリンタ共通）。ポーリング間隔は5〜10秒推奨。',
+        queue:'印刷キュー', pend:'未印刷', prog:'印刷中', done:'印刷済', fail:'失敗', reall:'失敗を再印刷', clear:'印刷済を削除',
+        prform:'プリンタの追加 / 編集', prname:'プリンタ名', prmac:'MACアドレス', hintMac:'CloudPRNTプリンタのMAC。設定画面や本体ラベルで確認できます。',
+        prcat:'対応カテゴリ', hintCat:'選択したカテゴリの商品のみ印刷。未選択の場合は全カテゴリを印刷します。', prenabled:'有効', save:'保存', clear2:'クリア', prlist:'登録プリンタ',
+        test:'テスト印刷', edit:'編集', del:'削除', delConfirm:'このプリンタを削除しますか？', saved:'✅ 保存しました', nameReq:'プリンタ名を入力してください', err:'エラー',
+        cTime:'時刻', cPrinter:'プリンタ', cTable:'卓', cStatus:'状態', cTry:'試行', reprint:'再印刷', noJobs:'ジョブはありません', noPrinters:'プリンタ未登録', testDone:'✅ テストジョブを登録しました', reprintDone:'再印刷キューに戻しました', clearDoneMsg:'✅ 印刷済を削除しました' },
+      en: { title:'Printers', langBtn:'JP', enable:'Printer Output', on:'✅ On (orders print automatically)', off:'⛔ Off (no printing)', receipt:'Auto-print receipt on checkout', receiptHint:'Sends a receipt to registered printers when a bill is settled',
+        url:'CloudPRNT Server URL', copy:'Copy', copied:'✅ Copied',
+        urlHelp:'In each Star printer\u2019s CloudPRNT settings, set the URL below as the "Server URL" (same for all printers). Polling interval 5\u201310s recommended.',
+        queue:'Print Queue', pend:'Pending', prog:'Printing', done:'Done', fail:'Failed', reall:'Reprint failed', clear:'Clear done',
+        prform:'Add / Edit Printer', prname:'Printer Name', prmac:'MAC Address', hintMac:'The CloudPRNT printer\u2019s MAC (see its settings screen or device label).',
+        prcat:'Categories', hintCat:'Prints only the selected categories. If none selected, prints all categories.', prenabled:'Enabled', save:'Save', clear2:'Clear', prlist:'Registered Printers',
+        test:'Test print', edit:'Edit', del:'Delete', delConfirm:'Delete this printer?', saved:'✅ Saved', nameReq:'Please enter a printer name', err:'Error',
+        cTime:'Time', cPrinter:'Printer', cTable:'T', cStatus:'Status', cTry:'Try', reprint:'Reprint', noJobs:'No jobs', noPrinters:'No printers yet', testDone:'✅ Test job queued', reprintDone:'Requeued for printing', clearDoneMsg:'✅ Cleared printed jobs' }
+    };
+
+    function $(id){ return document.getElementById(id); }
+    function toggleLang(){ currentLang=currentLang==='ja'?'en':'ja'; localStorage.setItem('lang',currentLang); updateUI(); renderCatChips(); renderPrinters(); renderQueue(lastQueue); }
+
+    function updateUI(){
+      var t=i18n[currentLang];
+      $('page-title').innerText=t.title; $('langToggle').innerText=t.langBtn;
+      $('t-enable').innerText=t.enable; $('t-url').innerText=t.url; $('url-help').innerText=t.urlHelp; $('t-copy').innerText=t.copy;
+      if($('t-receipt')) $('t-receipt').innerText=t.receipt||'会計時にレシートを自動印刷'; if($('t-receipt-hint')) $('t-receipt-hint').innerText=t.receiptHint||'';
+      $('t-queue').innerText=t.queue; $('l-pend').innerText=t.pend; $('l-prog').innerText=t.prog; $('l-done').innerText=t.done; $('l-fail').innerText=t.fail;
+      $('t-reall').innerText=t.reall; $('t-clear').innerText=t.clear; $('t-prform').innerText=t.prform; $('lbl-prname').innerText=t.prname;
+      $('lbl-prmac').innerText=t.prmac; $('hint-mac').innerText=t.hintMac; $('lbl-prcat').innerText=t.prcat; $('hint-cat').innerText=t.hintCat;
+      $('lbl-prenabled').innerText=t.prenabled; $('t-save').innerText=t.save; $('btn-pr-clear').innerText=t.clear2; $('t-prlist').innerText=t.prlist;
+      updateEnableState();
+    }
+    function updateEnableState(){ $('enable-state').innerText = $('enableToggle').checked ? i18n[currentLang].on : i18n[currentLang].off; }
+    function saveEnabled(){ updateEnableState(); rpc('saveSettings',[{ printEnabled: $('enableToggle').checked ? 'true' : 'false' }]).catch(onErr); }
+    window.saveReceipt=function(){ rpc('saveSettings',[{ receiptPrintEnabled: $('receiptToggle').checked ? 'true' : 'false' }]).catch(onErr); };
+
+    function copyUrl(){
+      var txt=$('cpUrl').innerText;
+      if(navigator.clipboard){ navigator.clipboard.writeText(txt); } else { var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      $('btn-copy').innerHTML='📋 '+i18n[currentLang].copied;
+      setTimeout(function(){ $('btn-copy').innerHTML='📋 <span id="t-copy">'+i18n[currentLang].copy+'</span>'; },1500);
+    }
+
+    function renderCatChips(){
+      var box=$('catChips');
+      if(!allCategories.length){ box.innerHTML='<span class="form-hint">—</span>'; return; }
+      box.innerHTML=allCategories.map(function(c){ var on=selectedCats.indexOf(c)!==-1; return '<span class="cat-chip'+(on?' on':'')+'" onclick="toggleCat(\''+c.replace(/'/g,"\\'")+'\')">'+(on?'✓ ':'')+c+'</span>'; }).join('');
+    }
+    window.toggleCat=function(c){ var i=selectedCats.indexOf(c); if(i===-1) selectedCats.push(c); else selectedCats.splice(i,1); renderCatChips(); };
+
+    function loadPrinters(){ rpc('getAllPrinters',[]).then(function(d){ allPrinters=d||[]; renderPrinters(); }).catch(onErr); }
+    function renderPrinters(){
+      var t=i18n[currentLang], el=$('prList');
+      if(!allPrinters.length){ el.innerHTML='<div class="loading">'+t.noPrinters+'</div>'; return; }
+      el.innerHTML=allPrinters.map(function(p){
+        var cats=p.categories&&p.categories.length?p.categories.join(', '):'ALL';
+        return '<div class="pr-row"'+(p.enabled?'':' style="opacity:.5;"')+'>'+
+          '<div style="flex:1;min-width:120px;"><span class="nm">'+p.name+'</span> <span class="mac">'+(p.mac||'-')+'</span><br><span class="form-hint">'+cats+'</span></div>'+
+          '<button class="btn btn-outline btn-xs" onclick=\'editPr('+JSON.stringify(p).replace(/'/g,"&#39;")+')\'>'+t.edit+'</button>'+
+          '<button class="btn btn-secondary btn-xs" onclick="testPr(\''+p.id+'\')">'+t.test+'</button>'+
+          '<button class="btn btn-danger btn-xs" onclick="delPr(\''+p.id+'\')">'+t.del+'</button>'+
+        '</div>';
+      }).join('');
+    }
+    window.editPr=function(p){ $('prId').value=p.id; $('prName').value=p.name; $('prMac').value=p.mac||''; $('prEnabled').checked=!!p.enabled; selectedCats=(p.categories||[]).slice(); renderCatChips(); window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}); };
+    window.clearPrForm=function(){ $('prId').value=''; $('prName').value=''; $('prMac').value=''; $('prEnabled').checked=true; selectedCats=[]; renderCatChips(); $('pr-msg').style.display='none'; };
+    window.savePr=function(){
+      var t=i18n[currentLang], name=$('prName').value.trim(), msg=$('pr-msg');
+      if(!name){ msg.innerText=t.nameReq; msg.className='alert alert-error'; msg.style.display='block'; return; }
+      var p={ id:$('prId').value, name:name, mac:$('prMac').value.trim(), categories:selectedCats.slice(), enabled:$('prEnabled').checked };
+      $('btn-pr-save').disabled=true;
+      rpc('savePrinter',[p]).then(function(){ $('btn-pr-save').disabled=false; msg.innerText=t.saved; msg.className='alert alert-success'; msg.style.display='block'; clearPrForm(); loadPrinters(); })
+        .catch(function(e){ $('btn-pr-save').disabled=false; onErr(e); msg.innerText=t.err+': '+(e.message||e); msg.className='alert alert-error'; msg.style.display='block'; });
+    };
+    window.delPr=function(id){ if(!confirm(i18n[currentLang].delConfirm)) return; rpc('deletePrinter',[id]).then(loadPrinters).catch(onErr); };
+    window.testPr=function(id){ rpc('testPrint',[id]).then(function(){ toast(i18n[currentLang].testDone); refreshQueue(); }).catch(onErr); };
+
+    function refreshQueue(){
+      rpc('getPrintQueueCounts',[]).then(function(c){ $('c-pend').innerText=c['未印刷']||0; $('c-prog').innerText=c['印刷中']||0; $('c-done').innerText=c['印刷済']||0; $('c-fail').innerText=c['失敗']||0; }).catch(onErr);
+      rpc('getPrintQueue',[60]).then(function(rows){ lastQueue=rows||[]; renderQueue(lastQueue); }).catch(onErr);
+    }
+    var STCLASS={ '未印刷':'s-pend','印刷中':'s-prog','印刷済':'s-done','失敗':'s-fail' };
+    function renderQueue(rows){
+      var t=i18n[currentLang], tb=document.querySelector('#qTable tbody');
+      if(!rows||!rows.length){ tb.innerHTML='<tr><td style="text-align:center;color:#aaa;padding:20px;">'+t.noJobs+'</td></tr>'; return; }
+      var html='<tr><th>'+t.cTime+'</th><th>'+t.cPrinter+'</th><th>'+t.cTable+'</th><th>'+t.cStatus+'</th><th>'+t.cTry+'</th><th></th></tr>';
+      rows.forEach(function(r){
+        var canRe=(r.status==='失敗'||r.status==='未印刷'||r.status==='印刷中');
+        html+='<tr><td>'+r.created+'</td><td>'+r.printerName+'</td><td>'+r.table+'</td>'+
+          '<td><span class="st-badge '+(STCLASS[r.status]||'')+'">'+r.status+'</span>'+(r.error?' <span class="form-hint">'+r.error+'</span>':'')+'</td>'+
+          '<td>'+r.attempts+'</td>'+
+          '<td>'+(canRe?'<button class="btn btn-outline btn-xs" onclick="reJob(\''+r.id+'\')">'+t.reprint+'</button>':'')+'</td></tr>';
+      });
+      tb.innerHTML=html;
+    }
+    window.reJob=function(id){ rpc('reprintJob',[id]).then(function(){ toast(i18n[currentLang].reprintDone); refreshQueue(); }).catch(onErr); };
+    window.reprintAll=function(){ rpc('reprintAllFailed',[]).then(refreshQueue).catch(onErr); };
+    window.clearDone=function(){ rpc('clearPrintedJobs',[]).then(function(){ toast(i18n[currentLang].clearDoneMsg); refreshQueue(); }).catch(onErr); };
+
+    function toast(m){ var msg=$('pr-msg'); msg.innerText=m; msg.className='alert alert-success'; msg.style.display='block'; setTimeout(function(){ msg.style.display='none'; },2200); }
+
+    // init
+    updateUI();
+    $('cpUrl').innerText = (window.APP_CONFIG && window.APP_CONFIG.API_URL ? window.APP_CONFIG.API_URL : '') + '?cp=1';
+    rpc('getSettings',[]).then(function(s){ $('enableToggle').checked=(s && String(s.printEnabled)==='true'); $('receiptToggle').checked=(s && String(s.receiptPrintEnabled)==='true'); updateEnableState(); }).catch(onErr);
+    rpc('getAllMenuForAdmin',[]).then(function(items){ var set={}; (items||[]).forEach(function(i){ if(i['カテゴリ']) set[i['カテゴリ']]=1; }); allCategories=Object.keys(set); renderCatChips(); }).catch(onErr);
+    loadPrinters();
+    refreshQueue();
+    refreshTimer=setInterval(refreshQueue, 8000);
+  </script>
+</body>
+</html>

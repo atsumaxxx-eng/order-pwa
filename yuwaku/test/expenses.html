@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Expenses</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:900px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .grid{ display:grid; grid-template-columns:130px 1fr 1fr 120px; gap:8px; }
+    .fg{ margin-bottom:8px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .fc{ width:100%; padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .btn{ border:0; border-radius:11px; padding:12px 16px; font-size:15px; font-weight:900; cursor:pointer; font-family:inherit; background:var(--navy); color:#fff; }
+    .btn-sm{ background:#fee2e2; color:#b91c1c; border:0; border-radius:8px; padding:7px 10px; font-weight:800; cursor:pointer; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; }
+    th{ font-size:11px; color:var(--text-3); white-space:nowrap; }
+    td.num,th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+    .tot{ font-weight:900; font-size:16px; }
+    .bar{ display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; flex-wrap:wrap; }
+    .alert{ margin-top:10px; display:none; padding:11px; border-radius:9px; font-size:14px; font-weight:700; }
+    .muted{ color:var(--text-3); font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">💰 経費一覧</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-title" data-t="addTitle">➕ 経費を登録</div>
+      <div class="grid">
+        <div class="fg"><label class="form-label" data-t="lblDate">日付</label><input id="eDate" type="date" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lblCat">カテゴリ</label>
+          <select id="eCat" class="fc">
+            <option value="賃料" data-t="c_rent">賃料</option>
+            <option value="電気代" data-t="c_elec">電気代</option>
+            <option value="水道代" data-t="c_water">水道代</option>
+            <option value="商品仕入" data-t="c_goods">商品仕入</option>
+            <option value="備品購入" data-t="c_supply">備品購入</option>
+            <option value="その他" data-t="c_other">その他</option>
+          </select>
+        </div>
+        <div class="fg"><label class="form-label" data-t="lblItem">品目 / 内容</label><input id="eItem" class="fc" list="itemList" data-tph="phItem" placeholder="過去の品目から選択 or 入力"><datalist id="itemList"></datalist></div>
+        <div class="fg"><label class="form-label" data-t="lblAmount">金額</label><input id="eAmount" type="number" min="0" step="any" class="fc"></div>
+      </div>
+      <div class="fg"><label class="form-label" data-t="lblMemo">メモ（任意）</label><input id="eMemo" class="fc"></div>
+      <input type="hidden" id="eId">
+      <button class="btn" id="saveBtn" onclick="save()" data-t="add">💾 登録</button>
+      <div class="alert" id="msg"></div>
+    </div>
+
+    <div class="card">
+      <div class="bar">
+        <div><label class="form-label" data-t="month">対象月</label><input id="month" type="month" class="fc"></div>
+        <div style="flex:1;"></div>
+        <div style="text-align:right;"><div class="muted" data-t="monthTotal">月合計</div><div class="tot" id="total">—</div></div>
+      </div>
+      <div style="overflow:auto;">
+        <table><thead><tr>
+          <th data-t="thDate">日付</th><th data-t="thCat">カテゴリ</th><th data-t="thItem">品目</th>
+          <th class="num" data-t="thAmount">金額</th><th data-t="thMemo">メモ</th><th style="width:70px;"></th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var ALL = [], SYM='₱';
+    var CATKEY = { '賃料':'c_rent','電気代':'c_elec','水道代':'c_water','商品仕入':'c_goods','備品購入':'c_supply','その他':'c_other' };
+    function catLabel(c){ return I18n.t(CATKEY[c]||'c_other'); }
+
+    function render(){
+      // 品目候補（過去履歴）
+      var items = []; ALL.forEach(function(e){ var it=(e.item||'').trim(); if(it && items.indexOf(it)<0) items.push(it); });
+      document.getElementById('itemList').innerHTML = items.map(function(i){ return '<option value="'+esc(i)+'">'; }).join('');
+      // 月フィルタ
+      var mo = document.getElementById('month').value;
+      var list = ALL.filter(function(e){ return e.month===mo; }).sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+      var total = 0; list.forEach(function(e){ total += Number(e.amount)||0; });
+      document.getElementById('total').innerText = SYM + total.toLocaleString();
+      if(!list.length){ document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = list.map(function(e){
+        return '<tr><td>'+esc(e.date)+'</td><td>'+esc(catLabel(e.category))+'</td><td>'+esc(e.item)+'</td>'+
+          '<td class="num">'+SYM+(Number(e.amount)||0).toLocaleString()+'</td><td class="muted">'+esc(e.memo||'')+'</td>'+
+          '<td><button class="btn-sm" onclick="edit(\''+e.id+'\')">'+I18n.t('edit')+'</button> '+
+          '<button class="btn-sm" onclick="del(\''+e.id+'\')">'+I18n.t('del')+'</button></td></tr>';
+      }).join('');
+    }
+    function msg(text, ok){ var m=document.getElementById('msg'); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
+    function clearForm(){ document.getElementById('eId').value=''; document.getElementById('eItem').value=''; document.getElementById('eAmount').value=''; document.getElementById('eMemo').value=''; }
+
+    window.edit = function(id){
+      var e = ALL.filter(function(x){return x.id===id;})[0]; if(!e) return;
+      document.getElementById('eId').value=e.id; document.getElementById('eDate').value=e.date;
+      document.getElementById('eCat').value=e.category; document.getElementById('eItem').value=e.item;
+      document.getElementById('eAmount').value=e.amount; document.getElementById('eMemo').value=e.memo||'';
+      window.scrollTo({top:0,behavior:'smooth'});
+    };
+    window.del = function(id){
+      if(!confirm(I18n.t('delConfirm'))) return;
+      rpc('deleteExpense',[id]).then(function(){ return rpc('getExpenses',[]); }).then(function(l){ ALL=l||[]; render(); })
+        .catch(function(e){ msg(I18n.t('errPrefix')+(e.message||e), false); });
+    };
+    window.save = function(){
+      var exp = { id:document.getElementById('eId').value, date:document.getElementById('eDate').value,
+        category:document.getElementById('eCat').value, item:document.getElementById('eItem').value.trim(),
+        amount:Number(document.getElementById('eAmount').value)||0, memo:document.getElementById('eMemo').value };
+      if(!exp.date){ msg(I18n.t('needDate'), false); return; }
+      if(!(exp.amount>0)){ msg(I18n.t('needAmount'), false); return; }
+      var btn=document.getElementById('saveBtn'); btn.disabled=true;
+      rpc('saveExpense',[exp]).then(function(r){ btn.disabled=false; msg(I18n.t('saved'), true); clearForm();
+        // 登録した月に合わせる
+        if(exp.date){ document.getElementById('month').value = exp.date.slice(0,7); }
+        return rpc('getExpenses',[]).then(function(l){ ALL=l||[]; render(); });
+      }).catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
+    };
+
+    var today = new Date();
+    var ymd = today.toISOString().slice(0,10);
+    document.getElementById('eDate').value = ymd;
+    document.getElementById('month').value = ymd.slice(0,7);
+    document.getElementById('month').addEventListener('change', render);
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
+    var __loaded=false;
+    rpc('getExpenses',[]).then(function(l){ ALL=l||[]; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="6" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'💰 経費一覧', back:'← 管理へ', addTitle:'➕ 経費を登録', lblDate:'日付', lblCat:'カテゴリ', lblItem:'品目 / 内容', phItem:'過去の品目から選択 or 入力', lblAmount:'金額', lblMemo:'メモ（任意）', add:'💾 登録', month:'対象月', monthTotal:'月合計', thDate:'日付', thCat:'カテゴリ', thItem:'品目', thAmount:'金額', thMemo:'メモ', loading:'読み込み中…', empty:'この月の経費はありません', edit:'編集', del:'削除', delConfirm:'この経費を削除しますか？', saved:'✅ 登録しました', needDate:'日付を入力してください', needAmount:'金額を入力してください', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', c_rent:'賃料', c_elec:'電気代', c_water:'水道代', c_goods:'商品仕入', c_supply:'備品購入', c_other:'その他' },
+      en:{ title:'💰 Expenses', back:'← Manage', addTitle:'➕ Add expense', lblDate:'Date', lblCat:'Category', lblItem:'Item / detail', phItem:'Pick from history or type', lblAmount:'Amount', lblMemo:'Memo (optional)', add:'💾 Add', month:'Target month', monthTotal:'Month total', thDate:'Date', thCat:'Category', thItem:'Item', thAmount:'Amount', thMemo:'Memo', loading:'Loading…', empty:'No expenses this month', edit:'Edit', del:'Delete', delConfirm:'Delete this expense?', saved:'✅ Added', needDate:'Please enter a date', needAmount:'Please enter an amount', errPrefix:'Error: ', loadErr:'Load error: ', c_rent:'Rent', c_elec:'Electricity', c_water:'Water', c_goods:'Goods purchase', c_supply:'Supplies', c_other:'Other' }
+    }, function(){ if(__loaded) render(); });
+  </script>
+</body>
+</html>

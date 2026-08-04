@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Management</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); -webkit-tap-highlight-color:transparent; }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .head .r{ display:flex; gap:8px; align-items:center; font-size:13px; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; }
+    .wrap{ padding:16px; max-width:900px; margin:0 auto; }
+    /* Login */
+    .login{ max-width:340px; margin:8vh auto; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:26px 22px; box-shadow:0 8px 24px rgba(0,0,0,.06); }
+    .login .emoji{ font-size:42px; text-align:center; }
+    .login h2{ text-align:center; font-size:19px; margin:8px 0 4px; }
+    .login p{ text-align:center; color:var(--text-3); font-size:13px; margin:0 0 16px; }
+    .fc{ width:100%; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:16px; font-family:inherit; margin-bottom:12px; }
+    .btn{ width:100%; border:0; border-radius:11px; padding:14px; font-size:15px; font-weight:900; color:#fff; background:var(--navy); cursor:pointer; font-family:inherit; }
+    .err{ display:none; color:var(--red); font-size:13px; font-weight:700; text-align:center; margin-bottom:10px; }
+    /* Hub */
+    .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+    .tile{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 14px; text-decoration:none; color:var(--navy); display:flex; flex-direction:column; gap:6px; cursor:pointer; }
+    .tile .ic{ font-size:26px; }
+    .tile .tt{ font-weight:800; font-size:15px; }
+    .tile .ds{ font-size:12px; color:var(--text-3); }
+    .tile.soon{ opacity:.45; cursor:default; }
+    .tile.soon .ds:after{ content:' ・準備中'; }
+    .hidden{ display:none; }
+    .mtabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; -webkit-overflow-scrolling:touch; }
+    .mtab{ flex:0 0 auto; background:var(--surface); border:1px solid var(--border); color:var(--text-3); border-radius:999px; padding:9px 16px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; }
+    .mtab.on{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <h1 id="title" data-t="title">管理</h1>
+    <div class="r"><span id="who"></span><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><button class="hbtn hidden" id="logoutBtn" onclick="logout()" data-t="logout">ログアウト</button></div>
+  </div>
+
+  <!-- Loading view (トークン確認中はこれを表示し、ログイン画面のちらつきを防ぐ) -->
+  <div class="wrap" id="loadingView"><p style="text-align:center;color:var(--text-3);margin-top:14vh;font-size:14px;" data-t="loading">読み込み中…</p></div>
+
+  <!-- Login view -->
+  <div class="wrap hidden" id="loginView">
+    <div class="login" id="loginCard">
+      <img id="loginPic" alt="" style="display:none;width:100%;max-height:120px;object-fit:contain;border-radius:12px;margin-bottom:14px;">
+      <div class="emoji">🔒</div>
+      <h2 data-t="login">ログイン</h2>
+      <p data-t="loginSub">ログインIDとパスワードを入力</p>
+      <div class="err" id="loginErr" data-t="loginErr">IDまたはパスワードが違います</div>
+      <input class="fc" id="loginId" placeholder="ログインID" data-tph="ph_loginId" autocapitalize="none" autocomplete="username">
+      <input class="fc" id="loginPass" type="password" placeholder="パスワード" data-tph="ph_pass" autocomplete="current-password">
+      <button class="btn" id="loginBtn" onclick="doLogin()" data-t="loginBtn">🔓 ログイン</button>
+      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(true);return false;" style="font-size:13px;font-weight:700;color:var(--text-3);" data-t="chgPwLink">🔑 パスワードを変更</a></div>
+    </div>
+    <div class="login hidden" id="chgPwCard">
+      <div class="emoji">🔑</div>
+      <h2 data-t="chgTitle">パスワード変更</h2>
+      <p data-t="chgSub">ログインIDと現在のパスワードで変更できます</p>
+      <div id="chgMsg" style="display:none;font-size:13px;font-weight:700;text-align:center;margin-bottom:10px;"></div>
+      <input class="fc" id="cpLoginId" placeholder="ログインID" data-tph="ph_loginId" autocapitalize="none" autocomplete="username">
+      <input class="fc" id="cpOldPass" type="password" placeholder="現在のパスワード" data-tph="ph_cpOld" autocomplete="current-password">
+      <input class="fc" id="cpNewPass" type="password" placeholder="新しいパスワード（6文字以上）" data-tph="ph_cpNew" autocomplete="new-password">
+      <input class="fc" id="cpNewPass2" type="password" placeholder="新しいパスワード（確認）" data-tph="ph_cpNew2" autocomplete="new-password">
+      <button class="btn" id="cpBtn" onclick="doChangePw()" data-t="cpBtn">🔑 変更する</button>
+      <div style="text-align:center;margin-top:14px;"><a href="#" onclick="toggleChgPw(false);return false;" style="font-size:13px;color:var(--text-3);" data-t="backToLogin">← ログインに戻る</a></div>
+    </div>
+  </div>
+
+  <!-- Hub view -->
+  <div class="wrap hidden" id="hubView">
+    <div class="mtabs" id="mtabs"></div>
+    <div class="grid" id="tiles"></div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    var NAME = localStorage.getItem('mgmtName') || '';
+    var lastAllowed = {};
+
+    // key: 権限キー（null=公開・常時表示）, active: 移設済みか
+    var GROUPS = [
+      { id:'orders',   ja:'接客・注文',   en:'Service & Orders' },
+      { id:'sales',    ja:'売上・経営',   en:'Sales & Mgmt' },
+      { id:'stock',    ja:'在庫・仕入',   en:'Inventory' },
+      { id:'staff',    ja:'スタッフ・勤怠', en:'Staff' },
+      { id:'customer', ja:'顧客・予約',   en:'Customers' },
+      { id:'system',   ja:'システム・設定', en:'System' }
+    ];
+    var TILES = [
+      { grp:'orders', key:'admin', ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', ttEn:'Orders', dsEn:'Tables · billing', url:'./admin.html', active:true },
+      { grp:'orders', key:'kds', ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', ttEn:'Kitchen', dsEn:'Pending orders', url:'./kds.html', active:true },
+      { grp:'orders', key:'takeout', ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', ttEn:'Takeout', dsEn:'Online orders', url:'./takeout.html', active:true },
+      { grp:'sales', key:'dashboard', ic:'📊', tt:'ダッシュボード', ds:'今日/今月・目標・粗利', ttEn:'Dashboard', dsEn:'Today · target · profit', url:'./dashboard.html', active:true },
+      { grp:'sales', key:'sales', ic:'📈', tt:'売上管理', ds:'集計・分析', ttEn:'Sales', dsEn:'Reports · analytics', url:'./sales.html', active:true },
+      { grp:'sales', key:'expenses', ic:'💰', tt:'経費一覧', ds:'固定費・仕入・備品', ttEn:'Expenses', dsEn:'Costs · purchases', url:'./expenses.html', active:true },
+      { grp:'sales', key:'profit', ic:'📉', tt:'月間粗利', ds:'売上−原価', ttEn:'Gross profit', dsEn:'Revenue − costs', url:'./profit.html', active:true },
+      { grp:'sales', key:'register', ic:'💵', tt:'レジ締め', ds:'現金過不足・X/Z', ttEn:'Register', dsEn:'Cash close · X/Z', url:'./register.html', active:true },
+      { grp:'sales', key:'receipts', ic:'🧾', tt:'会計履歴', ds:'過去の会計・再印刷', ttEn:'Receipts', dsEn:'Past bills · reprint', url:'./receipts.html', active:true },
+      { grp:'sales', key:'feedback', ic:'⭐', tt:'お客様の声', ds:'評価・コメント', ttEn:'Feedback', dsEn:'Ratings · comments', url:'./feedback.html', active:true },
+      { grp:'stock', key:'inventory', ic:'📦', tt:'在庫管理', ds:'在庫数・原価・低在庫', ttEn:'Inventory', dsEn:'Stock · cost · low-stock', url:'./inventory.html', active:true },
+      { grp:'stock', key:'purchasing', ic:'🚚', tt:'仕入・発注', ds:'発注提案・仕入先', ttEn:'Purchasing', dsEn:'Reorder · suppliers', url:'./purchasing.html', active:true },
+      { grp:'stock', key:'menu_editor', ic:'🍽️', tt:'メニュー編集', ds:'商品の追加・編集・並び替え', ttEn:'Menu', dsEn:'Add · edit · reorder', url:'./menu_editor.html', active:true },
+      { grp:'stock', key:'recipe', ic:'📖', tt:'レシピ・原価', ds:'材料・自動減算', ttEn:'Recipes · cost', dsEn:'Ingredients · auto-deduct', url:'./recipe.html', active:true },
+      { grp:'staff', key:'clock', ic:'⏰', tt:'出勤打刻', ds:'出退勤・休憩', ttEn:'Time clock', dsEn:'Clock in/out', url:'./clock.html', active:true },
+      { grp:'staff', key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', ttEn:'Attendance', dsEn:'Shifts · payroll', url:'./attendance.html', active:true },
+      { grp:'staff', key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', ttEn:'Users', dsEn:'Accounts · roles', url:'./users.html', active:true },
+      { grp:'customer', key:'members', ic:'🎁', tt:'会員管理', ds:'ポイント・来店', ttEn:'Members', dsEn:'Points · visits', url:'./members.html', active:true },
+      { grp:'customer', key:'birthdays', ic:'🎂', tt:'誕生日クーポン', ds:'今月の会員・発行', ttEn:'Birthdays', dsEn:'This month · issue', url:'./birthdays.html', active:true },
+      { grp:'customer', key:'coupons', ic:'🎟️', tt:'クーポン', ds:'割引・バウチャー', ttEn:'Coupons', dsEn:'Discounts · vouchers', url:'./coupons.html', active:true },
+      { grp:'customer', key:'reservations', ic:'🗓️', tt:'予約管理', ds:'受付・確定・来店', ttEn:'Reservations', dsEn:'Requests · status', url:'./reservations.html', active:true },
+      { grp:'system', key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', ttEn:'Printers', dsEn:'Kitchen printing', url:'./printers.html', active:true },
+      { grp:'system', key:'audit', ic:'🧾', tt:'監査ログ', ds:'注文取消・承認履歴', ttEn:'Audit log', dsEn:'Voids · approvals', url:'./audit.html', active:true },
+      { grp:'system', key:'backup', ic:'💾', tt:'バックアップ', ds:'全データ複製・CSV書出', ttEn:'Backup', dsEn:'Copy all · CSV export', url:'./backup.html', active:true },
+      { grp:'system', key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true }
+    ];
+    var curTab = (function(){ try { return localStorage.getItem('mgmtTab') || null; } catch(e){ return null; } })();
+
+    function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; var _lc=document.getElementById('loginCard'); if(_lc)_lc.classList.remove('hidden'); var _cc=document.getElementById('chgPwCard'); if(_cc)_cc.classList.add('hidden'); }
+    function showHub(allowed){
+      document.getElementById('loadingView').classList.add('hidden');
+      document.getElementById('loginView').classList.add('hidden');
+      document.getElementById('hubView').classList.remove('hidden');
+      document.getElementById('logoutBtn').classList.remove('hidden');
+      document.getElementById('who').innerText = NAME ? ('👤 '+NAME) : '';
+      lastAllowed = allowed || {};
+      renderHub();
+    }
+    function renderHub(){
+      var allowed = lastAllowed || {};
+      var en = (window.I18n && I18n.lang()==='en');
+      // 権限のあるタイルを持つタブだけ表示
+      var visGroups = GROUPS.filter(function(g){
+        return TILES.some(function(x){ return x.grp===g.id && (!x.key || allowed[x.key]); });
+      });
+      if (!visGroups.length){ document.getElementById('mtabs').innerHTML=''; document.getElementById('tiles').innerHTML=''; return; }
+      if (!curTab || !visGroups.some(function(g){ return g.id===curTab; })) curTab = visGroups[0].id;
+      // タブバー
+      document.getElementById('mtabs').innerHTML = visGroups.map(function(g){
+        return '<button class="mtab'+(g.id===curTab?' on':'')+'" onclick="selectTab(\''+g.id+'\')">'+(en?g.en:g.ja)+'</button>';
+      }).join('');
+      // タイル（現在のタブ）
+      var html = '';
+      TILES.forEach(function(x){
+        if (x.grp!==curTab) return;
+        if (x.key && !allowed[x.key]) return;
+        var tt = (en && x.ttEn) ? x.ttEn : x.tt, ds = (en && x.dsEn) ? x.dsEn : x.ds;
+        if (x.active){ html += '<a class="tile" href="'+x.url+'"><span class="ic">'+x.ic+'</span><span class="tt">'+tt+'</span><span class="ds">'+ds+'</span></a>'; }
+        else { html += '<div class="tile soon"><span class="ic">'+x.ic+'</span><span class="tt">'+tt+'</span><span class="ds">'+ds+'</span></div>'; }
+      });
+      document.getElementById('tiles').innerHTML = html;
+    }
+    window.selectTab = function(id){ curTab = id; try{ localStorage.setItem('mgmtTab', id); }catch(e){} renderHub(); };
+
+    window.doLogin = function(){
+      var idEl = document.getElementById('loginId'), passEl = document.getElementById('loginPass');
+      var id = idEl.value.trim(), pass = passEl.value;
+      var errEl = document.getElementById('loginErr');
+      if (!id || !pass){ errEl.textContent = I18n.t('needLogin'); errEl.style.display='block'; (!id ? idEl : passEl).focus(); return; }
+      errEl.style.display='none';
+      var btn = document.getElementById('loginBtn'); btn.disabled=true;
+      API.post('login', { loginId: id, pass: pass }).then(function(r){
+        btn.disabled=false;
+        TOKEN = r.token; NAME = r.name || '';
+        localStorage.setItem('mgmtToken', TOKEN); localStorage.setItem('mgmtName', NAME); localStorage.setItem('mgmtRole', r.role||'');
+        checkAndShow();
+      }).catch(function(){ btn.disabled=false; errEl.textContent = I18n.t('loginErr'); errEl.style.display='block'; });
+    };
+    window.logout = function(){ localStorage.removeItem('mgmtToken'); localStorage.removeItem('mgmtName'); localStorage.removeItem('mgmtRole'); TOKEN=''; NAME=''; showLogin(); };
+
+    // ログイン画面からのパスワード変更（ログインID＋現在のパスワードで本人確認）
+    window.toggleChgPw = function(show){
+      document.getElementById('loginCard').classList.toggle('hidden', !!show);
+      document.getElementById('chgPwCard').classList.toggle('hidden', !show);
+      var m=document.getElementById('chgMsg'); if(m) m.style.display='none';
+    };
+    window.doChangePw = function(){
+      var g=function(id){ return document.getElementById(id); };
+      var id=g('cpLoginId').value.trim(), o=g('cpOldPass').value, n=g('cpNewPass').value, n2=g('cpNewPass2').value;
+      function msg(t,ok){ var m=g('chgMsg'); m.style.display='block'; m.style.color=ok?'#15803d':'#c62828'; m.innerText=t; }
+      if(!id){ msg(I18n.t('m_needId'),false); return; }
+      if(!o){ msg(I18n.t('m_needOld'),false); return; }
+      if(!n||n.length<6){ msg(I18n.t('m_short'),false); return; }
+      if(n!==n2){ msg(I18n.t('m_mismatch'),false); return; }
+      var b=g('cpBtn'); b.disabled=true;
+      API.post('changePasswordByLogin',{loginId:id, oldPass:o, newPass:n}).then(function(r){
+        b.disabled=false;
+        if(r && r.data && r.data.success){ msg(I18n.t('m_ok'),true); g('cpOldPass').value=''; g('cpNewPass').value=''; g('cpNewPass2').value=''; }
+        else { msg((r&&r.data&&r.data.error==='too_short')?I18n.t('m_short'):I18n.t('m_wrong'),false); }
+      }).catch(function(e){ b.disabled=false; msg(I18n.t('m_err')+(e.message||e),false); });
+    };
+
+    function checkAndShow(){
+      if (!TOKEN){ showLogin(); return; }
+      API.post('checkToken', { token: TOKEN }).then(function(r){
+        if (r.valid && r.me){ showHub(r.me.allowed || {}); }
+        else { logout(); }
+      }).catch(function(){ showLogin(); });
+    }
+    // ログイン画面の画像（設定で登録した画像を表示。getSettingsはログイン前でも公開）
+    API.post('getSettings', {}).then(function(r){ var d=(r&&r.data)||{}; if(d.systemTopImageId){ var im=document.getElementById('loginPic'); if(im){ im.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; im.style.display='block'; } } }).catch(function(){});
+    I18n.init({
+      ja: { title:'管理', logout:'ログアウト', loading:'読み込み中…', login:'ログイン', loginSub:'ログインIDとパスワードを入力', loginErr:'IDまたはパスワードが違います', needLogin:'ログインIDとパスワードを入力してください', ph_loginId:'ログインID', ph_pass:'パスワード', loginBtn:'🔓 ログイン', chgPwLink:'🔑 パスワードを変更', chgTitle:'パスワード変更', chgSub:'ログインIDと現在のパスワードで変更できます', ph_cpOld:'現在のパスワード', ph_cpNew:'新しいパスワード（6文字以上）', ph_cpNew2:'新しいパスワード（確認）', cpBtn:'🔑 変更する', backToLogin:'← ログインに戻る', m_needId:'ログインIDを入力してください', m_needOld:'現在のパスワードを入力してください', m_short:'新しいパスワードは6文字以上にしてください', m_mismatch:'新しいパスワードが一致しません', m_ok:'✅ 変更しました。新しいパスワードでログインしてください', m_wrong:'ログインIDまたは現在のパスワードが違います', m_err:'エラー: ' },
+      en: { title:'Management', logout:'Logout', loading:'Loading…', login:'Login', loginSub:'Enter your login ID and password', loginErr:'Incorrect ID or password', needLogin:'Please enter your login ID and password', ph_loginId:'Login ID', ph_pass:'Password', loginBtn:'🔓 Login', chgPwLink:'🔑 Change password', chgTitle:'Change password', chgSub:'Change it with your login ID and current password', ph_cpOld:'Current password', ph_cpNew:'New password (6+ chars)', ph_cpNew2:'New password (confirm)', cpBtn:'🔑 Change', backToLogin:'← Back to login', m_needId:'Please enter your login ID', m_needOld:'Please enter your current password', m_short:'New password must be 6+ characters', m_mismatch:'New passwords do not match', m_ok:'✅ Changed. Please log in with your new password', m_wrong:'Login ID or current password is incorrect', m_err:'Error: ' }
+    }, function(){ if(!document.getElementById('hubView').classList.contains('hidden')) showHub(lastAllowed); });
+    document.addEventListener('DOMContentLoaded', checkAndShow);
+  </script>
+</body>
+</html>

@@ -306,21 +306,6 @@
   }
 
   // ---- 注文状況（自分の卓の注文・提供状況・未会計合計） ----
-  // 明細の商品名をメニューのENで表示（オプション括弧は原文のまま）
-  function menuEnName(jaName) {
-    var base = String(jaName || '').replace(/\s*[（(][^（(]*[)）]\s*$/, '').trim();
-    for (var i = 0; i < state.menu.length; i++) {
-      if (state.menu[i]['商品名'] === base && state.menu[i]['商品名_EN']) return state.menu[i]['商品名_EN'] + String(jaName).slice(base.length);
-    }
-    return jaName;
-  }
-  function transOrderDetails(details) {
-    if (state.lang !== 'en') return details;
-    return String(details || '').split(',').map(function (tok) {
-      var m = tok.trim().match(/^(.+?)x(\d+)$/); if (!m) return tok;
-      return menuEnName(m[1].trim()) + 'x' + m[2];
-    }).join(', ');
-  }
   function openStatus() {
     var x = t();
     $('stTitle').textContent = x.stTitle;
@@ -345,7 +330,7 @@
         var badge = served ? ('<span style="background:#dcfce7;color:#15803d;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:800;">✓ ' + escHtml(x.stServed) + '</span>')
                            : ('<span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:800;">🍳 ' + escHtml(x.stPending) + '</span>');
         html += '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
-          '<div style="flex:1;"><div style="font-size:11px;color:var(--text-2);">🕐 ' + escHtml(o.time || '') + '</div><div>' + escHtml(transOrderDetails(o.details || '')) + '</div></div>' +
+          '<div style="flex:1;"><div style="font-size:11px;color:var(--text-2);">🕐 ' + escHtml(o.time || '') + '</div><div>' + escHtml(o.details || '') + '</div></div>' +
           '<div style="text-align:right;white-space:nowrap;"><div>' + money(o.price || 0) + '</div>' + badge + '</div></div>';
       });
       $('stBody').innerHTML = html;

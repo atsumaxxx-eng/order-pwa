@@ -185,8 +185,6 @@
     function money(v){ return sym() + (Number(v)||0).toLocaleString(); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     function fmtTime(d){ try{ return new Date(d).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
-    // 席ラベルをEN/JP表示（保存値は変更しない・表示のみ）
-    function seatLabel(v){ var s=String(v==null?'':v); var m=s.match(/^テーブル(\d+)$/); if(m) return (lang==='en'?'Table ':'テーブル')+m[1]; var c=s.match(/^カウンター(\d+)$/); if(c) return (lang==='en'?'Counter ':'カウンター')+c[1]; return s; }
     function breakdown(subtotal){
       var s = Number(subtotal)||0;
       var svc = Math.round(s * (Number(SETTINGS.serviceRate)||0)/100);
@@ -218,7 +216,7 @@
         var minT = Infinity; rows.forEach(function(o){ var d=new Date(o.date).getTime(); if(!isNaN(d)&&d<minT) minT=d; });
         var dwell = (minT!==Infinity) ? dwellStr(now-minT) : '';
         var dwellTag = dwell ? ' <span class="dwell">⏱ '+t().stay+' '+dwell+'</span>' : '';
-        html += '<div class="tg"><div class="tg-h"><div class="ti">🪑 '+esc(seatLabel(tn))+dwellTag+'</div><div class="to">'+money(total)+'</div></div>';
+        html += '<div class="tg"><div class="tg-h"><div class="ti">🪑 '+esc(tn)+dwellTag+'</div><div class="to">'+money(total)+'</div></div>';
         rows.forEach(function(o){
           var served = o.status === '提供済';
           html += '<div class="row'+(served?' served':'')+'"><div class="m"><div class="tm">🕐 '+fmtTime(o.date)+'</div>'+
@@ -243,7 +241,7 @@
       calls.forEach(function(c){
         var lbl = c.type==='bill' ? ('🧾 '+t().billLbl) : ('🔔 '+t().callLbl);
         var age = c.ageMin>0 ? (' · '+c.ageMin+t().agoMin) : '';
-        html += '<div class="call-row"><span>🪑 '+esc(seatLabel(c.table))+' — '+lbl+age+'</span>'+
+        html += '<div class="call-row"><span>🪑 '+esc(c.table)+' — '+lbl+age+'</span>'+
           '<button class="b-xs" style="background:#0f766e;color:#fff;" onclick="resolveCall(\''+esc(c.id).replace(/'/g,"\\'")+'\')">'+t().resolve+'</button></div>';
       });
       w.innerHTML = html + '</div>';
@@ -257,7 +255,7 @@
       if(!o) return;
       voidId = id;
       document.getElementById('vdT').innerText = t().voidT;
-      document.getElementById('vdItem').innerText = '🪑 '+seatLabel(o.table)+' · '+transDetails(o.details)+' · '+money(o.price||0);
+      document.getElementById('vdItem').innerText = '🪑 '+o.table+' · '+o.details+' · '+money(o.price||0);
       document.getElementById('vdReasonL').innerText = t().reason;
       document.getElementById('vdApprL').innerText = t().approver;
       document.getElementById('vdReason').value='';
@@ -354,7 +352,7 @@
       payTotal = total;
       var vatBase = sub - eligible; var vat = Math.round(vatBase - vatBase/1.12);
       window._bill = { subtotal: sub, vat: vat, service: b.service, discountType: on?dtype:'', discountId: on?document.getElementById('dcId').value:'', discountAmount: disc, total: total };
-      var html = '<div style="font-weight:900;font-size:15px;margin-bottom:8px;">🪑 '+esc(seatLabel(payTable))+'</div>';
+      var html = '<div style="font-weight:900;font-size:15px;margin-bottom:8px;">🪑 '+esc(payTable)+'</div>';
       html += '<div class="sr"><span>'+t().sub+'</span><span>'+money(sub)+'</span></div>';
       if (b.service>0) html += '<div class="sr"><span>'+t().svc+'</span><span>'+money(b.service)+'</span></div>';
       if (b.tax>0) html += '<div class="sr"><span>'+t().tax+'</span><span>'+money(b.tax)+'</span></div>';
@@ -392,7 +390,7 @@
     function showReceipt(orNo, bill){
       var html = '<div style="font-size:40px;">✅</div>';
       html += '<div style="font-weight:800;margin:6px 0;">'+t().orLbl+': <b>'+esc(orNo)+'</b></div>';
-      html += '<div style="font-size:20px;font-weight:900;color:var(--green);margin-bottom:6px;">'+money(bill.total)+' — '+esc(seatLabel(bill.table))+'</div>';
+      html += '<div style="font-size:20px;font-weight:900;color:var(--green);margin-bottom:6px;">'+money(bill.total)+' — '+esc(bill.table)+'</div>';
       if (bill.discountAmount>0) html += '<div style="font-size:13px;color:#64748b;">'+t().discLine+' '+money(bill.discountAmount)+(bill.discountId?(' / ID '+esc(bill.discountId)):'')+'</div>';
       html += '<div style="display:flex;gap:8px;margin-top:14px;"><button class="pbtn" style="background:#334155;flex:1;margin:0;" onclick="printReceipt(\''+esc(orNo)+'\')">'+t().printBtn+'</button><button class="pbtn" style="background:var(--green);flex:1;margin:0;" onclick="closePay();load();">'+t().close+'</button></div>';
       document.getElementById('ps3').innerHTML = html;
@@ -430,7 +428,7 @@
     window.cashPay = function(){
       payMethod = 'cash';
       document.getElementById('ps3lbl').innerText = t().cashRecv;
-      document.getElementById('ps3amt').innerText = money(payTotal)+' — '+seatLabel(payTable);
+      document.getElementById('ps3amt').innerText = money(payTotal)+' — '+payTable;
       document.getElementById('doneBtn').innerText = t().done;
       step(3);
     };
@@ -460,7 +458,7 @@
         btn.disabled=false; btn.innerText=t().checkBtn;
         var d = r.data || {}; var a=document.getElementById('payAlert'); a.style.display='block';
         if (d.error){ a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText = d.error==='no_api_key'?t().noKey:d.error; return; }
-        if (d.paymentStatus==='paid'){ document.getElementById('ps3lbl').innerText=t().confirmed; document.getElementById('ps3amt').innerText=money(payTotal)+' — '+seatLabel(payTable); document.getElementById('doneBtn').innerText=t().done; step(3); }
+        if (d.paymentStatus==='paid'){ document.getElementById('ps3lbl').innerText=t().confirmed; document.getElementById('ps3amt').innerText=money(payTotal)+' — '+payTable; document.getElementById('doneBtn').innerText=t().done; step(3); }
         else { a.style.background='#fff8e1'; a.style.color='#856404'; a.innerText=t().notYet; }
       }).catch(function(e){ btn.disabled=false; btn.innerText=t().checkBtn; var a=document.getElementById('payAlert'); a.style.display='block'; a.style.background='#fce8e6'; a.style.color='#b71c1c'; a.innerText='Error: '+(e.message||e); });
     };
