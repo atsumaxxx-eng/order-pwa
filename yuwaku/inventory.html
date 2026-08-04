@@ -36,13 +36,14 @@
       <table><thead><tr>
         <th style="min-width:130px;" data-t="thName">商品名</th>
         <th style="min-width:100px;" data-t="thCat">カテゴリ</th>
+        <th style="min-width:100px;" data-t="thSupplier">仕入先</th>
         <th style="width:64px;" data-t="thUnit">単位</th>
         <th style="width:84px;" data-t="thStock">在庫数</th>
         <th style="width:92px;" data-t="thMin">最小在庫</th>
         <th style="width:84px;" data-t="thCost">原価</th>
         <th style="width:120px;"></th>
       </tr></thead>
-      <tbody id="rows"><tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+      <tbody id="rows"><tr><td colspan="8" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
     </div>
     <button class="btn btn-sec" onclick="addRow()" data-t="addRow">＋ 行を追加</button>
     <button class="btn btn-pri" id="saveBtn" onclick="save()" data-t="save">💾 保存</button>
@@ -85,19 +86,24 @@
         html += '<tr'+(low?' class="low"':'')+'>'+
           '<td><input value="'+esc(r.name||'')+'" oninput="window.rows['+i+'].name=this.value"></td>'+
           '<td><input value="'+esc(r.category||'')+'" oninput="window.rows['+i+'].category=this.value" list="catList"></td>'+
+          '<td><input value="'+esc(r.supplier||'')+'" oninput="window.rows['+i+'].supplier=this.value" list="supList"></td>'+
           '<td><input value="'+esc(r.unit||'本')+'" oninput="window.rows['+i+'].unit=this.value"></td>'+
           '<td><input type="number" step="any" value="'+(r.stock||0)+'" oninput="window.rows['+i+'].stock=Number(this.value)||0"></td>'+
           '<td><input type="number" step="any" value="'+(r.minimum||0)+'" oninput="window.rows['+i+'].minimum=Number(this.value)||0"></td>'+
           '<td><input type="number" step="any" value="'+(r.cost||0)+'" oninput="window.rows['+i+'].cost=Number(this.value)||0"></td>'+
           '<td style="white-space:nowrap;"><button class="btn-sm" style="background:#dcfce7;color:#15803d;" onclick="openMove('+i+')">'+I18n.t('moveBtn')+'</button> <button class="btn-sm" onclick="delRow('+i+')">🗑</button></td></tr>';
       });
-      if (!window.rows.length) html = '<tr><td colspan="7" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>';
+      if (!window.rows.length) html = '<tr><td colspan="8" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>';
       document.getElementById('rows').innerHTML = html;
       // カテゴリ候補（既存値）
       var cats = []; window.rows.forEach(function(r){ var c=(r.category||'').trim(); if(c && cats.indexOf(c)<0) cats.push(c); });
       var dl = document.getElementById('catList'); if(dl) dl.innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'; }).join('');
+      // 仕入先候補（既存値＋マスタ）
+      var sups = SUPPLIERS.slice(); window.rows.forEach(function(r){ var s=(r.supplier||'').trim(); if(s && sups.indexOf(s)<0) sups.push(s); });
+      var sl = document.getElementById('supList'); if(sl) sl.innerHTML = sups.map(function(s){ return '<option value="'+esc(s)+'">'; }).join('');
     }
-    window.addRow = function(){ window.rows.push({ name:'', category:'', unit:'本', stock:0, minimum:0, cost:0 }); render(); };
+    var SUPPLIERS = [];
+    window.addRow = function(){ window.rows.push({ name:'', category:'', supplier:'', unit:'本', stock:0, minimum:0, cost:0 }); render(); };
     window.delRow = function(i){ window.rows.splice(i,1); render(); };
     window.save = function(){
       var clean = window.rows.filter(function(r){ return (r.name||'').trim(); });
@@ -154,15 +160,17 @@
       }).catch(function(e){ go.disabled=false; mvErr(I18n.t('errPrefix')+(e.message||e)); });
     };
 
+    rpc('getSuppliers',[]).then(function(l){ SUPPLIERS=(l||[]).map(function(s){ return s.name; }); render(); }).catch(function(){});
     var __loaded=false;
     rpc('getDrinkInventory',[]).then(function(list){ window.rows=(list||[]).slice(); __loaded=true; render(); })
-      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="7" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="8" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
 
     I18n.init({
-      ja:{ title:'📦 在庫管理', back:'← 管理へ', movesLink:'📋 変動履歴', hint:'ドリンク・食材・備品などをまとめて数量管理できます。最小在庫を下回ると赤く表示され、日報・レポートに低在庫として通知。レシピ（材料名一致）で注文時に自動減算されます。「変動」から入荷・廃棄・棚卸を記録すると履歴に残ります。', thName:'商品名', thCat:'カテゴリ', thUnit:'単位', thStock:'在庫数', thMin:'最小在庫', thCost:'原価', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', moveBtn:'変動', mvIn:'＋ 入荷', mvWaste:'− 廃棄', mvCount:'棚卸', mvQty:'数量', mvCounted:'実棚卸数', mvCostL:'原価（任意・単価更新）', mvReasonL:'理由', mvStockNow:'現在庫', mvGo:'実行', mvClose:'閉じる', mvDone:'✅ 記録しました', mvBad:'数量を確認してください', mvNeedSave:'先に「保存」で商品を登録してください' },
-      en:{ title:'📦 Inventory', back:'← Manage', movesLink:'📋 History', hint:'Track drinks, ingredients and supplies together by quantity. Rows below the minimum turn red and appear as low-stock in reports. Auto-deducted on orders via recipes (material-name match). Use “Move” to log receiving, waste and stocktake — all kept in history.', thName:'Item', thCat:'Category', thUnit:'Unit', thStock:'Stock', thMin:'Min stock', thCost:'Cost', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ', moveBtn:'Move', mvIn:'＋ Receive', mvWaste:'− Waste', mvCount:'Stocktake', mvQty:'Quantity', mvCounted:'Counted qty', mvCostL:'Cost (optional, updates unit cost)', mvReasonL:'Reason', mvStockNow:'Current', mvGo:'Apply', mvClose:'Close', mvDone:'✅ Recorded', mvBad:'Please check the quantity', mvNeedSave:'Please save the item first' }
+      ja:{ title:'📦 在庫管理', back:'← 管理へ', movesLink:'📋 変動履歴', hint:'ドリンク・食材・備品などをまとめて数量管理できます。最小在庫を下回ると赤く表示され、日報・レポートに低在庫として通知。レシピ（材料名一致）で注文時に自動減算されます。「変動」から入荷・廃棄・棚卸を記録すると履歴に残ります。', thName:'商品名', thCat:'カテゴリ', thSupplier:'仕入先', thUnit:'単位', thStock:'在庫数', thMin:'最小在庫', thCost:'原価', addRow:'＋ 行を追加', save:'💾 保存', loading:'読み込み中…', empty:'「＋ 行を追加」で登録してください', saved:'✅ 保存しました', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', moveBtn:'変動', mvIn:'＋ 入荷', mvWaste:'− 廃棄', mvCount:'棚卸', mvQty:'数量', mvCounted:'実棚卸数', mvCostL:'原価（任意・単価更新）', mvReasonL:'理由', mvStockNow:'現在庫', mvGo:'実行', mvClose:'閉じる', mvDone:'✅ 記録しました', mvBad:'数量を確認してください', mvNeedSave:'先に「保存」で商品を登録してください' },
+      en:{ title:'📦 Inventory', back:'← Manage', movesLink:'📋 History', hint:'Track drinks, ingredients and supplies together by quantity. Rows below the minimum turn red and appear as low-stock in reports. Auto-deducted on orders via recipes (material-name match). Use “Move” to log receiving, waste and stocktake — all kept in history.', thName:'Item', thCat:'Category', thSupplier:'Supplier', thUnit:'Unit', thStock:'Stock', thMin:'Min stock', thCost:'Cost', addRow:'＋ Add row', save:'💾 Save', loading:'Loading…', empty:'Tap “＋ Add row” to register', saved:'✅ Saved', errPrefix:'Error: ', loadErr:'Load error: ', moveBtn:'Move', mvIn:'＋ Receive', mvWaste:'− Waste', mvCount:'Stocktake', mvQty:'Quantity', mvCounted:'Counted qty', mvCostL:'Cost (optional, updates unit cost)', mvReasonL:'Reason', mvStockNow:'Current', mvGo:'Apply', mvClose:'Close', mvDone:'✅ Recorded', mvBad:'Please check the quantity', mvNeedSave:'Please save the item first' }
     }, function(){ if(__loaded) render(); });
   </script>
   <datalist id="catList"></datalist>
+  <datalist id="supList"></datalist>
 </body>
 </html>
