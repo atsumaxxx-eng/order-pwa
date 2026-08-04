@@ -90,7 +90,7 @@
     function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     var allUsers = [], pmData = null;
-    function LBL(k){ return I18n.t('pg_'+k) || k; }
+    function LBL(k){ var en=(window.I18n&&I18n.lang()==='en'); if(pmData&&pmData.labels&&pmData.labels[k]) return en?pmData.labels[k].en:pmData.labels[k].ja; return I18n.t('pg_'+k) || k; }
 
     window.switchTab = function(w){
       document.getElementById('tab-u').classList.toggle('active', w==='u');
@@ -147,17 +147,33 @@
     }
     function renderMatrix(){
       if (!pmData) return;
-      var html = '<thead><tr><th>'+I18n.t('colRole')+'</th>';
-      pmData.pages.forEach(function(k){ html += '<th>'+esc(LBL(k))+'</th>'; });
+      var en = (window.I18n && I18n.lang()==='en');
+      var roles = pmData.roles;
+      var nCol = roles.length + 1;
+      // ヘッダ: メニュー + 各ロール
+      var html = '<thead><tr><th style="text-align:left;">'+I18n.t('colMenu')+'</th>';
+      roles.forEach(function(r){ html += '<th>'+esc(r)+'</th>'; });
       html += '</tr></thead><tbody>';
-      pmData.roles.forEach(function(role){
-        html += '<tr><td>'+esc(role)+'</td>';
-        pmData.pages.forEach(function(k){
+      // タブ（グループ）ごとにセクション
+      var order = (pmData.groupOrder||[]).length ? pmData.groupOrder : [null];
+      var seen = {};
+      function rowFor(k){
+        var h = '<tr><td style="text-align:left;font-weight:700;">'+esc(LBL(k))+'</td>';
+        roles.forEach(function(role){
           var on = !!(pmData.matrix[role] && pmData.matrix[role][k]); var sys = (role==='システム');
-          html += '<td><input type="checkbox" data-role="'+esc(role)+'" data-key="'+esc(k)+'"'+((on||sys)?' checked':'')+(sys?' disabled':'')+'></td>';
+          h += '<td><input type="checkbox" data-role="'+esc(role)+'" data-key="'+esc(k)+'"'+((on||sys)?' checked':'')+(sys?' disabled':'')+'></td>';
         });
-        html += '</tr>';
+        return h + '</tr>';
+      }
+      order.forEach(function(gid){
+        var keys = pmData.pages.filter(function(k){ return (pmData.groups&&pmData.groups[k])===gid; });
+        if(!keys.length) return;
+        var gl = (pmData.groupLabels&&pmData.groupLabels[gid]) ? (en?pmData.groupLabels[gid].en:pmData.groupLabels[gid].ja) : gid;
+        html += '<tr><td colspan="'+nCol+'" style="background:#f1f5f9;font-weight:900;font-size:12px;color:#475569;text-align:left;">'+esc(gl)+'</td></tr>';
+        keys.forEach(function(k){ seen[k]=1; html += rowFor(k); });
       });
+      // グループ未割当のページ（保険）
+      pmData.pages.forEach(function(k){ if(!seen[k]) html += rowFor(k); });
       html += '</tbody>';
       document.getElementById('pmTable').innerHTML = html;
     }
@@ -176,8 +192,8 @@
       .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('uList').innerHTML='<div style="color:#b91c1c;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
 
     I18n.init({
-      ja:{ title:'👥 ユーザー管理', back:'← 管理へ', tabU:'👤 ユーザー', tabP:'🔑 権限マスタ', formTitle:'➕ ユーザーの追加 / 編集', lblName:'名前', lblRole:'権限グループ', rGen:'一般', rMgr:'マネージャー', rAdmin:'管理者', rSys:'システム', lblLogin:'ログインID', lblWage:'時給', lblPass:'パスワード', passHint:'空欄なら変更しません（新規は6文字以上必須）', lblStatus:'ステータス', stActive:'在籍', stLeft:'退職', save:'💾 保存', clear:'クリア', listTitle:'👥 ユーザー一覧', loading:'読み込み中…', pmTitle:'🔑 権限マトリクス', pmHint:'権限グループ×メニューでアクセス可否を設定します。✓＝表示/アクセス可。システムは常に全権限（ロックアウト防止）。', colRole:'権限', noData:'データがありません', notSet:'(未設定)', pwSet:'設定済', edit:'編集', del:'削除', needName:'名前を入力してください', saved:'✅ 保存しました', dupLogin:'そのログインIDは既に使われています', pwShort:'パスワードは6文字以上にしてください', errG:'エラー', delConfirm:'このユーザーを削除しますか？', forbidden:'権限がありません', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', pg_admin:'注文管理', pg_menu_editor:'メニュー', pg_inventory:'在庫', pg_drink_inv:'ドリンク', pg_sales:'売上', pg_attendance:'勤怠', pg_printers:'プリンタ', pg_settings:'設定', pg_users:'ユーザー', pg_members:'会員', pg_coupons:'クーポン' },
-      en:{ title:'👥 Users', back:'← Manage', tabU:'👤 Users', tabP:'🔑 Permissions', formTitle:'➕ Add / Edit user', lblName:'Name', lblRole:'Role group', rGen:'General', rMgr:'Manager', rAdmin:'Admin', rSys:'System', lblLogin:'Login ID', lblWage:'Hourly wage', lblPass:'Password', passHint:'Leave blank to keep unchanged (new users need 6+ chars)', lblStatus:'Status', stActive:'Active', stLeft:'Left', save:'💾 Save', clear:'Clear', listTitle:'👥 User list', loading:'Loading…', pmTitle:'🔑 Permission matrix', pmHint:'Set access per role × menu. ✓ = visible/allowed. System always has full access (lockout prevention).', colRole:'Role', noData:'No data', notSet:'(not set)', pwSet:'Set', edit:'Edit', del:'Delete', needName:'Please enter a name', saved:'✅ Saved', dupLogin:'That login ID is already in use', pwShort:'Password must be 6+ characters', errG:'Error', delConfirm:'Delete this user?', forbidden:'No permission', errPrefix:'Error: ', loadErr:'Load error: ', pg_admin:'Orders', pg_menu_editor:'Menu', pg_inventory:'Inventory', pg_drink_inv:'Drinks', pg_sales:'Sales', pg_attendance:'Attendance', pg_printers:'Printers', pg_settings:'Settings', pg_users:'Users', pg_members:'Members', pg_coupons:'Coupons' }
+      ja:{ title:'👥 ユーザー管理', back:'← 管理へ', tabU:'👤 ユーザー', tabP:'🔑 権限マスタ', formTitle:'➕ ユーザーの追加 / 編集', lblName:'名前', lblRole:'権限グループ', rGen:'一般', rMgr:'マネージャー', rAdmin:'管理者', rSys:'システム', lblLogin:'ログインID', lblWage:'時給', lblPass:'パスワード', passHint:'空欄なら変更しません（新規は6文字以上必須）', lblStatus:'ステータス', stActive:'在籍', stLeft:'退職', save:'💾 保存', clear:'クリア', listTitle:'👥 ユーザー一覧', loading:'読み込み中…', pmTitle:'🔑 権限マトリクス', pmHint:'権限グループ×メニューでアクセス可否を設定します。✓＝表示/アクセス可。システムは常に全権限（ロックアウト防止）。', colRole:'権限', colMenu:'管理メニュー', noData:'データがありません', notSet:'(未設定)', pwSet:'設定済', edit:'編集', del:'削除', needName:'名前を入力してください', saved:'✅ 保存しました', dupLogin:'そのログインIDは既に使われています', pwShort:'パスワードは6文字以上にしてください', errG:'エラー', delConfirm:'このユーザーを削除しますか？', forbidden:'権限がありません', errPrefix:'エラー: ', loadErr:'読み込みエラー: ', pg_admin:'注文管理', pg_menu_editor:'メニュー', pg_inventory:'在庫', pg_drink_inv:'ドリンク', pg_sales:'売上', pg_attendance:'勤怠', pg_printers:'プリンタ', pg_settings:'設定', pg_users:'ユーザー', pg_members:'会員', pg_coupons:'クーポン' },
+      en:{ title:'👥 Users', back:'← Manage', tabU:'👤 Users', tabP:'🔑 Permissions', formTitle:'➕ Add / Edit user', lblName:'Name', lblRole:'Role group', rGen:'General', rMgr:'Manager', rAdmin:'Admin', rSys:'System', lblLogin:'Login ID', lblWage:'Hourly wage', lblPass:'Password', passHint:'Leave blank to keep unchanged (new users need 6+ chars)', lblStatus:'Status', stActive:'Active', stLeft:'Left', save:'💾 Save', clear:'Clear', listTitle:'👥 User list', loading:'Loading…', pmTitle:'🔑 Permission matrix', pmHint:'Set access per role × menu. ✓ = visible/allowed. System always has full access (lockout prevention).', colRole:'Role', colMenu:'Management menu', noData:'No data', notSet:'(not set)', pwSet:'Set', edit:'Edit', del:'Delete', needName:'Please enter a name', saved:'✅ Saved', dupLogin:'That login ID is already in use', pwShort:'Password must be 6+ characters', errG:'Error', delConfirm:'Delete this user?', forbidden:'No permission', errPrefix:'Error: ', loadErr:'Load error: ', pg_admin:'Orders', pg_menu_editor:'Menu', pg_inventory:'Inventory', pg_drink_inv:'Drinks', pg_sales:'Sales', pg_attendance:'Attendance', pg_printers:'Printers', pg_settings:'Settings', pg_users:'Users', pg_members:'Members', pg_coupons:'Coupons' }
     }, function(){ if(__loaded) renderUsers(); if(pmData) renderMatrix(); });
   </script>
 </body>

@@ -33,6 +33,9 @@
     .tile.soon{ opacity:.45; cursor:default; }
     .tile.soon .ds:after{ content:' ・準備中'; }
     .hidden{ display:none; }
+    .mtabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; -webkit-overflow-scrolling:touch; }
+    .mtab{ flex:0 0 auto; background:var(--surface); border:1px solid var(--border); color:var(--text-3); border-radius:999px; padding:9px 16px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; }
+    .mtab.on{ background:var(--navy); color:#fff; border-color:var(--navy); }
   </style>
 </head>
 <body>
@@ -73,6 +76,7 @@
 
   <!-- Hub view -->
   <div class="wrap hidden" id="hubView">
+    <div class="mtabs" id="mtabs"></div>
     <div class="grid" id="tiles"></div>
   </div>
 
@@ -85,32 +89,41 @@
     var lastAllowed = {};
 
     // key: 権限キー（null=公開・常時表示）, active: 移設済みか
-    var TILES = [
-      { key:null, ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', ttEn:'Orders', dsEn:'Tables · billing', url:'./admin.html', active:true },
-      { key:null, ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', ttEn:'Kitchen', dsEn:'Pending orders', url:'./kds.html', active:true },
-      { key:null, ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', ttEn:'Takeout', dsEn:'Online orders', url:'./takeout.html', active:true },
-      { key:'coupons', ic:'🎟️', tt:'クーポン', ds:'割引・バウチャー', ttEn:'Coupons', dsEn:'Discounts · vouchers', url:'./coupons.html', active:true },
-      { key:'menu_editor', ic:'🍽️', tt:'メニュー編集', ds:'商品の追加・編集', ttEn:'Menu', dsEn:'Add · edit items', url:'./menu_editor.html', active:true },
-      { key:'menu_editor', ic:'📖', tt:'レシピ・原価', ds:'材料・自動減算', ttEn:'Recipes · cost', dsEn:'Ingredients · auto-deduct', url:'./recipe.html', active:true },
-      { key:'inventory', ic:'📦', tt:'在庫管理', ds:'在庫数・原価・低在庫', ttEn:'Inventory', dsEn:'Stock · cost · low-stock', url:'./inventory.html', active:true },
-      { key:'sales', ic:'📊', tt:'ダッシュボード', ds:'今日/今月・目標・粗利', ttEn:'Dashboard', dsEn:'Today · target · profit', url:'./dashboard.html', active:true },
-      { key:'sales', ic:'📊', tt:'売上管理', ds:'集計・分析', ttEn:'Sales', dsEn:'Reports · analytics', url:'./sales.html', active:true },
-      { key:'sales', ic:'💰', tt:'経費一覧', ds:'固定費・仕入・備品', ttEn:'Expenses', dsEn:'Costs · purchases', url:'./expenses.html', active:true },
-      { key:'sales', ic:'📈', tt:'月間粗利', ds:'売上−原価', ttEn:'Gross profit', dsEn:'Revenue − costs', url:'./profit.html', active:true },
-      { key:'sales', ic:'💵', tt:'レジ締め', ds:'現金過不足・X/Z', ttEn:'Register', dsEn:'Cash close · X/Z', url:'./register.html', active:true },
-      { key:'members', ic:'🎁', tt:'会員管理', ds:'ポイント・来店', ttEn:'Members', dsEn:'Points · visits', url:'./members.html', active:true },
-      { key:'members', ic:'🎂', tt:'誕生日クーポン', ds:'今月の会員・発行', ttEn:'Birthdays', dsEn:'This month · issue', url:'./birthdays.html', active:true },
-      { key:'sales', ic:'🗓️', tt:'予約管理', ds:'受付・確定・来店', ttEn:'Reservations', dsEn:'Requests · status', url:'./reservations.html', active:true },
-      { key:'inventory', ic:'🚚', tt:'仕入・発注', ds:'発注提案・仕入先', ttEn:'Purchasing', dsEn:'Reorder · suppliers', url:'./purchasing.html', active:true },
-      { key:null, ic:'⏰', tt:'出勤打刻', ds:'出退勤・休憩', ttEn:'Time clock', dsEn:'Clock in/out', url:'./clock.html', active:true },
-      { key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', ttEn:'Attendance', dsEn:'Shifts · payroll', url:'./attendance.html', active:true },
-      { key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', ttEn:'Printers', dsEn:'Kitchen printing', url:'./printers.html', active:true },
-      { key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', ttEn:'Users', dsEn:'Accounts · roles', url:'./users.html', active:true },
-      { key:'users', ic:'🧾', tt:'監査ログ', ds:'注文取消・承認履歴', ttEn:'Audit log', dsEn:'Voids · approvals', url:'./audit.html', active:true },
-      { key:'sales', ic:'⭐', tt:'お客様の声', ds:'評価・コメント', ttEn:'Feedback', dsEn:'Ratings · comments', url:'./feedback.html', active:true },
-      { key:'settings', ic:'💾', tt:'バックアップ', ds:'全データ複製・CSV書出', ttEn:'Backup', dsEn:'Copy all · CSV export', url:'./backup.html', active:true },
-      { key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true }
+    var GROUPS = [
+      { id:'orders',   ja:'接客・注文',   en:'Service & Orders' },
+      { id:'sales',    ja:'売上・経営',   en:'Sales & Mgmt' },
+      { id:'stock',    ja:'在庫・仕入',   en:'Inventory' },
+      { id:'staff',    ja:'スタッフ・勤怠', en:'Staff' },
+      { id:'customer', ja:'顧客・予約',   en:'Customers' },
+      { id:'system',   ja:'システム・設定', en:'System' }
     ];
+    var TILES = [
+      { grp:'orders', key:'admin', ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', ttEn:'Orders', dsEn:'Tables · billing', url:'./admin.html', active:true },
+      { grp:'orders', key:'kds', ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', ttEn:'Kitchen', dsEn:'Pending orders', url:'./kds.html', active:true },
+      { grp:'orders', key:'takeout', ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', ttEn:'Takeout', dsEn:'Online orders', url:'./takeout.html', active:true },
+      { grp:'sales', key:'dashboard', ic:'📊', tt:'ダッシュボード', ds:'今日/今月・目標・粗利', ttEn:'Dashboard', dsEn:'Today · target · profit', url:'./dashboard.html', active:true },
+      { grp:'sales', key:'sales', ic:'📈', tt:'売上管理', ds:'集計・分析', ttEn:'Sales', dsEn:'Reports · analytics', url:'./sales.html', active:true },
+      { grp:'sales', key:'expenses', ic:'💰', tt:'経費一覧', ds:'固定費・仕入・備品', ttEn:'Expenses', dsEn:'Costs · purchases', url:'./expenses.html', active:true },
+      { grp:'sales', key:'profit', ic:'📉', tt:'月間粗利', ds:'売上−原価', ttEn:'Gross profit', dsEn:'Revenue − costs', url:'./profit.html', active:true },
+      { grp:'sales', key:'register', ic:'💵', tt:'レジ締め', ds:'現金過不足・X/Z', ttEn:'Register', dsEn:'Cash close · X/Z', url:'./register.html', active:true },
+      { grp:'sales', key:'feedback', ic:'⭐', tt:'お客様の声', ds:'評価・コメント', ttEn:'Feedback', dsEn:'Ratings · comments', url:'./feedback.html', active:true },
+      { grp:'stock', key:'inventory', ic:'📦', tt:'在庫管理', ds:'在庫数・原価・低在庫', ttEn:'Inventory', dsEn:'Stock · cost · low-stock', url:'./inventory.html', active:true },
+      { grp:'stock', key:'purchasing', ic:'🚚', tt:'仕入・発注', ds:'発注提案・仕入先', ttEn:'Purchasing', dsEn:'Reorder · suppliers', url:'./purchasing.html', active:true },
+      { grp:'stock', key:'menu_editor', ic:'🍽️', tt:'メニュー編集', ds:'商品の追加・編集・並び替え', ttEn:'Menu', dsEn:'Add · edit · reorder', url:'./menu_editor.html', active:true },
+      { grp:'stock', key:'recipe', ic:'📖', tt:'レシピ・原価', ds:'材料・自動減算', ttEn:'Recipes · cost', dsEn:'Ingredients · auto-deduct', url:'./recipe.html', active:true },
+      { grp:'staff', key:'clock', ic:'⏰', tt:'出勤打刻', ds:'出退勤・休憩', ttEn:'Time clock', dsEn:'Clock in/out', url:'./clock.html', active:true },
+      { grp:'staff', key:'attendance', ic:'🕐', tt:'勤怠管理', ds:'勤怠・給与概算', ttEn:'Attendance', dsEn:'Shifts · payroll', url:'./attendance.html', active:true },
+      { grp:'staff', key:'users', ic:'👥', tt:'ユーザー管理', ds:'アカウント・権限', ttEn:'Users', dsEn:'Accounts · roles', url:'./users.html', active:true },
+      { grp:'customer', key:'members', ic:'🎁', tt:'会員管理', ds:'ポイント・来店', ttEn:'Members', dsEn:'Points · visits', url:'./members.html', active:true },
+      { grp:'customer', key:'birthdays', ic:'🎂', tt:'誕生日クーポン', ds:'今月の会員・発行', ttEn:'Birthdays', dsEn:'This month · issue', url:'./birthdays.html', active:true },
+      { grp:'customer', key:'coupons', ic:'🎟️', tt:'クーポン', ds:'割引・バウチャー', ttEn:'Coupons', dsEn:'Discounts · vouchers', url:'./coupons.html', active:true },
+      { grp:'customer', key:'reservations', ic:'🗓️', tt:'予約管理', ds:'受付・確定・来店', ttEn:'Reservations', dsEn:'Requests · status', url:'./reservations.html', active:true },
+      { grp:'system', key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', ttEn:'Printers', dsEn:'Kitchen printing', url:'./printers.html', active:true },
+      { grp:'system', key:'audit', ic:'🧾', tt:'監査ログ', ds:'注文取消・承認履歴', ttEn:'Audit log', dsEn:'Voids · approvals', url:'./audit.html', active:true },
+      { grp:'system', key:'backup', ic:'💾', tt:'バックアップ', ds:'全データ複製・CSV書出', ttEn:'Backup', dsEn:'Copy all · CSV export', url:'./backup.html', active:true },
+      { grp:'system', key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true }
+    ];
+    var curTab = null;
 
     function showLogin(){ document.getElementById('loadingView').classList.add('hidden'); document.getElementById('loginView').classList.remove('hidden'); document.getElementById('hubView').classList.add('hidden'); document.getElementById('logoutBtn').classList.add('hidden'); document.getElementById('who').innerText=''; var _lc=document.getElementById('loginCard'); if(_lc)_lc.classList.remove('hidden'); var _cc=document.getElementById('chgPwCard'); if(_cc)_cc.classList.add('hidden'); }
     function showHub(allowed){
@@ -120,16 +133,33 @@
       document.getElementById('logoutBtn').classList.remove('hidden');
       document.getElementById('who').innerText = NAME ? ('👤 '+NAME) : '';
       lastAllowed = allowed || {};
+      renderHub();
+    }
+    function renderHub(){
+      var allowed = lastAllowed || {};
       var en = (window.I18n && I18n.lang()==='en');
+      // 権限のあるタイルを持つタブだけ表示
+      var visGroups = GROUPS.filter(function(g){
+        return TILES.some(function(x){ return x.grp===g.id && (!x.key || allowed[x.key]); });
+      });
+      if (!visGroups.length){ document.getElementById('mtabs').innerHTML=''; document.getElementById('tiles').innerHTML=''; return; }
+      if (!curTab || !visGroups.some(function(g){ return g.id===curTab; })) curTab = visGroups[0].id;
+      // タブバー
+      document.getElementById('mtabs').innerHTML = visGroups.map(function(g){
+        return '<button class="mtab'+(g.id===curTab?' on':'')+'" onclick="selectTab(\''+g.id+'\')">'+(en?g.en:g.ja)+'</button>';
+      }).join('');
+      // タイル（現在のタブ）
       var html = '';
       TILES.forEach(function(x){
-        if (x.key && !(allowed && allowed[x.key])) return; // 権限なしは非表示
+        if (x.grp!==curTab) return;
+        if (x.key && !allowed[x.key]) return;
         var tt = (en && x.ttEn) ? x.ttEn : x.tt, ds = (en && x.dsEn) ? x.dsEn : x.ds;
         if (x.active){ html += '<a class="tile" href="'+x.url+'"><span class="ic">'+x.ic+'</span><span class="tt">'+tt+'</span><span class="ds">'+ds+'</span></a>'; }
         else { html += '<div class="tile soon"><span class="ic">'+x.ic+'</span><span class="tt">'+tt+'</span><span class="ds">'+ds+'</span></div>'; }
       });
       document.getElementById('tiles').innerHTML = html;
     }
+    window.selectTab = function(id){ curTab = id; renderHub(); };
 
     window.doLogin = function(){
       var idEl = document.getElementById('loginId'), passEl = document.getElementById('loginPass');
