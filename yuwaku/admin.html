@@ -78,6 +78,11 @@
             <div id="dcNote" style="color:#64748b;margin-top:6px;"></div>
           </div>
         </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;font-size:13px;">
+          <span id="splitLbl">割り勘 ÷</span>
+          <input id="splitN" type="number" min="1" value="1" style="width:70px;padding:7px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;" oninput="updSplit()">
+          <span id="splitRes" style="font-weight:800;"></span>
+        </div>
         <button class="pbtn" style="background:linear-gradient(135deg,#0f4c81,#1565c0);" onclick="startOnline('gcash')">📱 GCash</button>
         <button class="pbtn" style="background:linear-gradient(135deg,#2e7d32,#43a047);" onclick="startOnline('card')">💳 Card</button>
         <button class="pbtn" style="background:#334155;" onclick="cashPay()">💴 <span id="cashLbl">現金</span></button>
@@ -103,24 +108,37 @@
     </div>
   </div>
 
+  <!-- Partial checkout modal -->
+  <div class="ov" id="partModal">
+    <div class="card">
+      <div style="font-size:17px;font-weight:900;margin-bottom:10px;" id="partT">一部会計 — 明細選択</div>
+      <div id="partList" style="max-height:46vh;overflow:auto;margin-bottom:10px;"></div>
+      <div style="display:flex;justify-content:space-between;font-weight:900;margin-bottom:10px;"><span id="partSelLbl">選択</span><span id="partSel">₱0</span></div>
+      <button class="pbtn" style="background:var(--green);" onclick="goPartial()" id="partGo">選択分を会計</button>
+      <button class="cancel" onclick="closePart()" id="partCxl">キャンセル</button>
+    </div>
+  </div>
+
   <script src="./config.js"></script>
   <script src="./api.js"></script>
   <script>
     var SETTINGS = {}, PAYMONGO = false, orders = [];
     var lang = (localStorage.getItem('lang') || '').match(/^(ja|en)$/) ? localStorage.getItem('lang') : 'ja';
-    var payTable = '', payTotal = 0, payCheckoutId = null, payMethod = 'cash', paySub = 0, payBase = null;
+    var payTable = '', payTotal = 0, payCheckoutId = null, payMethod = 'cash', paySub = 0, payBase = null, payOrderIds = null, partTable = '';
 
     var i18n = {
       ja: { title:'注文管理', served:'✓ 提供済', servedBtn:'提供済にする', pay:'💳 会計する', noOrder:'未会計の注文はありません',
             cash:'現金', card:'Card', cancel:'キャンセル', pTitle:'お会計', sub:'小計', svc:'サービス料', tax:'税',
             openPay:'支払いページを開く', checkBtn:'支払い確認', checking:'確認中…', notYet:'まだ支払いが確認できません。',
             noKey:'オンライン決済は未設定です。', cashRecv:'現金を受け取りましたか？', confirmed:'支払い完了', done:'完了（会計済にする）', processing:'処理中…', lang:'EN',
-            disc:'シニア/PWD割引', senior:'シニア', idPh:'ID番号', eligPh:'対象額', discLine:'割引', vatNote:'うちVAT', orLbl:'レシート番号', printBtn:'🖨️ レシート印刷', close:'閉じる', tableW:'卓', totalW:'合計' },
+            disc:'シニア/PWD割引', senior:'シニア', idPh:'ID番号', eligPh:'対象額', discLine:'割引', vatNote:'うちVAT', orLbl:'レシート番号', printBtn:'🖨️ レシート印刷', close:'閉じる', tableW:'卓', totalW:'合計',
+            partial:'🧾 一部会計', partTitle:'一部会計 — 明細を選択', selected:'選択', selPay:'選択分を会計', splitLbl:'割り勘 ÷', each:'/人' },
       en: { title:'Orders', served:'✓ Served', servedBtn:'Mark served', pay:'💳 Checkout', noOrder:'No open orders',
             cash:'Cash', card:'Card', cancel:'Cancel', pTitle:'Payment', sub:'Subtotal', svc:'Service', tax:'Tax',
             openPay:'Open payment page', checkBtn:'Check status', checking:'Checking…', notYet:'Payment not confirmed yet.',
             noKey:'Online payment is not set up.', cashRecv:'Cash received?', confirmed:'Paid', done:'Done (settle)', processing:'Processing…', lang:'JP',
-            disc:'Senior/PWD discount', senior:'Senior', idPh:'ID no.', eligPh:'Eligible amt', discLine:'Discount', vatNote:'incl. VAT', orLbl:'Receipt no.', printBtn:'🖨️ Print receipt', close:'Close', tableW:'Table', totalW:'TOTAL' }
+            disc:'Senior/PWD discount', senior:'Senior', idPh:'ID no.', eligPh:'Eligible amt', discLine:'Discount', vatNote:'incl. VAT', orLbl:'Receipt no.', printBtn:'🖨️ Print receipt', close:'Close', tableW:'Table', totalW:'TOTAL',
+            partial:'🧾 Partial', partTitle:'Partial checkout — select items', selected:'Selected', selPay:'Checkout selected', splitLbl:'Split ÷', each:'/person' }
     };
     function t(){ return i18n[lang]; }
     function sym(){ return SETTINGS.currencySymbol || '₱'; }
@@ -157,7 +175,8 @@
             (served?('<span class="served-lbl">'+t().served+'</span>'):('<button class="b-xs b-warn" onclick="setServed(\''+o.id+'\')">'+t().servedBtn+'</button>'))+
             '</div></div>';
         });
-        html += '<div class="tg-a"><button class="b-pay" onclick="openPay(\''+esc(tn).replace(/'/g,"\\'")+'\','+total+')">'+t().pay+' '+money(total)+'</button></div></div>';
+        html += '<div class="tg-a"><button class="b-pay" onclick="openPay(\''+esc(tn).replace(/'/g,"\\'")+'\','+total+')">'+t().pay+' '+money(total)+'</button>'+
+          '<button class="b-xs" style="margin-top:6px;width:100%;background:#eef2f7;color:#0f172a;border:0;border-radius:9px;padding:9px;font-weight:800;cursor:pointer;" onclick="openPartial(\''+esc(tn).replace(/'/g,"\\'")+'\')">'+t().partial+'</button></div></div>';
       });
       el.innerHTML = html;
     }
@@ -169,9 +188,10 @@
     };
 
     // ── Payment ──
-    window.openPay = function(tn, subtotal){
-      payTable = tn; payCheckoutId = null; paySub = Number(subtotal)||0; payBase = breakdown(paySub);
+    window.openPay = function(tn, subtotal, orderIds){
+      payTable = tn; payCheckoutId = null; payOrderIds = (orderIds && orderIds.length) ? orderIds : null; paySub = Number(subtotal)||0; payBase = breakdown(paySub);
       document.getElementById('dcOn').checked = false; document.getElementById('dcId').value=''; document.getElementById('dcElig').value='';
+      document.getElementById('splitN').value = 1; document.getElementById('splitLbl').innerText = t().splitLbl;
       document.getElementById('ps1t').innerText = t().pTitle;
       document.getElementById('cashLbl').innerText = t().cash;
       document.getElementById('cxl1').innerText = t().cancel;
@@ -206,6 +226,32 @@
       html += '<div class="big">'+money(total)+'</div>';
       document.getElementById('paySum').innerHTML = html;
       document.getElementById('dcNote').innerText = on ? (t().vatNote+' '+money(vat)) : '';
+      updSplit();
+    };
+    window.updSplit = function(){
+      var n = Math.max(1, parseInt(document.getElementById('splitN').value,10)||1);
+      document.getElementById('splitRes').innerText = n>1 ? (money(Math.ceil((payTotal||0)/n))+' '+t().each) : '';
+    };
+    window.openPartial = function(tn){
+      partTable = tn;
+      var rows = orders.filter(function(o){ return String(o.table)===String(tn) && o.status!=='会計済'; });
+      document.getElementById('partList').innerHTML = rows.map(function(o){
+        return '<label style="display:flex;gap:8px;align-items:center;padding:9px 2px;border-bottom:1px solid #eee;cursor:pointer;">'
+          + '<input type="checkbox" class="pchk" data-id="'+esc(o.id)+'" data-price="'+(Number(o.price)||0)+'" onchange="updPart()">'
+          + '<span style="flex:1;">'+esc(o.details)+'</span><span style="font-weight:800;">'+money(o.price||0)+'</span></label>';
+      }).join('') || '<div style="color:#aaa;padding:14px;">-</div>';
+      document.getElementById('partT').innerText = t().partTitle;
+      document.getElementById('partSelLbl').innerText = t().selected;
+      document.getElementById('partGo').innerText = t().selPay;
+      updPart();
+      document.getElementById('partModal').classList.add('on');
+    };
+    window.updPart = function(){ var s=0; document.querySelectorAll('.pchk:checked').forEach(function(c){ s += Number(c.getAttribute('data-price'))||0; }); document.getElementById('partSel').innerText = money(s); };
+    window.closePart = function(){ document.getElementById('partModal').classList.remove('on'); };
+    window.goPartial = function(){
+      var ids=[], tot=0; document.querySelectorAll('.pchk:checked').forEach(function(c){ ids.push(c.getAttribute('data-id')); tot += Number(c.getAttribute('data-price'))||0; });
+      if(!ids.length) return;
+      closePart(); openPay(partTable, tot, ids);
     };
     function showReceipt(orNo, bill){
       var html = '<div style="font-size:40px;">✅</div>';
@@ -276,7 +322,7 @@
     };
     window.finalize = function(){
       var btn = document.getElementById('doneBtn'); btn.disabled=true; btn.innerText=t().processing;
-      var bill = Object.assign({}, window._bill||{}, { table: payTable, method: payMethod });
+      var bill = Object.assign({}, window._bill||{}, { table: payTable, method: payMethod, orderIds: payOrderIds });
       API.post('finalizeBill', bill).then(function(r){ btn.disabled=false; btn.innerText=t().done; var d=r.data||{}; showReceipt(d.orNo||'', bill); })
         .catch(function(e){ btn.disabled=false; btn.innerText=t().done; alert('Error: '+(e.message||e)); });
     };
