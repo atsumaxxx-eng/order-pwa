@@ -13,7 +13,8 @@
       payTitle:'How would you like to pay?', payLater:'👤 Pay at counter', payCard:'💳 Card', payProcessing:'Preparing…', payScan:'Scan the QR to pay', payNotYet:'Payment not confirmed yet.', payNoKey:'Online payment is not set up.', paidTitle:'Paid & ordered', paidMsg:'Payment received. Your order was sent.', cancel:'Cancel',
       memberTitle:'Member (points)', memberSub:'Enter your phone to earn / use points.', check:'Check', usePoints:'Use points', points:'pts', discountLbl:'Points', earned:'pts earned',
       couponTitle:'Coupon / Voucher', couponSub:'Enter a code to get a discount.', apply:'Apply', remove:'Remove coupon', close:'Close', couponLbl:'Coupon',
-      cpApplied:'Applied', cpEmpty:'Enter a code', cpNotfound:'Code not found', cpInactive:'Not available', cpExpired:'Expired', cpLimit:'Usage limit reached', cpMin:'Minimum order not met', cpInvalid:'Invalid code' },
+      cpApplied:'Applied', cpEmpty:'Enter a code', cpNotfound:'Code not found', cpInactive:'Not available', cpExpired:'Expired', cpLimit:'Usage limit reached', cpMin:'Minimum order not met', cpInvalid:'Invalid code',
+      optChoose:'Choose options', optAdd:'Add to order', optQty:'Qty', optRequired:'required', optPick:'Please choose the required options.', optInCart:'In your order', optClose:'Close' },
     ja: { order:'ご注文', total:'合計', all:'すべて', send:'注文する', empty:'商品を選んでください',
       confirm:'この内容で注文しますか？', okTitle:'注文を送信しました', okMsg:'ご注文を承りました。',
       queuedTitle:'保留しました（オフライン）', queuedMsg:'今は接続がありません。オンライン復帰時に自動送信します。',
@@ -29,7 +30,7 @@
 
   var state = {
     lang: 'en', settings: {}, menu: [], cats: [], currentCat: 'all',
-    cart: {}, table: '', paymongo: false, member: null, usePoints: false, coupon: null
+    cart: {}, optLines: [], table: '', paymongo: false, member: null, usePoints: false, coupon: null
   };
 
   function $(id) { return document.getElementById(id); }
@@ -45,12 +46,28 @@
     return sym + (Number(v) || 0).toLocaleString();
   }
 
+  // ---- オプション ----
+  // メニュー行の「オプション」JSONを配列で返す（[{name,type,required,choices:[{label,price}]}]）
+  function itemOpts(it) {
+    try { var a = JSON.parse(it['オプション'] || '[]'); return Array.isArray(a) ? a : []; }
+    catch (e) { return []; }
+  }
+  function menuItem(name) {
+    for (var i = 0; i < state.menu.length; i++) { if (state.menu[i]['商品名'] === name) return state.menu[i]; }
+    return null;
+  }
+  // ある基本商品のオプション明細合計数量（カード上のバッジ用）
+  function optQty(base) {
+    var n = 0; state.optLines.forEach(function (l) { if (l.base === base) n += l.qty; }); return n;
+  }
+
   function breakdown() {
     var sub = 0;
     state.menu.forEach(function (it) {
       var q = state.cart[it['商品名']] || 0;
       if (q > 0) sub += (Number(it['価格']) || 0) * q;
     });
+    state.optLines.forEach(function (l) { sub += (Number(l.unit) || 0) * (Number(l.qty) || 0); });
     var svcRate = Number(state.settings.serviceRate) || 0;
     var taxRate = Number(state.settings.taxRate) || 0;
     var service = Math.round(sub * (svcRate / 100));
@@ -117,19 +134,30 @@
     items.forEach(function (it) {
       var key = it['商品名'];
       var name = (state.lang === 'en' && it['商品名_EN']) ? it['商品名_EN'] : key;
-      var q = state.cart[key] || 0;
       var thumb = it.displayUrl
         ? '<img class="thumb" src="' + escAttr(it.displayUrl) + '" loading="lazy" alt="">'
         : '<div class="no-thumb"></div>';
+      var ctrl;
+      if (itemOpts(it).length) {
+        // オプション付き：選択ボタン＋合計数量バッジ
+        var oq = optQty(key);
+        ctrl = '<div class="qty">' +
+            '<button class="opt-btn" data-opt="' + escAttr(key) + '">' + escHtml(t().optChoose) +
+              (oq > 0 ? ' <span class="opt-badge">' + oq + '</span>' : '') + '</button>' +
+          '</div>';
+      } else {
+        var q = state.cart[key] || 0;
+        ctrl = '<div class="qty">' +
+            '<button class="minus" data-n="' + escAttr(key) + '" data-d="-1">−</button>' +
+            '<span class="n' + (q > 0 ? ' has' : '') + '" id="n-' + cssId(key) + '">' + q + '</span>' +
+            '<button class="plus" data-n="' + escAttr(key) + '" data-d="1">＋</button>' +
+          '</div>';
+      }
       html += '<div class="card">' + thumb +
         '<div class="body">' +
           '<div class="name">' + escHtml(name) + '</div>' +
           '<div class="price">' + money(it['価格']) + '</div>' +
-          '<div class="qty">' +
-            '<button class="minus" data-n="' + escAttr(key) + '" data-d="-1">−</button>' +
-            '<span class="n' + (q > 0 ? ' has' : '') + '" id="n-' + cssId(key) + '">' + q + '</span>' +
-            '<button class="plus" data-n="' + escAttr(key) + '" data-d="1">＋</button>' +
-          '</div>' +
+          ctrl +
         '</div>' +
       '</div>';
     });
@@ -140,6 +168,96 @@
         changeQty(btn.getAttribute('data-n'), Number(btn.getAttribute('data-d')));
       });
     });
+    Array.prototype.forEach.call($('menuArea').querySelectorAll('button[data-opt]'), function (btn) {
+      btn.addEventListener('click', function () { openOpt(btn.getAttribute('data-opt')); });
+    });
+  }
+
+  // ---- オプション選択モーダル ----
+  var optCtx = null; // { base }
+  function openOpt(base) {
+    var it = menuItem(base); if (!it) return;
+    optCtx = { base: base };
+    var x = t();
+    var en = state.lang === 'en';
+    var dispName = (en && it['商品名_EN']) ? it['商品名_EN'] : base;
+    $('optName').textContent = dispName;
+    var groups = itemOpts(it);
+    var html = '';
+    // 既にカートに入っている当商品の明細（削除可）
+    var lines = state.optLines.filter(function (l) { return l.base === base; });
+    if (lines.length) {
+      html += '<div class="opt-incart"><div class="opt-incart-h">' + escHtml(x.optInCart) + '</div>';
+      state.optLines.forEach(function (l, idx) {
+        if (l.base !== base) return;
+        html += '<div class="opt-line"><span>' + escHtml(l.label || '—') + ' × ' + l.qty + '　' + money(l.unit) + '</span>' +
+          '<button class="opt-rm" data-rm="' + idx + '">×</button></div>';
+      });
+      html += '</div>';
+    }
+    // グループ
+    groups.forEach(function (g, gi) {
+      var multi = g.type === 'multi';
+      var req = g.required ? ' <span class="opt-req">(' + escHtml(x.optRequired) + ')</span>' : '';
+      html += '<div class="opt-group" data-gi="' + gi + '" data-type="' + (multi ? 'multi' : 'single') + '" data-req="' + (g.required ? 1 : 0) + '">' +
+        '<div class="opt-gname">' + escHtml(g.name || '') + req + '</div>';
+      (g.choices || []).forEach(function (c, ci) {
+        var add = (Number(c.price) || 0);
+        var addTxt = add ? '　+' + money(add) : '';
+        html += '<label class="opt-choice">' +
+          '<input type="' + (multi ? 'checkbox' : 'radio') + '" name="og' + gi + '" value="' + ci + '" data-price="' + add + '">' +
+          '<span>' + escHtml(c.label || '') + addTxt + '</span></label>';
+      });
+      html += '</div>';
+    });
+    // 数量
+    html += '<div class="opt-qtybar"><span>' + escHtml(x.optQty) + '</span>' +
+      '<button id="optMinus">−</button><span id="optQtyN">1</span><button id="optPlus">＋</button></div>';
+    $('optBody').innerHTML = html;
+    $('optAdd').textContent = x.optAdd;
+    $('optClose').textContent = x.optClose;
+    optCtx.qty = 1;
+    // イベント
+    Array.prototype.forEach.call($('optBody').querySelectorAll('button[data-rm]'), function (b) {
+      b.addEventListener('click', function () {
+        var i = Number(b.getAttribute('data-rm')); state.optLines.splice(i, 1);
+        renderMenu(); updateTotal(); openOpt(base); // 再描画
+      });
+    });
+    $('optMinus').addEventListener('click', function () { optCtx.qty = Math.max(1, optCtx.qty - 1); $('optQtyN').textContent = optCtx.qty; });
+    $('optPlus').addEventListener('click', function () { optCtx.qty = Math.min(99, optCtx.qty + 1); $('optQtyN').textContent = optCtx.qty; });
+    $('optModal').classList.add('show');
+  }
+  function closeOpt() { $('optModal').classList.remove('show'); optCtx = null; }
+
+  function addOptLine() {
+    if (!optCtx) return;
+    var it = menuItem(optCtx.base); if (!it) return;
+    var x = t();
+    var groups = itemOpts(it);
+    var chosen = [], extra = 0, ok = true;
+    Array.prototype.forEach.call($('optBody').querySelectorAll('.opt-group'), function (gd) {
+      var req = gd.getAttribute('data-req') === '1';
+      var sels = gd.querySelectorAll('input:checked');
+      if (req && !sels.length) ok = false;
+      Array.prototype.forEach.call(sels, function (inp) {
+        var gi = Number(gd.getAttribute('data-gi')), ci = Number(inp.value);
+        var c = (groups[gi].choices || [])[ci] || {};
+        chosen.push(c.label || '');
+        extra += Number(inp.getAttribute('data-price')) || 0;
+      });
+    });
+    if (!ok) { alert(x.optPick); return; }
+    var label = chosen.filter(function (s) { return s; }).join(', ');
+    var basePrice = Number(it['価格']) || 0;
+    var unit = basePrice + extra;
+    var sig = optCtx.base + '||' + label;
+    var qty = optCtx.qty || 1;
+    // 同一構成があれば数量加算
+    var merged = false;
+    state.optLines.forEach(function (l) { if (l.sig === sig) { l.qty += qty; merged = true; } });
+    if (!merged) state.optLines.push({ base: optCtx.base, sig: sig, label: label, unit: unit, qty: qty });
+    closeOpt(); renderMenu(); updateTotal();
   }
 
   function changeQty(name, delta) {
@@ -170,6 +288,9 @@
     if (!state.table) { showErr(x.noTable); return; }
     var items = [];
     Object.keys(state.cart).forEach(function (n) { if (state.cart[n] > 0) items.push({ name: n, count: state.cart[n] }); });
+    state.optLines.forEach(function (l) {
+      if (l.qty > 0) items.push({ name: l.base + (l.label ? ' (' + l.label + ')' : ''), count: l.qty });
+    });
     if (!items.length) { showErr(x.empty); return; }
     var b = breakdown();
     var order = { tableNumber: state.table, items: items, totalPrice: b.total, phone: (state.member ? state.member.phone : ''), pointsUsed: (state.usePoints ? b.pointsUsed : 0),
@@ -192,7 +313,7 @@
         state.usePoints = false;
         if (earned > 0) earnedTxt = '　🎁+' + earned + x.points;
       }
-      state.cart = {}; state.coupon = null; updateCouponBtn(); renderMenu(); updateTotal();
+      state.cart = {}; state.optLines = []; state.coupon = null; updateCouponBtn(); renderMenu(); updateTotal();
       var title = result === 'queued' ? x.queuedTitle : (paid ? x.paidTitle : x.okTitle);
       var msg   = (result === 'queued' ? x.queuedMsg   : (paid ? x.paidMsg   : x.okMsg)) + earnedTxt;
       showOk(title, msg, result === 'queued' ? '📥' : (paid ? '💳' : '✅'));
@@ -421,6 +542,8 @@
     $('cpClose').addEventListener('click', function () { $('couponModal').classList.remove('show'); });
     $('memUse').addEventListener('change', function () { state.usePoints = this.checked; updateTotal(); });
     $('memClose').addEventListener('click', function () { $('memberModal').classList.remove('show'); });
+    $('optAdd').addEventListener('click', addOptLine);
+    $('optClose').addEventListener('click', closeOpt);
 
     window.addEventListener('online', function () { document.body.classList.remove('offline'); API.flush().then(refreshPending); });
     window.addEventListener('offline', function () { document.body.classList.add('offline'); });
