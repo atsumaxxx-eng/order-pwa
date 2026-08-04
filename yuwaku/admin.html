@@ -89,6 +89,7 @@
           <input id="splitN" type="number" min="1" value="1" style="width:70px;padding:7px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;" oninput="updSplit()">
           <span id="splitRes" style="font-weight:800;"></span>
         </div>
+        <div style="margin-bottom:10px;"><input id="payEmail" type="email" placeholder="e-receipt email (任意)" autocomplete="off" style="width:100%;padding:9px;border:1px solid #e5e7eb;border-radius:8px;font-family:inherit;box-sizing:border-box;"></div>
         <button class="pbtn" style="background:linear-gradient(135deg,#0f4c81,#1565c0);" onclick="startOnline('gcash')">📱 GCash</button>
         <button class="pbtn" style="background:linear-gradient(135deg,#2e7d32,#43a047);" onclick="startOnline('card')">💳 Card</button>
         <button class="pbtn" style="background:#334155;" onclick="cashPay()">💴 <span id="cashLbl">現金</span></button>
@@ -155,14 +156,14 @@
             noKey:'オンライン決済は未設定です。', cashRecv:'現金を受け取りましたか？', confirmed:'支払い完了', done:'完了（会計済にする）', processing:'処理中…', lang:'EN',
             disc:'シニア/PWD割引', senior:'シニア', idPh:'ID番号', eligPh:'対象額', discLine:'割引', vatNote:'うちVAT', orLbl:'レシート番号', printBtn:'🖨️ レシート印刷', close:'閉じる', tableW:'卓', totalW:'合計',
             partial:'🧾 一部会計', partTitle:'一部会計 — 明細を選択', selected:'選択', selPay:'選択分を会計', splitLbl:'割り勘 ÷', each:'/人',
-            callHdr:'🔔 呼び出し', callLbl:'スタッフ呼出', billLbl:'お会計希望', resolve:'対応済', agoMin:'分前', stay:'滞在', voidBtn:'取消', voidT:'注文の取消', reason:'取消理由', approver:'承認者（責任者ログイン）', loginPh:'ログインID', passPh:'パスワード', voidGo:'取消を承認', needReason:'取消理由を入力してください', authFail:'ログインIDまたはパスワードが違います', voided:'取消しました', alreadySettled:'会計済のため取消できません' },
+            callHdr:'🔔 呼び出し', callLbl:'スタッフ呼出', billLbl:'お会計希望', resolve:'対応済', agoMin:'分前', stay:'滞在', voidBtn:'取消', voidT:'注文の取消', reason:'取消理由', approver:'承認者（責任者ログイン）', loginPh:'ログインID', passPh:'パスワード', voidGo:'取消を承認', needReason:'取消理由を入力してください', authFail:'ログインIDまたはパスワードが違います', voided:'取消しました', alreadySettled:'会計済のため取消できません', eReceipt:'eレシート送信先メール（任意）' },
       en: { title:'Orders', served:'✓ Served', servedBtn:'Mark served', pay:'💳 Checkout', noOrder:'No open orders',
             cash:'Cash', card:'Card', cancel:'Cancel', pTitle:'Payment', sub:'Subtotal', svc:'Service', tax:'Tax',
             openPay:'Open payment page', checkBtn:'Check status', checking:'Checking…', notYet:'Payment not confirmed yet.',
             noKey:'Online payment is not set up.', cashRecv:'Cash received?', confirmed:'Paid', done:'Done (settle)', processing:'Processing…', lang:'JP',
             disc:'Senior/PWD discount', senior:'Senior', idPh:'ID no.', eligPh:'Eligible amt', discLine:'Discount', vatNote:'incl. VAT', orLbl:'Receipt no.', printBtn:'🖨️ Print receipt', close:'Close', tableW:'Table', totalW:'TOTAL',
             partial:'🧾 Partial', partTitle:'Partial checkout — select items', selected:'Selected', selPay:'Checkout selected', splitLbl:'Split ÷', each:'/person',
-            callHdr:'🔔 Requests', callLbl:'Call staff', billLbl:'Bill please', resolve:'Done', agoMin:'m ago', stay:'Seated', voidBtn:'Void', voidT:'Void order', reason:'Reason', approver:'Approver (manager login)', loginPh:'Login ID', passPh:'Password', voidGo:'Approve void', needReason:'Please enter a reason', authFail:'Wrong login ID or password', voided:'Order voided', alreadySettled:'Cannot void a settled order' }
+            callHdr:'🔔 Requests', callLbl:'Call staff', billLbl:'Bill please', resolve:'Done', agoMin:'m ago', stay:'Seated', voidBtn:'Void', voidT:'Void order', reason:'Reason', approver:'Approver (manager login)', loginPh:'Login ID', passPh:'Password', voidGo:'Approve void', needReason:'Please enter a reason', authFail:'Wrong login ID or password', voided:'Order voided', alreadySettled:'Cannot void a settled order', eReceipt:'e-receipt email (optional)' }
     };
     function t(){ return i18n[lang]; }
     function sym(){ return SETTINGS.currencySymbol || '₱'; }
@@ -277,6 +278,7 @@
     window.openPay = function(tn, subtotal, orderIds){
       payTable = tn; payCheckoutId = null; payOrderIds = (orderIds && orderIds.length) ? orderIds : null; paySub = Number(subtotal)||0; payBase = breakdown(paySub);
       document.getElementById('dcOn').checked = false; document.getElementById('dcId').value=''; document.getElementById('dcElig').value='';
+      var _pe=document.getElementById('payEmail'); if(_pe){ _pe.value=''; _pe.placeholder=t().eReceipt; }
       document.getElementById('splitN').value = 1; document.getElementById('splitLbl').innerText = t().splitLbl;
       document.getElementById('ps1t').innerText = t().pTitle;
       document.getElementById('cashLbl').innerText = t().cash;
@@ -408,7 +410,8 @@
     };
     window.finalize = function(){
       var btn = document.getElementById('doneBtn'); btn.disabled=true; btn.innerText=t().processing;
-      var bill = Object.assign({}, window._bill||{}, { table: payTable, method: payMethod, orderIds: payOrderIds });
+      var _em=document.getElementById('payEmail'); var email=_em?_em.value.trim():'';
+      var bill = Object.assign({}, window._bill||{}, { table: payTable, method: payMethod, orderIds: payOrderIds, email: email });
       API.post('finalizeBill', bill).then(function(r){ btn.disabled=false; btn.innerText=t().done; var d=r.data||{}; showReceipt(d.orNo||'', bill); })
         .catch(function(e){ btn.disabled=false; btn.innerText=t().done; alert('Error: '+(e.message||e)); });
     };

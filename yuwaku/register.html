@@ -46,7 +46,8 @@
     if (!TOKEN) location.href = './manage.html';
     function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-    var SYM='₱', CUR=null, HIST=[];
+    var SYM='₱', CUR=null, HIST=[], STAFF=[];
+    var THIS_MONTH = new Date().toISOString().slice(0,7);
     function money(v){ return SYM+(Math.round(Number(v)||0)).toLocaleString(); }
 
     window.doOpen = function(){
@@ -105,19 +106,24 @@
         var rows = HIST.map(function(h){ var o=h.overShort||0; return '<tr><td>'+esc(h.closeAt)+'</td><td class="num">'+money(h.cashSales)+'</td><td class="num">'+money(h.cardSales)+'</td><td class="num" style="color:'+(o===0?'inherit':(o>0?'#15803d':'#b91c1c'))+';">'+(o>0?'+':'')+money(o)+'</td></tr>'; }).join('');
         html += '<div class="card"><div class="card-title">'+I18n.t('histTitle')+'</div><div style="overflow:auto;"><table><thead><tr><th>'+I18n.t('closeAt')+'</th><th class="num">'+I18n.t('cashSales')+'</th><th class="num">'+I18n.t('cardSales')+'</th><th class="num">'+I18n.t('overShort')+'</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
       }
+      // スタッフ別売上（今月・締めたシフト集計）
+      if(STAFF.length){
+        var srows = STAFF.map(function(s){ var o=s.overShort||0; return '<tr><td>'+esc(s.staff)+'</td><td class="num">'+s.shifts+'</td><td class="num" style="font-weight:800;">'+money(s.total)+'</td><td class="num" style="color:'+(o===0?'inherit':(o>0?'#15803d':'#b91c1c'))+';">'+(o>0?'+':'')+money(o)+'</td></tr>'; }).join('');
+        html += '<div class="card"><div class="card-title">'+I18n.t('staffTitle')+' <span class="muted">('+esc(THIS_MONTH)+')</span></div><div style="overflow:auto;"><table><thead><tr><th>'+I18n.t('thStaff')+'</th><th class="num">'+I18n.t('thShifts')+'</th><th class="num">'+I18n.t('thTotal')+'</th><th class="num">'+I18n.t('overShort')+'</th></tr></thead><tbody>'+srows+'</tbody></table></div></div>';
+      }
       document.getElementById('wrap').innerHTML = html;
     }
 
     window.reload = function(){
-      Promise.all([ rpc('getCurrentShift',[]), rpc('getShifts',[20]) ]).then(function(a){ CUR=a[0]||{open:false}; HIST=a[1]||[]; render(); })
+      Promise.all([ rpc('getCurrentShift',[]), rpc('getShifts',[20]), rpc('getStaffSales',[THIS_MONTH]) ]).then(function(a){ CUR=a[0]||{open:false}; HIST=a[1]||[]; STAFF=a[2]||[]; render(); })
         .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('wrap').innerHTML='<div style="color:#b91c1c;padding:14px;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
     };
 
     API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
 
     I18n.init({
-      ja:{ title:'💵 レジ締め', back:'← 管理へ', loading:'読み込み中…', openTitle:'🔓 レジを開ける', float:'開店フロート（釣銭準備金）', staff:'担当', optional:'任意', openBtn:'🔓 レジを開ける', xTitle:'📋 現在のシフト（X）', cashSales:'現金売上', cardSales:'カード/GCash売上', otherSales:'その他売上', expected:'想定現金', refresh:'更新', closeTitle:'🔒 レジ締め（Z）', cashInOut:'現金入出金', cioHint:'入金+ / 出金−', counted:'実現金（数えた金額）', memo:'メモ', closeBtn:'🔒 レジを締める', zTitle:'✅ レジ締め結果（Z）', openAt:'開始', closeAt:'終了', overShort:'過不足', done:'完了', histTitle:'📖 締め履歴', needCount:'実現金を入力してください', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
-      en:{ title:'💵 Register close', back:'← Manage', loading:'Loading…', openTitle:'🔓 Open register', float:'Opening float (change fund)', staff:'Staff', optional:'optional', openBtn:'🔓 Open register', xTitle:'📋 Current shift (X)', cashSales:'Cash sales', cardSales:'Card/GCash sales', otherSales:'Other sales', expected:'Expected cash', refresh:'Refresh', closeTitle:'🔒 Close register (Z)', cashInOut:'Cash in/out', cioHint:'in + / out −', counted:'Counted cash', memo:'Memo', closeBtn:'🔒 Close register', zTitle:'✅ Register close (Z)', openAt:'Open', closeAt:'Close', overShort:'Over/Short', done:'Done', histTitle:'📖 History', needCount:'Please enter counted cash', errPrefix:'Error: ', loadErr:'Load error: ' }
+      ja:{ title:'💵 レジ締め', back:'← 管理へ', loading:'読み込み中…', openTitle:'🔓 レジを開ける', float:'開店フロート（釣銭準備金）', staff:'担当', optional:'任意', openBtn:'🔓 レジを開ける', xTitle:'📋 現在のシフト（X）', cashSales:'現金売上', cardSales:'カード/GCash売上', otherSales:'その他売上', expected:'想定現金', refresh:'更新', closeTitle:'🔒 レジ締め（Z）', cashInOut:'現金入出金', cioHint:'入金+ / 出金−', counted:'実現金（数えた金額）', memo:'メモ', closeBtn:'🔒 レジを締める', zTitle:'✅ レジ締め結果（Z）', openAt:'開始', closeAt:'終了', overShort:'過不足', done:'完了', histTitle:'📖 締め履歴', staffTitle:'👤 スタッフ別売上', thStaff:'担当', thShifts:'シフト数', thTotal:'売上合計', needCount:'実現金を入力してください', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'💵 Register close', back:'← Manage', loading:'Loading…', openTitle:'🔓 Open register', float:'Opening float (change fund)', staff:'Staff', optional:'optional', openBtn:'🔓 Open register', xTitle:'📋 Current shift (X)', cashSales:'Cash sales', cardSales:'Card/GCash sales', otherSales:'Other sales', expected:'Expected cash', refresh:'Refresh', closeTitle:'🔒 Close register (Z)', cashInOut:'Cash in/out', cioHint:'in + / out −', counted:'Counted cash', memo:'Memo', closeBtn:'🔒 Close register', zTitle:'✅ Register close (Z)', openAt:'Open', closeAt:'Close', overShort:'Over/Short', done:'Done', histTitle:'📖 History', staffTitle:'👤 Sales by staff', thStaff:'Staff', thShifts:'Shifts', thTotal:'Total sales', needCount:'Please enter counted cash', errPrefix:'Error: ', loadErr:'Load error: ' }
     }, function(){ if(CUR!==null) render(); });
 
     reload();
