@@ -81,6 +81,11 @@
     .fcard h4{ font-size:16px; font-weight:800; margin:0 0 6px; }
     .fcard p{ font-size:14px; color:var(--muted); margin:0; }
 
+    /* Flow image */
+    .flowimg{ background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:14px; box-shadow:0 16px 40px rgba(15,23,42,.1); overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .flowimg img{ width:100%; height:auto; display:block; min-width:820px; border-radius:10px; }
+    @media(max-width:600px){ .flowimg{ padding:8px; } }
+
     /* CTA */
     .cta{ background:radial-gradient(700px 300px at 50% -40%, rgba(245,158,11,.22), transparent 60%), linear-gradient(165deg,#0b1220,#111c33); color:#fff; border-radius:26px; padding:56px 30px; text-align:center; }
     .cta h2{ font-size:28px; font-weight:900; margin:0 0 10px; }
@@ -97,6 +102,7 @@
       <nav class="nav">
         <a class="navlink" href="#name" data-ja="由来" data-en="Name">由来</a>
         <a class="navlink" href="#features" data-ja="特長" data-en="Features">特長</a>
+        <a class="navlink" href="#flow" data-ja="利用イメージ" data-en="How it works">利用イメージ</a>
         <a class="navlink" href="#contact" data-ja="お問い合わせ" data-en="Contact">お問い合わせ</a>
         <button class="lang" id="langBtn" onclick="toggleLang()">EN</button>
       </nav>
@@ -181,6 +187,7 @@
           <div class="fcard"><div class="fic">📱</div><h4 data-ja="QRセルフオーダー（多言語）" data-en="QR self-ordering (multilingual)">QRセルフオーダー（多言語）</h4><p data-ja="テーブルのQRから、お客様が自分のスマホで注文。日本語・英語をワンタップ切替でき、写真付きメニューで注文ミスも減らします。" data-en="Guests order from their own phone via the table QR. One-tap Japanese/English and photo menus cut ordering mistakes.">テーブルのQRから、お客様が自分のスマホで注文。日本語・英語をワンタップ切替でき、写真付きメニューで注文ミスも減らします。</p></div>
           <div class="fcard"><div class="fic">💳</div><h4 data-ja="キャッシュレス決済" data-en="Cashless payment">キャッシュレス決済</h4><p data-ja="GCash・カードなどオンライン決済に対応。お客様はその場でスマホ決済、レジ前の会計待ちを減らせます。" data-en="GCash, cards and more. Guests pay on their phone at the table — less queueing at the counter.">GCash・カードなどオンライン決済に対応。お客様はその場でスマホ決済、レジ前の会計待ちを減らせます。</p></div>
           <div class="fcard"><div class="fic">🎁</div><h4 data-ja="会員・ポイント・クーポン" data-en="Loyalty &amp; coupons">会員・ポイント・クーポン</h4><p data-ja="来店・ポイントを記録し、クーポンやバウチャーでリピートを後押し。常連づくりを仕組みでサポートします。" data-en="Track visits and points, and drive repeat business with coupons and vouchers — regulars, by design.">来店・ポイントを記録し、クーポンやバウチャーでリピートを後押し。常連づくりを仕組みでサポートします。</p></div>
+          <div class="fcard"><div class="fic">🗓️</div><h4 data-ja="予約・フィードバック・誕生日" data-en="Reservations, feedback &amp; birthdays">予約・フィードバック・誕生日</h4><p data-ja="席の事前予約、来店後のフィードバック、誕生日登録に対応。誕生日にはクーポンを自動で発行できます。" data-en="Take table reservations, collect guest feedback, and register birthdays — with birthday coupons issued automatically.">席の事前予約、来店後のフィードバック、誕生日登録に対応。誕生日にはクーポンを自動で発行できます。</p></div>
         </div>
       </div>
 
@@ -231,6 +238,8 @@
           <div class="fcard"><div class="fic">🍳</div><h4 data-ja="キッチン表示（KDS）" data-en="Kitchen display (KDS)">キッチン表示（KDS）</h4><p data-ja="入った注文を厨房のディスプレイにリアルタイム表示。提供済み・調理中がひと目でわかり、出し忘れをゼロへ。" data-en="Orders hit the kitchen screen in real time. See what's cooking and what's served at a glance — no missed tickets.">入った注文を厨房のディスプレイにリアルタイム表示。提供済み・調理中がひと目でわかり、出し忘れをゼロへ。</p></div>
           <div class="fcard"><div class="fic">🥡</div><h4 data-ja="テイクアウト注文" data-en="Takeout orders">テイクアウト注文</h4><p data-ja="オンラインからの持ち帰り注文と店頭受取に対応。店内・持ち帰りを同じ仕組みでさばけます。" data-en="Online pickup orders, ready at the counter — dine-in and takeout run on the same system.">オンラインからの持ち帰り注文と店頭受取に対応。店内・持ち帰りを同じ仕組みでさばけます。</p></div>
           <div class="fcard"><div class="fic">📦</div><h4 data-ja="在庫・レシピ原価" data-en="Inventory &amp; recipe cost">在庫・レシピ原価</h4><p data-ja="レシピと連動して在庫を自動減算。低在庫は自動アラート、原価もリアルタイムに把握できます。" data-en="Recipes auto-deduct stock. Get low-stock alerts and see food cost update in real time.">レシピと連動して在庫を自動減算。低在庫は自動アラート、原価もリアルタイムに把握できます。</p></div>
+          <div class="fcard"><div class="fic">✍️</div><h4 data-ja="口頭注文をスタッフが入力" data-en="Staff-entered orders">口頭注文をスタッフが入力</h4><p data-ja="お客様のスマホだけでなく、口頭の注文もフロアスタッフが代理入力。管理画面からテーブル／カウンターを選ぶだけで登録できます。" data-en="Beyond guest phones, floor staff can enter spoken orders too — just pick the table or counter from the admin and add items.">お客様のスマホだけでなく、口頭の注文もフロアスタッフが代理入力。管理画面からテーブル／カウンターを選ぶだけで登録できます。</p></div>
+          <div class="fcard"><div class="fic">🔔</div><h4 data-ja="呼び出し・会計・取消承認" data-en="Calls, checkout &amp; void approval">呼び出し・会計・取消承認</h4><p data-ja="卓からの呼び出しやお会計依頼に対応し、現金・カード・GCashで会計。割り勘・一部会計、シニア/PWD割引、責任者承認つきの注文取消にも対応します。" data-en="Handle table calls and bill requests, and settle by cash, card or GCash. Split bills, partial checkout, senior/PWD discounts, and manager-approved voids all supported.">卓からの呼び出しやお会計依頼に対応し、現金・カード・GCashで会計。割り勘・一部会計、シニア/PWD割引、責任者承認つきの注文取消にも対応します。</p></div>
         </div>
       </div>
 
@@ -269,6 +278,8 @@
           <div class="fcard"><div class="fic">📊</div><h4 data-ja="売上分析・日次日報" data-en="Sales analytics &amp; daily report">売上分析・日次日報</h4><p data-ja="売上や人気商品を集計・分析。日次日報は指定時刻に自動でメール配信。数字を見る習慣が続きます。" data-en="Analyze sales and top sellers, with an automated daily email report at the time you choose.">売上や人気商品を集計・分析。日次日報は指定時刻に自動でメール配信。数字を見る習慣が続きます。</p></div>
           <div class="fcard"><div class="fic">🕐</div><h4 data-ja="勤怠・給与概算" data-en="Attendance &amp; payroll">勤怠・給与概算</h4><p data-ja="写真＋位置情報の打刻で不正を防止。労働時間から給与を概算し、締め作業をラクにします。" data-en="Photo + GPS clock-in prevents fraud, and estimates payroll from hours worked — easier month-ends.">写真＋位置情報の打刻で不正を防止。労働時間から給与を概算し、締め作業をラクにします。</p></div>
           <div class="fcard"><div class="fic">🏬</div><h4 data-ja="権限・マルチ店舗" data-en="Roles &amp; multi-store">権限・マルチ店舗</h4><p data-ja="役割ごとに見られる画面を制御。店舗ごとに独立した環境で、多店舗展開もそのまま拡張できます。" data-en="Role-based access to each screen, and a separate environment per store — ready to scale to many.">役割ごとに見られる画面を制御。店舗ごとに独立した環境で、多店舗展開もそのまま拡張できます。</p></div>
+          <div class="fcard"><div class="fic">🧾</div><h4 data-ja="会計履歴・レジ締め" data-en="Receipts &amp; cash-up">会計履歴・レジ締め</h4><p data-ja="過去の会計を月別に確認・再印刷。レジ締めやeレシートのメール送信にも対応し、日々の締め作業を確実にします。" data-en="Review and reprint past receipts by month, run cash-up, and email e-receipts — dependable daily close-outs.">過去の会計を月別に確認・再印刷。レジ締めやeレシートのメール送信にも対応し、日々の締め作業を確実にします。</p></div>
+          <div class="fcard"><div class="fic">🛡️</div><h4 data-ja="監査・操作ログ・バックアップ" data-en="Audit log &amp; backup">監査・操作ログ・バックアップ</h4><p data-ja="取消や主要な変更を記録する監査・操作ログで運用を見える化。データはCSV書き出しや自動バックアップで安全に保管します。" data-en="Audit and operation logs record voids and key changes for transparency, while CSV export and automatic backups keep data safe.">取消や主要な変更を記録する監査・操作ログで運用を見える化。データはCSV書き出しや自動バックアップで安全に保管します。</p></div>
         </div>
       </div>
       <div class="pillar">
@@ -307,6 +318,18 @@
           <div class="fcard"><div class="fic">🖨️</div><h4 data-ja="プリンタ連携" data-en="Printer integration">プリンタ連携</h4><p data-ja="厨房のレシートプリンタと連携し、入った注文の伝票を自動で印刷できます。" data-en="Connect a kitchen receipt printer to auto-print incoming order tickets.">厨房のレシートプリンタと連携し、入った注文の伝票を自動で印刷できます。</p></div>
           <div class="fcard"><div class="fic">🛠️</div><h4 data-ja="個別カスタマイズ" data-en="Custom development">個別カスタマイズ</h4><p data-ja="お店ごとのご要望に合わせて、画面・機能の個別カスタマイズや追加開発にも対応します。" data-en="We also tailor screens and build custom features to fit each store's needs.">お店ごとのご要望に合わせて、画面・機能の個別カスタマイズや追加開発にも対応します。</p></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Usage overview -->
+  <section id="flow" style="padding-top:8px;">
+    <div class="wrap">
+      <p class="kicker" data-ja="利用イメージ" data-en="How it works">利用イメージ</p>
+      <h2 class="stitle" data-ja="お店の一日を、一枚の絵で。" data-en="Your whole day, in one picture.">お店の一日を、一枚の絵で。</h2>
+      <p class="ssub" data-ja="お客様・厨房・ホール・管理者の流れと、システムがどうつながるかをまとめました。" data-en="How guests, kitchen, floor and management flow together — and how the system connects them.">お客様・厨房・ホール・管理者の流れと、システムがどうつながるかをまとめました。</p>
+      <div class="flowimg">
+        <img src="./system-overview.svg" alt="izakanpai システム利用イメージ（客・厨房・ホール・管理者の流れ）" loading="lazy">
       </div>
     </div>
   </section>
