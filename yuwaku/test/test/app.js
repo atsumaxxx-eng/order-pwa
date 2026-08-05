@@ -118,7 +118,9 @@
   function renderTexts() {
     var x = t();
     $('shopName').textContent = state.settings.shopName || x.order;
-    $('tableChip').textContent = state.table ? seatLabel(state.table) : (x.table + ' —');
+    $('tableChip').textContent = (state.table ? seatLabel(state.table) : (x.table + ' —')) + ' ▾';
+    $('tableChip').style.cursor = 'pointer';
+    $('tableChip').title = (state.lang === 'en') ? 'Tap to change table' : '卓を選び直す';
     $('langBtn').textContent = x.lang;
     $('totalLbl').textContent = x.total;
     $('sendLbl').textContent = x.send;
@@ -517,7 +519,13 @@
     $('tableOverlay').classList.add('show');
     $('tblGo').onclick = function () {
       var v = sel.value; if (!v) return;
+      var prev = state.table;
       state.table = String(v);
+      // 卓を切り替えたらカートをリセット（店員の口頭注文で別卓に入れ間違えない）
+      if (prev && prev !== state.table) {
+        state.cart = {}; state.optLines = []; state.coupon = null;
+        updateCouponBtn(); renderMenu(); updateTotal();
+      }
       $('tableOverlay').classList.remove('show');
       renderTexts();
     };
@@ -652,8 +660,9 @@
     applyAccent();
     var _bid = state.settings.menuTopImageId;
     if (_bid) { var _b = $('shopBanner'); _b.src = 'https://lh3.googleusercontent.com/d/' + _bid; _b.style.display = 'block'; }
+    state.tables = r.tables || [];   // 卓一覧を保持（卓チップから選び直せるように）
     renderTexts(); renderCats(); renderMenu(); updateTotal();
-    if (!state.table) showTablePicker(r.tables || []); // QR無しアクセス時はテーブル選択を促す
+    if (!state.table) showTablePicker(state.tables); // QR無し（店員のオーダー入力）時はテーブル選択を促す
   }
 
   // ---- 起動 ----
@@ -688,6 +697,8 @@
     $('stRefresh').addEventListener('click', loadStatus);
     $('stClose').addEventListener('click', function () { $('statusModal').classList.remove('show'); });
     $('fbBtn').addEventListener('click', openFeedback);
+    // 卓チップをタップで卓を選び直す（店員が口頭注文を別卓に入力する用）
+    $('tableChip').addEventListener('click', function () { if (state.tables && state.tables.length) showTablePicker(state.tables); });
     $('fbSend').addEventListener('click', sendFeedback);
     $('fbClose').addEventListener('click', function () { $('fbModal').classList.remove('show'); });
     Array.prototype.forEach.call($('fbStars').querySelectorAll('span'), function (s) {

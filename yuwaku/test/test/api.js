@@ -155,6 +155,19 @@
 
   window.API = API;
 
+  // ---- テスト環境バッジ（config.jsで TEST_ENV:true のときだけ表示。本番では出ない）----
+  if (CFG && CFG.TEST_ENV && typeof document !== 'undefined') {
+    var _mkBadge = function () {
+      if (document.getElementById('izTestBadge')) return;
+      var b = document.createElement('div');
+      b.id = 'izTestBadge';
+      b.textContent = '🧪 TEST';
+      b.style.cssText = 'position:fixed;left:0;bottom:0;z-index:2147483647;background:#b91c1c;color:#fff;font:800 12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:4px 10px;border-top-right-radius:8px;letter-spacing:1px;pointer-events:none;opacity:.92;';
+      (document.body || document.documentElement).appendChild(b);
+    };
+    if (document.body) _mkBadge(); else document.addEventListener('DOMContentLoaded', _mkBadge);
+  }
+
   // ---- Service Worker 自動更新（更新後に一度だけ自動リロード）----
   // デプロイ後に古いキャッシュのまま動くのを防ぐ。初回制御取得では再読み込みしない。
   if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {

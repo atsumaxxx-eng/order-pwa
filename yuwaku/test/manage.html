@@ -101,6 +101,7 @@
       { grp:'orders', key:'admin', ic:'🧾', tt:'注文管理', ds:'テーブル別・会計', ttEn:'Orders', dsEn:'Tables · billing', url:'./admin.html', active:true },
       { grp:'orders', key:'kds', ic:'🍳', tt:'キッチン画面', ds:'未提供オーダー', ttEn:'Kitchen', dsEn:'Pending orders', url:'./kds.html', active:true },
       { grp:'orders', key:'takeout', ic:'🥡', tt:'テイクアウト', ds:'オンライン注文', ttEn:'Takeout', dsEn:'Online orders', url:'./takeout.html', active:true },
+      { grp:'orders', key:null, ic:'✍️', tt:'オーダー入力', ds:'口頭注文を店員が入力', ttEn:'New order', dsEn:'Staff order entry', url:'./index.html', active:true },
       { grp:'sales', key:'dashboard', ic:'📊', tt:'ダッシュボード', ds:'今日/今月・目標・粗利', ttEn:'Dashboard', dsEn:'Today · target · profit', url:'./dashboard.html', active:true },
       { grp:'sales', key:'sales', ic:'📈', tt:'売上管理', ds:'集計・分析', ttEn:'Sales', dsEn:'Reports · analytics', url:'./sales.html', active:true },
       { grp:'sales', key:'expenses', ic:'💰', tt:'経費一覧', ds:'固定費・仕入・備品', ttEn:'Expenses', dsEn:'Costs · purchases', url:'./expenses.html', active:true },
@@ -122,7 +123,8 @@
       { grp:'system', key:'printers', ic:'🖨️', tt:'プリンタ設定', ds:'厨房印刷', ttEn:'Printers', dsEn:'Kitchen printing', url:'./printers.html', active:true },
       { grp:'system', key:'audit', ic:'🧾', tt:'監査ログ', ds:'注文取消・承認履歴', ttEn:'Audit log', dsEn:'Voids · approvals', url:'./audit.html', active:true },
       { grp:'system', key:'backup', ic:'💾', tt:'バックアップ', ds:'全データ複製・CSV書出', ttEn:'Backup', dsEn:'Copy all · CSV export', url:'./backup.html', active:true },
-      { grp:'system', key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true }
+      { grp:'system', key:'settings', ic:'⚙️', tt:'設定', ds:'店舗設定', ttEn:'Settings', dsEn:'Store settings', url:'./settings.html', active:true },
+      { grp:'system', key:null, ic:'📖', tt:'利用ガイド', ds:'システム利用イメージ', ttEn:'Guide', dsEn:'System overview', url:'./overview.html', active:true }
     ];
     var curTab = (function(){ try { return localStorage.getItem('mgmtTab') || null; } catch(e){ return null; } })();
 

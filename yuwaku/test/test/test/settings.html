@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Settings</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; --green:#16a34a; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:720px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .fg{ margin-bottom:10px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .fc{ width:100%; padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .hint{ color:var(--text-3); font-size:12px; margin-top:4px; }
+    .btn{ border:0; border-radius:11px; padding:12px 16px; font-size:14px; font-weight:900; cursor:pointer; font-family:inherit; background:var(--navy); color:#fff; }
+    .btn.sec{ background:#eef2f7; color:var(--navy); }
+    .prev{ max-width:100%; max-height:120px; border-radius:10px; margin-top:8px; display:none; }
+    .st{ display:none; margin-top:10px; padding:10px; border-radius:9px; font-size:13px; font-weight:700; }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .badge{ font-size:12px; font-weight:800; padding:3px 10px; border-radius:999px; }
+    .on{ background:#dcfce7; color:#15803d; } .offb{ background:#fee2e2; color:#b91c1c; }
+    label.chk{ display:flex; gap:8px; align-items:center; font-weight:700; }
+    label.chk input{ width:20px; height:20px; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">⚙️ 設定</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+
+    <div class="card">
+      <div class="card-title" data-t="shopTitle">🏪 店舗設定</div>
+      <div class="fg"><label class="form-label" data-t="shopName">店舗名</label><input id="shopName" class="fc"></div>
+      <div class="grid2">
+        <div class="fg"><label class="form-label" data-t="tableCount">テーブル数</label><input id="tableCount" type="number" min="0" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="counterCount">カウンター数</label><input id="counterCount" type="number" min="0" class="fc"></div>
+      </div>
+      <div class="hint" data-t="seatHint">注文画面で「テーブル1〜」「カウンター1〜」から席を選べます。0にするとその種別は非表示。</div>
+      <button class="btn" onclick="saveShop()" data-t="save">💾 保存</button>
+      <div class="st" id="st-shop"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="imgTitle">🖼️ トップ画像</div>
+      <div class="fg"><label class="form-label" data-t="orderImg">オーダートップ画像（注文画面）</label><input id="orderImg" type="file" accept="image/*" class="fc" onchange="prev('orderImg','prevOrder')"><img id="prevOrder" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('orderImg','uploadTopImage','st-img')" data-t="upload">⬆️ アップロード</button></div>
+      <hr style="border:0;border-top:1px solid var(--border);margin:14px 0;">
+      <div class="fg"><label class="form-label" data-t="loginImg">ログイン画面の画像（管理ログイン画面に表示）</label><input id="loginImg" type="file" accept="image/*" class="fc" onchange="prev('loginImg','prevLogin')"><img id="prevLogin" class="prev"><button class="btn sec" style="margin-top:8px;" onclick="upImg('loginImg','uploadSystemTopImage','st-img')" data-t="upload">⬆️ アップロード</button></div>
+      <div class="st" id="st-img"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="localeTitle">🌐 表示・地域</div>
+      <div class="grid2">
+        <div class="fg"><label class="form-label" data-t="curCode">通貨コード</label><input id="currencyCode" class="fc" placeholder="PHP"></div>
+        <div class="fg"><label class="form-label" data-t="curSym">通貨記号</label><input id="currencySymbol" class="fc" placeholder="₱"></div>
+        <div class="fg"><label class="form-label" data-t="svcRate">サービス料 (%)</label><input id="serviceRate" type="number" min="0" step="any" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="taxRate">税率 (%)</label><input id="taxRate" type="number" min="0" step="any" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="defLang">既定言語</label><select id="defaultLang" class="fc"><option value="en">English</option><option value="ja">日本語</option></select></div>
+        <div class="fg"><label class="form-label" data-t="accent">アクセント色</label><input id="accentColor" type="color" class="fc" style="height:44px;"></div>
+      </div>
+      <button class="btn" onclick="saveLocale()" data-t="save">💾 保存</button>
+      <div class="st" id="st-locale"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="payTitle">💳 PayMongo（オンライン決済）</div>
+      <div class="row" style="margin-bottom:8px;"><span data-t="status">状態:</span> <span class="badge offb" id="payBadge" data-t="unset">未設定</span></div>
+      <div class="fg"><label class="form-label" data-t="payKey">シークレットキー（sk_live_… / sk_test_…）</label><input id="payKey" type="password" class="fc" autocomplete="off" placeholder="貼り付けて保存" data-tph="phPaste"><div class="hint" data-t="payHint">保存後はキー自体は表示されません（状態のみ）。</div></div>
+      <button class="btn" onclick="savePayKey()" data-t="save">💾 保存</button>
+      <div class="st" id="st-pay"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="gemTitle">🤖 Gemini APIキー（画像検索用・任意）</div>
+      <div class="row" style="margin-bottom:8px;"><span data-t="status">状態:</span> <span class="badge offb" id="gemBadge" data-t="unset">未設定</span></div>
+      <div class="fg"><label class="form-label" data-t="apiKey">APIキー</label><input id="gemKey" type="password" class="fc" autocomplete="off" placeholder="貼り付けて保存" data-tph="phPaste"></div>
+      <button class="btn" onclick="saveGemKey()" data-t="save">💾 保存</button>
+      <div class="st" id="st-gem"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="geoTitle">📍 勤怠・店舗位置</div>
+      <div class="grid2">
+        <div class="fg"><label class="form-label" data-t="lat">緯度</label><input id="storeLat" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="lng">経度</label><input id="storeLng" class="fc"></div>
+      </div>
+      <div class="fg"><label class="form-label" data-t="radius">許容半径 (m)</label><input id="storeRadius" type="number" min="0" class="fc"></div>
+      <div class="row"><button class="btn sec" onclick="getLoc()" data-t="getLoc">📡 現在地を取得</button><button class="btn" onclick="saveGeo()" data-t="save">💾 保存</button></div>
+      <div class="st" id="st-geo"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="loyTitle">🎁 ロイヤリティ（ポイント）</div>
+      <label class="chk" style="margin-bottom:10px;"><input type="checkbox" id="loyaltyEnabled"><span data-t="loyEnable">有効にする</span></label>
+      <div class="grid2">
+        <div class="fg"><label class="form-label" data-t="loyEarn">付与レート（何円で1pt）</label><input id="loyaltyEarnRate" type="number" min="1" class="fc" placeholder="20"></div>
+        <div class="fg"><label class="form-label" data-t="loyRedeem">利用価値（1pt=何円）</label><input id="loyaltyRedeemValue" type="number" min="1" class="fc" placeholder="1"></div>
+      </div>
+      <button class="btn" onclick="saveLoy()" data-t="save">💾 保存</button>
+      <div class="st" id="st-loy"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" data-t="repTitle">📧 定期レポート（自動メール）</div>
+      <div class="fg"><label class="form-label" data-t="repEmail">送信先メール（複数可・カンマか改行区切り）</label><textarea id="reportEmail" class="fc" rows="2" placeholder="a@example.com, b@example.com"></textarea></div>
+
+      <label class="chk" style="display:block;margin:10px 0 4px;"><input type="checkbox" id="reportEnabled"><span data-t="repDaily">日次日報（毎日）</span></label>
+      <div class="fg" style="max-width:200px;"><label class="form-label" data-t="repHour">送信時刻（0-23時）</label><input id="reportHour" type="number" min="0" max="23" class="fc"></div>
+
+      <label class="chk" style="display:block;margin:12px 0 4px;"><input type="checkbox" id="reportWeekly"><span data-t="repWeekly">週次レポート</span></label>
+      <div class="grid2">
+        <div class="fg"><label class="form-label" data-t="repWeekDay">送信曜日</label><select id="reportWeeklyDay" class="fc"><option value="0" data-t="dow0">日曜</option><option value="1" data-t="dow1">月曜</option><option value="2" data-t="dow2">火曜</option><option value="3" data-t="dow3">水曜</option><option value="4" data-t="dow4">木曜</option><option value="5" data-t="dow5">金曜</option><option value="6" data-t="dow6">土曜</option></select></div>
+        <div class="fg"><label class="form-label" data-t="repHour">送信時刻（0-23時）</label><input id="reportWeeklyHour" type="number" min="0" max="23" class="fc"></div>
+      </div>
+
+      <label class="chk" style="display:block;margin:12px 0 4px;"><input type="checkbox" id="reportMonthly"><span data-t="repMonthly">月次レポート</span></label>
+      <div class="grid2">
+        <div class="fg"><label class="form-label" data-t="repMonthDay">送信日（1〜28）</label><input id="reportMonthlyDay" type="number" min="1" max="28" class="fc"></div>
+        <div class="fg"><label class="form-label" data-t="repHour">送信時刻（0-23時）</label><input id="reportMonthlyHour" type="number" min="0" max="23" class="fc"></div>
+      </div>
+
+      <div class="row" style="margin-top:10px;"><button class="btn" onclick="saveReport()" data-t="repSave">💾 保存＆スケジュール</button></div>
+      <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px;">
+        <button class="btn sec" onclick="testReport('daily')" data-t="repTestD">✉️ 日次テスト</button>
+        <button class="btn sec" onclick="testReport('weekly')" data-t="repTestW">✉️ 週次テスト</button>
+        <button class="btn sec" onclick="testReport('monthly')" data-t="repTestM">✉️ 月次テスト</button>
+      </div>
+      <div class="st" id="st-report"></div>
+    </div>
+
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function $(id){ return document.getElementById(id); }
+    function st(id, text, ok){ var e=$(id); e.style.display='block'; e.style.background=ok?'#dcfce7':'#fee2e2'; e.style.color=ok?'#15803d':'#b91c1c'; e.innerText=text; }
+
+    window.prev = function(inp, img){ var f=$(inp).files[0]; if(!f) return; var el=$(img); el.src=URL.createObjectURL(f); el.style.display='block'; };
+    window.upImg = function(inp, fn, stId){
+      var f=$(inp).files[0]; if(!f){ st(stId,I18n.t('pickImg'), false); return; }
+      var reader=new FileReader();
+      reader.onload=function(e){ rpc(fn,[{ name:f.name, type:f.type, data:e.target.result.split(',')[1] }]).then(function(){ st(stId,I18n.t('uploaded'), true); }).catch(function(err){ st(stId,I18n.t('errPrefix')+(err.message||err), false); }); };
+      reader.readAsDataURL(f);
+    };
+
+    window.saveShop = function(){ Promise.all([ rpc('saveSettings',[{shopName:$('shopName').value}]), rpc('saveSeatCounts',[Number($('tableCount').value)||0, Number($('counterCount').value)||0]) ]).then(function(){ st('st-shop',I18n.t('saved'), true); }).catch(function(e){ st('st-shop',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.saveLocale = function(){ rpc('saveSettings',[{ currencyCode:$('currencyCode').value, currencySymbol:$('currencySymbol').value, serviceRate:$('serviceRate').value, taxRate:$('taxRate').value, defaultLang:$('defaultLang').value, accentColor:$('accentColor').value }]).then(function(){ st('st-locale',I18n.t('saved'), true); }).catch(function(e){ st('st-locale',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.savePayKey = function(){ var k=$('payKey').value.trim(); if(!k){ st('st-pay',I18n.t('needKey'), false); return; } rpc('savePaymongoKey',[k]).then(function(){ $('payKey').value=''; st('st-pay',I18n.t('saved'), true); return rpc('getPaymongoKeyStatus',[]); }).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(e){ st('st-pay',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.saveGemKey = function(){ var k=$('gemKey').value.trim(); if(!k){ st('st-gem',I18n.t('needKey'), false); return; } rpc('saveGeminiKey',[k]).then(function(){ $('gemKey').value=''; st('st-gem',I18n.t('saved'), true); return rpc('getGeminiKeyStatus',[]); }).then(function(s){ if(s) setBadge('gemBadge', s.configured); }).catch(function(e){ st('st-gem',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.getLoc = function(){
+      if(!navigator.geolocation){ st('st-geo',I18n.t('noGeoDev'), false); return; }
+      navigator.geolocation.getCurrentPosition(function(p){ $('storeLat').value=p.coords.latitude.toFixed(6); $('storeLng').value=p.coords.longitude.toFixed(6); st('st-geo',I18n.t('gotLoc'), true); }, function(){ st('st-geo',I18n.t('noLoc'), false); }, { enableHighAccuracy:true, timeout:8000 });
+    };
+    window.saveGeo = function(){ rpc('saveSettings',[{ storeLat:$('storeLat').value, storeLng:$('storeLng').value, storeRadius:Number($('storeRadius').value)||0 }]).then(function(){ st('st-geo',I18n.t('saved'), true); }).catch(function(e){ st('st-geo',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.saveLoy = function(){ rpc('saveSettings',[{ loyaltyEnabled:$('loyaltyEnabled').checked?'on':'', loyaltyEarnRate:Number($('loyaltyEarnRate').value)||20, loyaltyRedeemValue:Number($('loyaltyRedeemValue').value)||1 }]).then(function(){ st('st-loy',I18n.t('saved'), true); }).catch(function(e){ st('st-loy',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.saveReport = function(){ var emails=($('reportEmail').value||'').split(/[\s,;]+/).map(function(x){return x.trim();}).filter(Boolean).join(','); rpc('saveReportSettings',[emails, $('reportHour').value, $('reportEnabled').checked, $('reportWeekly').checked, $('reportMonthly').checked, $('reportWeeklyDay').value, $('reportWeeklyHour').value, $('reportMonthlyDay').value, $('reportMonthlyHour').value]).then(function(r){ if(r&&r.success){ st('st-report',I18n.t('savedSched'), true); } else { st('st-report',I18n.t('errPrefix')+((r&&r.error)||I18n.t('scopeReauth')), false); } }).catch(function(e){ st('st-report',I18n.t('errPrefix')+(e.message||e), false); }); };
+    window.testReport = function(kind){ st('st-report',I18n.t('sending'), true); rpc('sendTestReport',[kind||'daily']).then(function(r){ if(r&&r.success){ st('st-report',I18n.t('testSent'), true); } else { st('st-report',I18n.t('errPrefix')+((r&&r.error)||I18n.t('sendFail')), false); } }).catch(function(e){ st('st-report',I18n.t('errPrefix')+(e.message||e), false); }); };
+    function setBadge(id, on){ var b=$(id); b.className='badge '+(on?'on':'offb'); b.innerText=on?I18n.t('set'):I18n.t('unset'); b.removeAttribute('data-t'); }
+
+    // ---- load ----
+    API.post('getSettings', {}).then(function(r){
+      var d = r.data || {};
+      $('shopName').value = d.shopName || '';
+      $('tableCount').value = (d.tableCount!==undefined && d.tableCount!=='') ? d.tableCount : 20;
+      $('counterCount').value = (d.counterCount!==undefined && d.counterCount!=='') ? d.counterCount : 0;
+      if (d.menuTopImageId){ var e1=$('prevOrder'); e1.src='https://lh3.googleusercontent.com/d/'+d.menuTopImageId; e1.style.display='block'; }
+      if (d.systemTopImageId){ var e2=$('prevLogin'); e2.src='https://lh3.googleusercontent.com/d/'+d.systemTopImageId; e2.style.display='block'; }
+      $('currencyCode').value = d.currencyCode || 'PHP';
+      $('currencySymbol').value = (d.currencySymbol!==undefined && d.currencySymbol!=='') ? d.currencySymbol : '₱';
+      $('serviceRate').value = d.serviceRate || '';
+      $('taxRate').value = d.taxRate || '';
+      $('defaultLang').value = d.defaultLang || 'en';
+      $('accentColor').value = d.accentColor || '#0f172a';
+      $('storeLat').value = d.storeLat || ''; $('storeLng').value = d.storeLng || ''; $('storeRadius').value = d.storeRadius || '';
+      $('loyaltyEnabled').checked = (d.loyaltyEnabled==='on'||d.loyaltyEnabled===true||d.loyaltyEnabled==='true');
+      $('loyaltyEarnRate').value = d.loyaltyEarnRate || ''; $('loyaltyRedeemValue').value = d.loyaltyRedeemValue || '';
+      $('reportEmail').value = (d.reportEmail || '').replace(/,/g,'\n'); $('reportHour').value = (d.reportHour!==undefined&&d.reportHour!=='')?d.reportHour:'';
+      $('reportEnabled').checked = (d.reportEnabled==='on'||d.reportEnabled===true||d.reportEnabled==='true');
+      $('reportWeekly').checked = (d.reportWeeklyEnabled==='on'||d.reportWeeklyEnabled===true||d.reportWeeklyEnabled==='true');
+      $('reportMonthly').checked = (d.reportMonthlyEnabled==='on'||d.reportMonthlyEnabled===true||d.reportMonthlyEnabled==='true');
+      $('reportWeeklyDay').value = (d.reportWeeklyDay!==undefined&&d.reportWeeklyDay!=='')?String(d.reportWeeklyDay):'1';
+      $('reportWeeklyHour').value = (d.reportWeeklyHour!==undefined&&d.reportWeeklyHour!=='')?d.reportWeeklyHour:'';
+      $('reportMonthlyDay').value = (d.reportMonthlyDay!==undefined&&d.reportMonthlyDay!=='')?d.reportMonthlyDay:'1';
+      $('reportMonthlyHour').value = (d.reportMonthlyHour!==undefined&&d.reportMonthlyHour!=='')?d.reportMonthlyHour:'';
+    }).catch(function(){});
+    rpc('getPaymongoKeyStatus',[]).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(){});
+    rpc('getGeminiKeyStatus',[]).then(function(s){ if(s) setBadge('gemBadge', s.configured); }).catch(function(){});
+
+    I18n.init({
+      ja:{ title:'⚙️ 設定', back:'← 管理へ', save:'💾 保存', status:'状態:', unset:'未設定', set:'設定済', phPaste:'貼り付けて保存',
+        shopTitle:'🏪 店舗設定', shopName:'店舗名', tableCount:'テーブル数', counterCount:'カウンター数', seatHint:'注文画面で「テーブル1〜」「カウンター1〜」から席を選べます。0にするとその種別は非表示。', tableHint:'注文画面のテーブル番号の上限。',
+        imgTitle:'🖼️ トップ画像', orderImg:'オーダートップ画像（注文画面）', loginImg:'ログイン画面の画像（管理ログイン画面に表示）', upload:'⬆️ アップロード',
+        localeTitle:'🌐 表示・地域', curCode:'通貨コード', curSym:'通貨記号', svcRate:'サービス料 (%)', taxRate:'税率 (%)', defLang:'既定言語', accent:'アクセント色',
+        payTitle:'💳 PayMongo（オンライン決済）', payKey:'シークレットキー（sk_live_… / sk_test_…）', payHint:'保存後はキー自体は表示されません（状態のみ）。',
+        gemTitle:'🤖 Gemini APIキー（画像検索用・任意）', apiKey:'APIキー',
+        geoTitle:'📍 勤怠・店舗位置', lat:'緯度', lng:'経度', radius:'許容半径 (m)', getLoc:'📡 現在地を取得',
+        loyTitle:'🎁 ロイヤリティ（ポイント）', loyEnable:'有効にする', loyEarn:'付与レート（何円で1pt）', loyRedeem:'利用価値（1pt=何円）',
+        repTitle:'📧 定期レポート（自動メール）', repDaily:'日次日報（毎日）', repWeekly:'週次レポート', repMonthly:'月次レポート', repEmail:'送信先メール（複数可・カンマか改行区切り）', repHour:'送信時刻（0-23時）', repWeekDay:'送信曜日', repMonthDay:'送信日（1〜28）', dow0:'日曜', dow1:'月曜', dow2:'火曜', dow3:'水曜', dow4:'木曜', dow5:'金曜', dow6:'土曜', repSave:'💾 保存＆スケジュール', repTestD:'✉️ 日次テスト', repTestW:'✉️ 週次テスト', repTestM:'✉️ 月次テスト',
+        saved:'✅ 保存しました', savedSched:'✅ 保存＆スケジュール設定しました', uploaded:'✅ アップロードしました', pickImg:'画像を選択してください', needKey:'キーを入力してください', noGeoDev:'この端末は位置情報に対応していません', gotLoc:'現在地を取得しました。「保存」を押してください。', noLoc:'位置情報を取得できませんでした。手動入力してください。', sending:'送信中…', testSent:'✅ テスト送信しました。受信箱をご確認ください', sendFail:'送信できませんでした', scopeReauth:'認証(スコープ)の再承認が必要かもしれません', errPrefix:'エラー: ' },
+      en:{ title:'⚙️ Settings', back:'← Manage', save:'💾 Save', status:'Status:', unset:'Not set', set:'Set', phPaste:'Paste and save',
+        shopTitle:'🏪 Store settings', shopName:'Store name', tableCount:'Tables', counterCount:'Counter seats', seatHint:'On the order screen guests pick from “Table 1…” / “Counter 1…”. Set 0 to hide that type.', tableHint:'Max table number on the order screen.',
+        imgTitle:'🖼️ Top images', orderImg:'Order top image (order screen)', loginImg:'Login screen image (shown on admin login)', upload:'⬆️ Upload',
+        localeTitle:'🌐 Display & region', curCode:'Currency code', curSym:'Currency symbol', svcRate:'Service charge (%)', taxRate:'Tax (%)', defLang:'Default language', accent:'Accent color',
+        payTitle:'💳 PayMongo (online payment)', payKey:'Secret key (sk_live_… / sk_test_…)', payHint:'The key itself is not shown after saving (status only).',
+        gemTitle:'🤖 Gemini API key (image search, optional)', apiKey:'API key',
+        geoTitle:'📍 Attendance / store location', lat:'Latitude', lng:'Longitude', radius:'Allowed radius (m)', getLoc:'📡 Get current location',
+        loyTitle:'🎁 Loyalty (points)', loyEnable:'Enable', loyEarn:'Earn rate (amount per 1pt)', loyRedeem:'Redeem value (1pt = amount)',
+        repTitle:'📧 Scheduled reports (auto email)', repDaily:'Daily report (every day)', repWeekly:'Weekly report', repMonthly:'Monthly report', repEmail:'Recipient emails (multiple, comma/newline separated)', repHour:'Send time (0-23)', repWeekDay:'Send day', repMonthDay:'Send day (1–28)', dow0:'Sun', dow1:'Mon', dow2:'Tue', dow3:'Wed', dow4:'Thu', dow5:'Fri', dow6:'Sat', repSave:'💾 Save & schedule', repTestD:'✉️ Daily test', repTestW:'✉️ Weekly test', repTestM:'✉️ Monthly test',
+        saved:'✅ Saved', savedSched:'✅ Saved & scheduled', uploaded:'✅ Uploaded', pickImg:'Please select an image', needKey:'Please enter a key', noGeoDev:'This device does not support location', gotLoc:'Location acquired. Please press Save.', noLoc:'Could not get location. Please enter manually.', sending:'Sending…', testSent:'✅ Test sent. Please check your inbox', sendFail:'Could not send', scopeReauth:'You may need to re-authorize (scopes)', errPrefix:'Error: ' }
+    }, function(){ rpc('getPaymongoKeyStatus',[]).then(function(s){ if(s) setBadge('payBadge', s.configured); }).catch(function(){}); rpc('getGeminiKeyStatus',[]).then(function(s){ if(s) setBadge('gemBadge', s.configured); }).catch(function(){}); });
+  </script>
+</body>
+</html>

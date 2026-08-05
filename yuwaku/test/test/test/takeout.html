@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <title>Takeout</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --green:#16a34a; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); padding-bottom:120px; -webkit-tap-highlight-color:transparent; }
+    .lang-btn{ background:rgba(15,23,42,.7); color:#fff; border:0; border-radius:999px; padding:6px 12px; font-size:12px; font-weight:800; cursor:pointer; }
+    .lang-fab{ position:fixed; top:12px; right:12px; z-index:12; }
+    .to-banner{ width:100%; max-height:150px; object-fit:cover; display:none; }
+    .to-head{ padding:14px 16px 6px; }
+    .to-shop{ font-size:20px; font-weight:900; }
+    .to-tag{ display:inline-block; background:#065f46; color:#d1fae5; font-size:12px; font-weight:800; padding:2px 10px; border-radius:999px; margin-left:6px; vertical-align:middle; }
+    .cats{ display:flex; gap:8px; overflow-x:auto; padding:8px 16px; position:sticky; top:0; background:var(--bg); z-index:10; }
+    .cat{ flex:0 0 auto; border:1px solid var(--border); background:var(--surface); border-radius:999px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; }
+    .cat.on{ background:var(--navy); color:#fff; border-color:var(--navy); }
+    .menu{ padding:6px 16px; }
+    .mi{ display:flex; gap:12px; align-items:center; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:10px; margin-bottom:10px; }
+    .mi .thumb{ width:64px; height:64px; border-radius:10px; object-fit:cover; flex:0 0 64px; background:#e5e7eb; }
+    .mi .info{ flex:1; min-width:0; }
+    .mi .nm{ font-weight:800; font-size:15px; }
+    .mi .ds{ font-size:12px; color:var(--text-3); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mi .pr{ font-weight:900; color:var(--navy); margin-top:3px; }
+    .stp{ display:flex; align-items:center; gap:10px; flex:0 0 auto; }
+    .stp button{ width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:var(--surface); font-size:20px; font-weight:900; cursor:pointer; line-height:1; }
+    .stp button.add{ background:var(--navy); color:#fff; border-color:var(--navy); }
+    .stp .q{ min-width:20px; text-align:center; font-weight:900; font-size:16px; }
+    .mi.tk-off{ opacity:.55; } .mi.tk-off .thumb{ filter:grayscale(1); }
+    .tk-unavail{ display:inline-block; background:#e2e8f0; color:#64748b; border-radius:8px; padding:5px 9px; font-size:12px; font-weight:800; }
+    .tk-tags{ display:flex; flex-wrap:wrap; gap:4px; margin:2px 0; }
+    .tk-spicy{ font-size:12px; }
+    .tk-allg{ font-size:11px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; border-radius:6px; padding:1px 5px; font-weight:700; }
+    .cartbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--surface); border-top:1px solid var(--border); padding:12px 16px; box-shadow:0 -4px 16px rgba(0,0,0,.08); }
+    .cartbtn{ width:100%; border:0; border-radius:12px; padding:15px; font-size:16px; font-weight:900; color:#fff; background:var(--navy); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+    .cartbtn[disabled]{ opacity:.45; }
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:flex-end; }
+    .overlay.on{ display:flex; }
+    .sheet{ background:var(--surface); width:100%; border-radius:18px 18px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom)); max-height:88vh; overflow:auto; }
+    .sheet h3{ margin:2px 0 12px; font-size:18px; font-weight:900; }
+    .fg{ margin-bottom:13px; }
+    .fl{ font-size:13px; font-weight:700; margin-bottom:5px; display:block; }
+    .fc{ width:100%; padding:11px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .pmrow{ display:flex; gap:8px; }
+    .pm{ flex:1; border:1px solid var(--border); border-radius:10px; padding:11px; text-align:center; font-weight:800; font-size:14px; cursor:pointer; background:var(--surface); }
+    .pm.on{ border-color:var(--navy); background:#0f172a; color:#fff; }
+    .sumrow{ display:flex; justify-content:space-between; font-size:14px; padding:4px 0; }
+    .sumrow.tot{ font-size:18px; font-weight:900; border-top:1px dashed var(--border); margin-top:6px; padding-top:8px; }
+    .btn-primary2{ width:100%; border:0; border-radius:12px; padding:15px; font-size:16px; font-weight:900; color:#fff; background:var(--green); cursor:pointer; margin-top:6px; }
+    .btn-ghost{ width:100%; border:1px solid var(--border); border-radius:12px; padding:12px; font-size:14px; font-weight:700; background:var(--surface); cursor:pointer; margin-top:8px; }
+    .succ{ text-align:center; padding:20px 8px; }
+    .succ .code{ font-size:44px; font-weight:900; letter-spacing:2px; color:var(--navy); margin:6px 0; }
+    .succ .hint{ color:var(--text-3); font-size:14px; line-height:1.7; }
+    .cli{ display:flex; justify-content:space-between; font-size:14px; padding:5px 0; border-bottom:1px dashed var(--border); }
+    .loadwrap{ text-align:center; color:var(--text-3); padding:50px 20px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <a class="lang-btn lang-fab" id="mgmtBack" href="./manage.html" style="display:none;left:12px;right:auto;">← 管理</a>
+  <button class="lang-btn lang-fab" id="langToggle" onclick="toggleLang()">JP/EN</button>
+  <script>try{if(localStorage.getItem('mgmtToken')){var _mb=document.getElementById('mgmtBack');if(_mb)_mb.style.display='block';}}catch(e){}</script>
+  <img id="banner" class="to-banner" alt="">
+  <div class="to-head">
+    <span class="to-shop" id="shopName">Takeout</span><span class="to-tag" id="tagTakeout">🥡 Takeout</span>
+  </div>
+
+  <div class="cats" id="cats"></div>
+  <div class="menu" id="menu"><div class="loadwrap" id="loadMsg">読み込み中…</div></div>
+
+  <div class="cartbar">
+    <button class="cartbtn" id="cartBtn" onclick="openCheckout()" disabled>
+      <span id="cartLabel">Cart</span><span id="cartTotal">₱0</span>
+    </button>
+  </div>
+
+  <div class="overlay" id="coOverlay">
+    <div class="sheet" id="coSheet">
+      <h3 id="coTitle">Pickup details</h3>
+      <div id="coForm">
+        <div class="fg"><label class="fl" id="lblName">Name *</label><input id="fName" class="fc" maxlength="40" placeholder=""></div>
+        <div class="fg"><label class="fl" id="lblPhone">Phone (optional)</label><input id="fPhone" class="fc" type="tel" maxlength="20" placeholder=""></div>
+        <div class="fg"><label class="fl" id="lblPickup">Pickup time</label><select id="fPickup" class="fc"></select></div>
+        <div class="fg"><label class="fl" id="lblNotes">Notes (optional)</label><input id="fNotes" class="fc" maxlength="120" placeholder=""></div>
+        <div class="fg"><label class="fl" id="lblCoupon">Coupon (optional)</label>
+          <div style="display:flex;gap:8px;">
+            <input id="fCoupon" class="fc" maxlength="32" placeholder="CODE" style="text-transform:uppercase;flex:1;">
+            <button type="button" class="pm" id="cpApplyBtn" onclick="applyTakeoutCoupon()" style="flex:0 0 auto;padding:11px 16px;">Apply</button>
+          </div>
+          <div id="cpMsg" style="margin-top:6px;font-size:13px;font-weight:700;"></div>
+        </div>
+        <div class="fg" id="pmWrap" style="display:none;">
+          <label class="fl" id="lblPay">Payment</label>
+          <div class="pmrow">
+            <div class="pm on" id="pmCard" onclick="setPM('card')">💳 <span id="pmCardT">Card</span></div>
+            <div class="pm" id="pmGcash" onclick="setPM('gcash')">📱 GCash</div>
+          </div>
+        </div>
+        <div id="coItems" style="margin:8px 0;"></div>
+        <div class="sumrow tot"><span id="lblTotal">Total</span><span id="coTotal">₱0</span></div>
+        <div id="coAlert" style="display:none;padding:11px;border-radius:10px;font-size:13px;margin:6px 0;"></div>
+        <button class="btn-primary2" id="coConfirm" onclick="confirmOrder()"></button>
+        <button class="btn-ghost" onclick="closeCheckout()" id="coCancel">Cancel</button>
+      </div>
+      <div id="coSuccess" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script>
+    var MENU = [], SETTINGS = {}, PAYMONGO = false;
+    var cart = {}, curCat = null, payMethod = 'card';
+    var pendingOrder = null, pollTimer = null, takeoutCoupon = null;
+    var lang = (localStorage.getItem('lang') || '').match(/^(ja|en)$/) ? localStorage.getItem('lang') : '';
+
+    var T = {
+      ja: { cart:'カート', order:'注文へ進む', pickup:'受取情報', name:'お名前 *', phone:'電話番号（任意）', pickupT:'受取時刻',
+            notes:'備考（任意）', pay:'お支払い', card:'カード', total:'合計', cancel:'キャンセル', tag:'🥡 テイクアウト',
+            asap:'できるだけ早く', min:'分後', payNow:'オンライン決済して注文', payStore:'店頭で支払う（注文確定）',
+            needName:'お名前を入力してください', empty:'カートが空です', thanks:'ご注文ありがとうございます！',
+            codeHint:'この番号を店頭でお伝えください', payAtStore:'店頭でお支払いください', paid:'お支払い済み',
+            newOrder:'新しい注文', waiting:'決済確認中…支払い画面で完了してください', payFail:'決済が確認できませんでした。もう一度お試しください。',
+            confirmPay:'支払い完了を確認', opening:'決済画面を開いています…', pickupLabel:'受取', totalLabel:'合計',
+            coupon:'クーポン（任意）', apply:'適用', cpApplied:'適用しました', cpNotfound:'コードが見つかりません', cpInactive:'利用できません', cpExpired:'期限切れ', cpLimit:'利用上限に達しています', cpMin:'最低注文額に達していません', cpInvalid:'無効なコード', discountLabel:'割引', loading:'読み込み中…', loadErr:'メニューを取得できませんでした' },
+      en: { cart:'Cart', order:'Checkout', pickup:'Pickup details', name:'Name *', phone:'Phone (optional)', pickupT:'Pickup time',
+            notes:'Notes (optional)', pay:'Payment', card:'Card', total:'Total', cancel:'Cancel', tag:'🥡 Takeout',
+            asap:'As soon as possible', min:'min', payNow:'Pay online & order', payStore:'Pay at counter (confirm)',
+            needName:'Please enter your name', empty:'Cart is empty', thanks:'Thank you for your order!',
+            codeHint:'Show this number at the counter', payAtStore:'Please pay at the counter', paid:'Paid',
+            newOrder:'New order', waiting:'Confirming payment… complete it in the payment window', payFail:'Payment not confirmed. Please try again.',
+            confirmPay:'I have paid', opening:'Opening payment window…', pickupLabel:'Pickup', totalLabel:'Total',
+            coupon:'Coupon (optional)', apply:'Apply', cpApplied:'Applied', cpNotfound:'Code not found', cpInactive:'Not available', cpExpired:'Expired', cpLimit:'Usage limit reached', cpMin:'Minimum order not met', cpInvalid:'Invalid code', discountLabel:'Discount', loading:'Loading…', loadErr:'Could not load the menu' }
+    };
+    function tt(){ return T[lang] || T.en; }
+    function sym(){ return SETTINGS.currencySymbol || '₱'; }
+    function money(n){ return sym() + (Number(n)||0).toLocaleString(); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+
+    function catsOf(){ var c=[]; MENU.forEach(function(it){ var k=it['カテゴリ']; if(k && c.indexOf(k)===-1) c.push(k); }); return c; }
+    function renderCats(){
+      var cs = catsOf(); if (!curCat) curCat = cs[0] || null;
+      document.getElementById('cats').innerHTML = cs.map(function(c){
+        return '<div class="cat'+(c===curCat?' on':'')+'" onclick="pickCat(\''+esc(c).replace(/'/g,"\\'")+'\')">'+esc(c)+'</div>';
+      }).join('');
+    }
+    window.pickCat = function(c){ curCat = c; renderCats(); renderMenu(); };
+    function renderMenu(){
+      var list = MENU.filter(function(it){ return it['カテゴリ']===curCat; });
+      document.getElementById('menu').innerHTML = list.map(function(it){
+        var nm = it['商品名']; var q = cart[nm]||0;
+        var thumb = it.displayUrl ? '<img class="thumb" src="'+esc(it.displayUrl)+'" loading="lazy" alt="">' : '<div class="thumb"></div>';
+        var unavail = it.soldOut===true || it.available===false;
+        var tags = '';
+        var sp = Number(it['辛さ'])||0; if(sp>0){ var pep=''; for(var s=0;s<sp;s++) pep+='🌶'; tags += '<span class="tk-spicy">'+pep+'</span>'; }
+        if(it['アレルゲン']) tags += '<span class="tk-allg">⚠ '+esc(String(it['アレルゲン']))+'</span>';
+        var stepper = unavail
+          ? '<span class="tk-unavail">'+(it.soldOut?(lang==='ja'?'本日売切':'Sold out'):(lang==='ja'?'時間外':'Not now'))+'</span>'
+          : (q>0
+            ? '<button onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',-1)">−</button><span class="q">'+q+'</span><button class="add" onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',1)">＋</button>'
+            : '<button class="add" onclick="chg(\''+esc(nm).replace(/'/g,"\\'")+'\',1)">＋</button>');
+        return '<div class="mi'+(unavail?' tk-off':'')+'">'+thumb+'<div class="info"><div class="nm">'+esc(nm)+'</div>'+
+          (tags?'<div class="tk-tags">'+tags+'</div>':'')+
+          (it['説明']?'<div class="ds">'+esc(it['説明'])+'</div>':'')+
+          '<div class="pr">'+money(it['価格'])+'</div></div><div class="stp">'+stepper+'</div></div>';
+      }).join('') || '<div class="loadwrap">—</div>';
+    }
+    window.chg = function(nm, d){ cart[nm] = Math.max(0,(cart[nm]||0)+d); if(!cart[nm]) delete cart[nm]; renderMenu(); updateCart(); };
+
+    function priceOf(nm){ for(var i=0;i<MENU.length;i++){ if(String(MENU[i]['商品名'])===String(nm)) return Number(MENU[i]['価格'])||0; } return 0; }
+    function cartItems(){ return Object.keys(cart).map(function(nm){ return { name:nm, count:cart[nm] }; }); }
+    function cartTotal(){ return Object.keys(cart).reduce(function(s,nm){ return s + priceOf(nm)*cart[nm]; }, 0); }
+    function cartCount(){ return Object.keys(cart).reduce(function(s,nm){ return s + cart[nm]; }, 0); }
+    function updateCart(){
+      var n = cartCount(), tot = cartTotal();
+      document.getElementById('cartTotal').innerText = money(tot);
+      document.getElementById('cartLabel').innerText = tt().order + (n? ' ('+n+')':'');
+      document.getElementById('cartBtn').disabled = n===0;
+    }
+
+    function fillPickupOptions(){
+      var sel = document.getElementById('fPickup');
+      var opts = ['<option value="ASAP">'+tt().asap+'</option>'];
+      [15,30,45,60].forEach(function(m){
+        var d = new Date(Date.now()+m*60000);
+        var hh = ('0'+d.getHours()).slice(-2), mm = ('0'+d.getMinutes()).slice(-2);
+        opts.push('<option value="'+hh+':'+mm+'">'+m+tt().min+' ('+hh+':'+mm+')</option>');
+      });
+      sel.innerHTML = opts.join('');
+    }
+    window.openCheckout = function(){
+      if (!cartCount()) return;
+      var t = tt();
+      takeoutCoupon = null;
+      document.getElementById('fCoupon').value = '';
+      document.getElementById('cpMsg').textContent = '';
+      document.getElementById('coItems').innerHTML = cartItems().map(function(i){
+        return '<div class="cli"><span>'+esc(i.name)+' ×'+i.count+'</span><span>'+money(priceOf(i.name)*i.count)+'</span></div>';
+      }).join('');
+      document.getElementById('coTotal').innerText = money(cartTotal());
+      document.getElementById('pmWrap').style.display = PAYMONGO ? 'block' : 'none';
+      document.getElementById('coConfirm').innerText = PAYMONGO ? t.payNow : t.payStore;
+      document.getElementById('coForm').style.display = 'block';
+      document.getElementById('coSuccess').style.display = 'none';
+      document.getElementById('coAlert').style.display = 'none';
+      fillPickupOptions();
+      document.getElementById('coOverlay').classList.add('on');
+    };
+    window.closeCheckout = function(){ document.getElementById('coOverlay').classList.remove('on'); if(pollTimer){clearInterval(pollTimer);pollTimer=null;} };
+    window.setPM = function(m){ payMethod=m; document.getElementById('pmCard').classList.toggle('on', m==='card'); document.getElementById('pmGcash').classList.toggle('on', m==='gcash'); };
+    function showAlert(msg, ok){ var a=document.getElementById('coAlert'); a.style.display='block'; a.style.background=ok?'#dcfce7':'#fee2e2'; a.style.color=ok?'#15803d':'#b91c1c'; a.innerText=msg; }
+
+    function coDiscountedTotal(){ var v = cartTotal() - (takeoutCoupon?takeoutCoupon.discount:0); return v<0?0:v; }
+    function updateCoTotal(){ document.getElementById('coTotal').innerText = money(coDiscountedTotal()); }
+    window.applyTakeoutCoupon = function(){
+      var t = tt();
+      var code = (document.getElementById('fCoupon').value||'').trim().toUpperCase();
+      var msg = document.getElementById('cpMsg');
+      if (!code){ takeoutCoupon=null; updateCoTotal(); msg.textContent=''; return; }
+      var btn = document.getElementById('cpApplyBtn'); btn.disabled=true;
+      API.post('validateCoupon', { code: code, amount: cartTotal() }).then(function(r){
+        btn.disabled=false; var d = r.data || {};
+        if (!d.ok){ takeoutCoupon=null; updateCoTotal(); msg.style.color='#b91c1c';
+          msg.textContent = '⚠️ ' + (t['cp'+(d.reason?d.reason.charAt(0).toUpperCase()+d.reason.slice(1):'Invalid')]||t.cpInvalid) + (d.reason==='min'&&d.min?('（'+money(d.min)+'）'):''); return; }
+        takeoutCoupon = { code:d.code, discount:d.discount };
+        updateCoTotal(); msg.style.color='#15803d'; msg.textContent='✅ '+t.cpApplied+'（-'+money(d.discount)+'）';
+      }).catch(function(){ btn.disabled=false; msg.style.color='#b91c1c'; msg.textContent=t.cpInvalid; });
+    };
+
+    window.confirmOrder = function(){
+      var t = tt();
+      var name = document.getElementById('fName').value.trim();
+      if (!name){ showAlert(t.needName, false); return; }
+      if (!cartCount()){ showAlert(t.empty, false); return; }
+      var order = {
+        name: name, phone: document.getElementById('fPhone').value.trim(),
+        pickup: document.getElementById('fPickup').value, notes: document.getElementById('fNotes').value.trim(),
+        items: cartItems(), coupon: (takeoutCoupon ? takeoutCoupon.code : '')
+      };
+      var btn = document.getElementById('coConfirm'); btn.disabled=true;
+      if (PAYMONGO){ startPayment(order, btn); }
+      else {
+        order.paid = false;
+        API.post('submitTakeout', { order: order }).then(function(r){ btn.disabled=false; onOrdered(r.data, false); })
+          .catch(function(e){ btn.disabled=false; showAlert(String(e.message||e), false); });
+      }
+    };
+    function startPayment(order, btn){
+      var t = tt();
+      showAlert(t.opening, true);
+      API.post('createCheckout', { amount: coDiscountedTotal(), desc: 'Takeout order', method: payMethod }).then(function(r){
+        var d = r.data || {};
+        if (!d || d.error || !d.checkoutUrl){ btn.disabled=false; showAlert((d&&d.error)||t.payFail, false); return; }
+        pendingOrder = { order: order, checkoutId: d.checkoutId };
+        window.open(d.checkoutUrl, '_blank');
+        document.getElementById('coConfirm').innerText = t.confirmPay;
+        document.getElementById('coConfirm').disabled = false;
+        document.getElementById('coConfirm').onclick = checkPayment;
+        showAlert(t.waiting, true);
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(checkPayment, 4000);
+      }).catch(function(e){ btn.disabled=false; showAlert(String(e.message||e), false); });
+    }
+    function checkPayment(){
+      if (!pendingOrder) return;
+      API.post('checkoutStatus', { checkoutId: pendingOrder.checkoutId }).then(function(r){
+        var st = r.data || {};
+        if (st && (st.paymentStatus==='paid' || st.status==='paid')){
+          if (pollTimer){ clearInterval(pollTimer); pollTimer=null; }
+          var o = pendingOrder.order; o.paid = true; pendingOrder = null;
+          API.post('submitTakeout', { order: o }).then(function(rr){ onOrdered(rr.data, true); })
+            .catch(function(e){ showAlert(String(e.message||e), false); });
+        }
+      }).catch(function(){});
+    }
+
+    function onOrdered(d, paid){
+      var t = tt();
+      if (!d || d.error){ showAlert((d&&d.error)||t.payFail, false); return; }
+      var itemsHtml = cartItems().map(function(i){ return '<div class="cli"><span>'+esc(i.name)+' ×'+i.count+'</span><span>'+money(priceOf(i.name)*i.count)+'</span></div>'; }).join('');
+      var pickup = document.getElementById('fPickup').value;
+      document.getElementById('coForm').style.display='none';
+      var s = document.getElementById('coSuccess'); s.style.display='block';
+      s.innerHTML = '<div class="succ"><div style="font-size:40px;">✅</div>'+
+        '<div style="font-weight:800;font-size:16px;">'+t.thanks+'</div>'+
+        '<div class="code">'+esc(d.code)+'</div>'+
+        '<div class="hint">'+t.codeHint+'<br>'+t.pickupLabel+': <b>'+esc(pickup)+'</b> ・ '+
+        (paid?('<span style="color:#15803d;font-weight:800;">'+t.paid+'</span>'):t.payAtStore)+'</div></div>'+
+        '<div style="margin:10px 0;">'+itemsHtml+'</div>'+
+        ((d.discount>0)?('<div class="sumrow"><span>🎟️ '+t.discountLabel+'</span><span>-'+money(d.discount)+'</span></div>'):'')+
+        '<div class="sumrow tot"><span>'+t.totalLabel+'</span><span>'+money(d.price)+'</span></div>'+
+        '<button class="btn-primary2" onclick="resetAll()">'+t.newOrder+'</button>';
+    }
+    window.resetAll = function(){
+      cart={}; pendingOrder=null; takeoutCoupon=null; if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+      document.getElementById('fName').value=''; document.getElementById('fPhone').value=''; document.getElementById('fNotes').value='';
+      document.getElementById('coConfirm').onclick = confirmOrder;
+      closeCheckout(); renderMenu(); updateCart();
+    };
+
+    function applyLang(){
+      var t = tt();
+      document.getElementById('shopName').innerText = SETTINGS.shopName || 'Takeout';
+      document.getElementById('tagTakeout').innerText = t.tag;
+      document.getElementById('coTitle').innerText = t.pickup;
+      document.getElementById('lblName').innerText = t.name;
+      document.getElementById('lblPhone').innerText = t.phone;
+      document.getElementById('lblPickup').innerText = t.pickupT;
+      document.getElementById('lblNotes').innerText = t.notes;
+      document.getElementById('lblCoupon').innerText = t.coupon;
+      document.getElementById('cpApplyBtn').innerText = t.apply;
+      document.getElementById('lblPay').innerText = t.pay;
+      document.getElementById('pmCardT').innerText = t.card;
+      document.getElementById('lblTotal').innerText = t.total;
+      document.getElementById('coCancel').innerText = t.cancel;
+      updateCart();
+    }
+    window.toggleLang = function(){ lang = (lang==='ja'?'en':'ja'); try{localStorage.setItem('lang',lang);}catch(e){} applyLang(); };
+
+    function boot(){
+      API.post('bootstrap', {}).then(function(r){
+        SETTINGS = r.settings || {}; MENU = r.menu || []; PAYMONGO = !!r.paymongo;
+        if (!lang) lang = SETTINGS.defaultLang || 'en';
+        var bid = SETTINGS.menuTopImageId;
+        if (bid){ var b=document.getElementById('banner'); b.src='https://lh3.googleusercontent.com/d/'+bid; b.style.display='block'; }
+        renderCats(); renderMenu(); applyLang(); updateCart();
+      }).catch(function(){
+        if (!lang) lang='en';
+        document.getElementById('loadMsg').innerText = tt().loadErr;
+        applyLang();
+      });
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(function(){}); }
+    }
+    document.addEventListener('DOMContentLoaded', boot);
+  </script>
+</body>
+</html>

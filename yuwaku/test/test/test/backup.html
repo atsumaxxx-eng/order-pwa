@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Backup</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --green:#16a34a; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:720px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:8px; }
+    .muted{ color:var(--text-3); font-size:13px; line-height:1.7; }
+    .btn{ border:0; border-radius:11px; padding:13px 16px; font-size:15px; font-weight:900; cursor:pointer; font-family:inherit; background:var(--navy); color:#fff; }
+    .btn.green{ background:var(--green); }
+    .fc{ padding:11px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .alert{ margin-top:12px; display:none; padding:12px; border-radius:9px; font-size:14px; font-weight:700; }
+    a.dl{ color:#2563eb; font-weight:800; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">💾 バックアップ / 書き出し</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-title" data-t="bkTitle">📦 スプレッドシートを丸ごとバックアップ</div>
+      <div class="muted" data-t="bkHint" style="margin-bottom:12px;">現在の全データを日時付きでコピーし、Driveの「バックアップ」フォルダに保存します。</div>
+      <button class="btn green" id="bkBtn" onclick="backup()" data-t="bkBtn">💾 今すぐバックアップ</button>
+      <div class="alert" id="bkMsg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" data-t="csvTitle">📄 シートをCSVで書き出し</div>
+      <div class="muted" data-t="csvHint" style="margin-bottom:12px;">シートを選んでCSVをダウンロードできます（Excel等で開けます）。</div>
+      <div class="row">
+        <select id="sheetSel" class="fc" style="min-width:180px;"></select>
+        <button class="btn" onclick="exportCsv()" data-t="csvBtn">⬇ CSVを書き出し</button>
+      </div>
+      <div class="alert" id="csvMsg"></div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function alertBox(id, html, ok){ var m=document.getElementById(id); m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerHTML=html; }
+
+    window.backup = function(){
+      var b=document.getElementById('bkBtn'); b.disabled=true; var old=b.innerText; b.innerText='…';
+      rpc('backupSpreadsheet',[]).then(function(d){ b.disabled=false; b.innerText=old; d=d||{};
+        if(d.error){ alertBox('bkMsg', I18n.t('errPrefix')+d.error, false); return; }
+        alertBox('bkMsg', I18n.t('bkDone')+'<br><b>'+esc(d.name)+'</b><br><a class="dl" href="'+esc(d.url)+'" target="_blank" rel="noopener">'+I18n.t('bkOpen')+'</a>', true);
+      }).catch(function(e){ b.disabled=false; b.innerText=old; alertBox('bkMsg', I18n.t('errPrefix')+(e.message||e), false); });
+    };
+
+    function csvCell(v){ var s=(v==null)?'':String(v); if(/[",\n]/.test(s)) s='"'+s.replace(/"/g,'""')+'"'; return s; }
+    window.exportCsv = function(){
+      var name=document.getElementById('sheetSel').value; if(!name) return;
+      rpc('exportSheetData',[name]).then(function(d){ d=d||{};
+        if(d.error){ alertBox('csvMsg', I18n.t('errPrefix')+d.error, false); return; }
+        var csv=(d.rows||[]).map(function(row){ return row.map(csvCell).join(','); }).join('\r\n');
+        var blob=new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+        var url=URL.createObjectURL(blob); var a=document.createElement('a');
+        a.href=url; a.download=name+'.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        alertBox('csvMsg', I18n.t('csvDone')+' '+esc(name)+'.csv', true);
+      }).catch(function(e){ alertBox('csvMsg', I18n.t('errPrefix')+(e.message||e), false); });
+    };
+
+    rpc('getSheetNames',[]).then(function(names){ document.getElementById('sheetSel').innerHTML=(names||[]).map(function(n){ return '<option value="'+esc(n)+'">'+esc(n)+'</option>'; }).join(''); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; } });
+
+    I18n.init({
+      ja:{ title:'💾 バックアップ / 書き出し', back:'← 管理へ', bkTitle:'📦 スプレッドシートを丸ごとバックアップ', bkHint:'現在の全データを日時付きでコピーし、Driveの「バックアップ」フォルダに保存します。', bkBtn:'💾 今すぐバックアップ', bkDone:'✅ バックアップを作成しました', bkOpen:'Driveで開く', csvTitle:'📄 シートをCSVで書き出し', csvHint:'シートを選んでCSVをダウンロードできます（Excel等で開けます）。', csvBtn:'⬇ CSVを書き出し', csvDone:'✅ 書き出しました:', errPrefix:'エラー: ' },
+      en:{ title:'💾 Backup / Export', back:'← Manage', bkTitle:'📦 Full spreadsheet backup', bkHint:'Copies all current data with a timestamp into the “Backup” folder on Drive.', bkBtn:'💾 Back up now', bkDone:'✅ Backup created', bkOpen:'Open in Drive', csvTitle:'📄 Export a sheet to CSV', csvHint:'Pick a sheet and download it as CSV (opens in Excel, etc.).', csvBtn:'⬇ Export CSV', csvDone:'✅ Exported:', errPrefix:'Error: ' }
+    }, function(){});
+  </script>
+</body>
+</html>
