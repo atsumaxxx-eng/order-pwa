@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Register</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --green:#16a34a; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:640px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .card-title{ font-weight:900; font-size:15px; margin-bottom:12px; }
+    .fg{ margin-bottom:10px; }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .fc{ width:100%; padding:11px; border:1px solid var(--border); border-radius:9px; font-size:16px; font-family:inherit; background:var(--surface); }
+    .btn{ border:0; border-radius:11px; padding:14px; font-size:15px; font-weight:900; cursor:pointer; font-family:inherit; width:100%; }
+    .btn-pri{ background:var(--navy); color:#fff; } .btn-green{ background:var(--green); color:#fff; }
+    .row{ display:flex; justify-content:space-between; padding:9px 2px; border-bottom:1px solid var(--border); font-size:14px; }
+    .row .amt{ font-weight:800; font-variant-numeric:tabular-nums; }
+    .big{ display:flex; justify-content:space-between; align-items:center; padding:14px 12px; border-radius:12px; margin-top:8px; }
+    .big .amt{ font-size:22px; font-weight:900; }
+    .muted{ color:var(--text-3); font-size:12px; }
+    .alert{ margin-top:10px; display:none; padding:11px; border-radius:9px; font-size:14px; font-weight:700; }
+    table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+    th,td{ padding:7px 5px; border-bottom:1px solid var(--border); text-align:left; white-space:nowrap; }
+    th{ font-size:11px; color:var(--text-3); }
+    td.num,th.num{ text-align:right; }
+    .loading{ text-align:center; color:var(--text-3); padding:30px 0; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">💵 レジ締め</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap" id="wrap"><div class="loading" data-t="loading">読み込み中…</div></div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var SYM='₱', CUR=null, HIST=[], STAFF=[];
+    var THIS_MONTH = new Date().toISOString().slice(0,7);
+    function money(v){ return SYM+(Math.round(Number(v)||0)).toLocaleString(); }
+
+    window.doOpen = function(){
+      var f = Number(document.getElementById('flt').value)||0;
+      var st = document.getElementById('stf').value;
+      rpc('openShift',[f, st]).then(function(r){ if(r&&r.success){ reload(); } else { alert((r&&r.error)||'error'); } }).catch(function(e){ alert(e.message||e); });
+    };
+    window.doClose = function(){
+      var counted = Number(document.getElementById('cnt').value);
+      if(!(counted>=0)){ msg(I18n.t('needCount'), false); return; }
+      var cio = Number(document.getElementById('cio').value)||0;
+      var memo = document.getElementById('memo').value;
+      var btn=document.getElementById('closeBtn'); btn.disabled=true;
+      rpc('closeShift',[counted, cio, memo]).then(function(r){ btn.disabled=false; if(r&&r.success){ showZ(r.z); } else { msg((r&&r.error)||'error', false); } })
+        .catch(function(e){ btn.disabled=false; msg(I18n.t('errPrefix')+(e.message||e), false); });
+    };
+    function msg(text, ok){ var m=document.getElementById('msg'); if(!m) return; m.style.display='block'; m.style.background=ok?'#dcfce7':'#fee2e2'; m.style.color=ok?'#15803d':'#b91c1c'; m.innerText=text; }
+
+    function showZ(z){
+      var over = z.overShort||0;
+      var html = '<div class="card"><div class="card-title">'+I18n.t('zTitle')+'</div>'
+        + line(I18n.t('openAt'), z.openAt, true) + line(I18n.t('closeAt'), z.closeAt, true)
+        + row(I18n.t('float'), money(z.float)) + row(I18n.t('cashSales'), money(z.sales.cash))
+        + row(I18n.t('cardSales'), money(z.sales.card)) + (z.sales.other>0?row(I18n.t('otherSales'), money(z.sales.other)):'')
+        + row(I18n.t('cashInOut'), money(z.cashInOut)) + row(I18n.t('expected'), money(z.expectedCash))
+        + row(I18n.t('counted'), money(z.countedCash))
+        + '<div class="big" style="background:'+(over===0?'#0f172a':(over>0?'#14532d':'#7f1d1d'))+';color:#fff;"><span>'+I18n.t('overShort')+'</span><span class="amt">'+(over>0?'+':'')+money(over)+'</span></div>'
+        + '<button class="btn btn-pri" style="margin-top:12px;" onclick="reload()">'+I18n.t('done')+'</button></div>';
+      document.getElementById('wrap').innerHTML = html;
+    }
+    function line(k,v){ return '<div class="row"><span>'+k+'</span><span class="muted">'+esc(v)+'</span></div>'; }
+    function row(k,v){ return '<div class="row"><span>'+k+'</span><span class="amt">'+v+'</span></div>'; }
+
+    function render(){
+      var html='';
+      if(!CUR || !CUR.open){
+        html += '<div class="card"><div class="card-title">'+I18n.t('openTitle')+'</div>'
+          + '<div class="fg"><label class="form-label">'+I18n.t('float')+'</label><input id="flt" type="number" min="0" step="any" class="fc" placeholder="0"></div>'
+          + '<div class="fg"><label class="form-label">'+I18n.t('staff')+' <span class="muted">('+I18n.t('optional')+')</span></label><input id="stf" class="fc"></div>'
+          + '<button class="btn btn-green" onclick="doOpen()">'+I18n.t('openBtn')+'</button></div>';
+      } else {
+        var s=CUR.sales||{};
+        html += '<div class="card"><div class="card-title">'+I18n.t('xTitle')+' <span class="muted">('+esc(CUR.openAt)+(CUR.staff?(' / '+esc(CUR.staff)):'')+')</span></div>'
+          + row(I18n.t('float'), money(CUR.float)) + row(I18n.t('cashSales'), money(s.cash))
+          + row(I18n.t('cardSales'), money(s.card)) + (s.other>0?row(I18n.t('otherSales'), money(s.other)):'')
+          + '<div class="big" style="background:#eef1f5;"><span>'+I18n.t('expected')+'</span><span class="amt">'+money(CUR.expectedCash)+'</span></div>'
+          + '<button class="hbtn" style="background:var(--navy);margin-top:8px;" onclick="reload()">🔄 '+I18n.t('refresh')+'</button></div>';
+        html += '<div class="card"><div class="card-title">'+I18n.t('closeTitle')+'</div>'
+          + '<div class="fg"><label class="form-label">'+I18n.t('cashInOut')+' <span class="muted">('+I18n.t('cioHint')+')</span></label><input id="cio" type="number" step="any" class="fc" value="0"></div>'
+          + '<div class="fg"><label class="form-label">'+I18n.t('counted')+'</label><input id="cnt" type="number" min="0" step="any" class="fc" placeholder="0"></div>'
+          + '<div class="fg"><label class="form-label">'+I18n.t('memo')+'</label><input id="memo" class="fc"></div>'
+          + '<button class="btn btn-pri" id="closeBtn" onclick="doClose()">'+I18n.t('closeBtn')+'</button><div class="alert" id="msg"></div></div>';
+      }
+      // 履歴
+      if(HIST.length){
+        var rows = HIST.map(function(h){ var o=h.overShort||0; return '<tr><td>'+esc(h.closeAt)+'</td><td class="num">'+money(h.cashSales)+'</td><td class="num">'+money(h.cardSales)+'</td><td class="num" style="color:'+(o===0?'inherit':(o>0?'#15803d':'#b91c1c'))+';">'+(o>0?'+':'')+money(o)+'</td></tr>'; }).join('');
+        html += '<div class="card"><div class="card-title">'+I18n.t('histTitle')+'</div><div style="overflow:auto;"><table><thead><tr><th>'+I18n.t('closeAt')+'</th><th class="num">'+I18n.t('cashSales')+'</th><th class="num">'+I18n.t('cardSales')+'</th><th class="num">'+I18n.t('overShort')+'</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+      }
+      // スタッフ別売上（今月・締めたシフト集計）
+      if(STAFF.length){
+        var srows = STAFF.map(function(s){ var o=s.overShort||0; return '<tr><td>'+esc(s.staff)+'</td><td class="num">'+s.shifts+'</td><td class="num" style="font-weight:800;">'+money(s.total)+'</td><td class="num" style="color:'+(o===0?'inherit':(o>0?'#15803d':'#b91c1c'))+';">'+(o>0?'+':'')+money(o)+'</td></tr>'; }).join('');
+        html += '<div class="card"><div class="card-title">'+I18n.t('staffTitle')+' <span class="muted">('+esc(THIS_MONTH)+')</span></div><div style="overflow:auto;"><table><thead><tr><th>'+I18n.t('thStaff')+'</th><th class="num">'+I18n.t('thShifts')+'</th><th class="num">'+I18n.t('thTotal')+'</th><th class="num">'+I18n.t('overShort')+'</th></tr></thead><tbody>'+srows+'</tbody></table></div></div>';
+      }
+      document.getElementById('wrap').innerHTML = html;
+    }
+
+    window.reload = function(){
+      Promise.all([ rpc('getCurrentShift',[]), rpc('getShifts',[20]), rpc('getStaffSales',[THIS_MONTH]) ]).then(function(a){ CUR=a[0]||{open:false}; HIST=a[1]||[]; STAFF=a[2]||[]; render(); })
+        .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('wrap').innerHTML='<div style="color:#b91c1c;padding:14px;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
+    };
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
+
+    I18n.init({
+      ja:{ title:'💵 レジ締め', back:'← 管理へ', loading:'読み込み中…', openTitle:'🔓 レジを開ける', float:'開店フロート（釣銭準備金）', staff:'担当', optional:'任意', openBtn:'🔓 レジを開ける', xTitle:'📋 現在のシフト（X）', cashSales:'現金売上', cardSales:'カード/GCash売上', otherSales:'その他売上', expected:'想定現金', refresh:'更新', closeTitle:'🔒 レジ締め（Z）', cashInOut:'現金入出金', cioHint:'入金+ / 出金−', counted:'実現金（数えた金額）', memo:'メモ', closeBtn:'🔒 レジを締める', zTitle:'✅ レジ締め結果（Z）', openAt:'開始', closeAt:'終了', overShort:'過不足', done:'完了', histTitle:'📖 締め履歴', staffTitle:'👤 スタッフ別売上', thStaff:'担当', thShifts:'シフト数', thTotal:'売上合計', needCount:'実現金を入力してください', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'💵 Register close', back:'← Manage', loading:'Loading…', openTitle:'🔓 Open register', float:'Opening float (change fund)', staff:'Staff', optional:'optional', openBtn:'🔓 Open register', xTitle:'📋 Current shift (X)', cashSales:'Cash sales', cardSales:'Card/GCash sales', otherSales:'Other sales', expected:'Expected cash', refresh:'Refresh', closeTitle:'🔒 Close register (Z)', cashInOut:'Cash in/out', cioHint:'in + / out −', counted:'Counted cash', memo:'Memo', closeBtn:'🔒 Close register', zTitle:'✅ Register close (Z)', openAt:'Open', closeAt:'Close', overShort:'Over/Short', done:'Done', histTitle:'📖 History', staffTitle:'👤 Sales by staff', thStaff:'Staff', thShifts:'Shifts', thTotal:'Total sales', needCount:'Please enter counted cash', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(CUR!==null) render(); });
+
+    reload();
+  </script>
+</body>
+</html>

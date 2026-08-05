@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Gross Profit</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --green:#16a34a; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:720px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:14px; }
+    .bar{ display:flex; gap:8px; align-items:flex-end; margin-bottom:6px; }
+    .fc{ padding:10px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-family:inherit; }
+    .form-label{ font-size:12px; font-weight:700; }
+    .row{ display:flex; justify-content:space-between; align-items:center; padding:11px 2px; border-bottom:1px solid var(--border); }
+    .row .lb{ font-weight:700; } .row .amt{ font-variant-numeric:tabular-nums; font-weight:800; }
+    .row.sub .lb{ font-weight:600; color:var(--text-3); padding-left:12px; }
+    .row.sub .amt{ color:var(--text-3); font-weight:700; }
+    .row.rev .amt{ color:var(--green); font-size:18px; }
+    .cost .amt{ color:var(--red); }
+    .profit{ display:flex; justify-content:space-between; align-items:center; padding:16px 12px; margin-top:6px; border-radius:12px; background:#0f172a; color:#fff; }
+    .profit .lb{ font-weight:900; font-size:16px; } .profit .amt{ font-weight:900; font-size:22px; font-variant-numeric:tabular-nums; }
+    .profit .rate{ font-size:13px; opacity:.85; margin-left:8px; }
+    .cogsopt{ display:flex; gap:14px; margin:4px 0 2px; font-size:13px; }
+    .cogsopt label{ display:flex; gap:5px; align-items:center; cursor:pointer; }
+    .muted{ color:var(--text-3); font-size:12px; }
+    .hint{ color:var(--text-3); font-size:12px; line-height:1.7; }
+    .loading{ text-align:center; color:var(--text-3); padding:30px 0; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">📈 月間粗利</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="bar">
+        <div style="flex:1;"><label class="form-label" data-t="month">対象月</label><br><input id="month" type="month" class="fc" style="width:100%;"></div>
+        <button class="hbtn" style="background:var(--navy);" onclick="load()" data-t="calc">🔄 計算</button>
+      </div>
+      <div class="hint" data-t="hint">売上・商品原価(レシピ自動)・従業員給与(勤怠)はシステムから自動取得。固定費・備品・その他は「経費一覧」の登録額を集計します。</div>
+    </div>
+
+    <div class="card" id="result"><div class="loading" data-t="loading">読み込み中…</div></div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var SYM='₱', DATA=null, cogsMode='auto';
+    function money(v){ return SYM+(Math.round(Number(v)||0)).toLocaleString(); }
+
+    window.setCogs = function(mode){ cogsMode=mode; render(); };
+
+    function render(){
+      if(!DATA){ return; }
+      var d = DATA, e = d.exp||{};
+      var cogs = (cogsMode==='purchase') ? (e['商品仕入']||0) : (d.cogsAuto||0);
+      var fixed = (e['賃料']||0)+(e['電気代']||0)+(e['水道代']||0);
+      var totalCost = cogs + (d.wages||0) + fixed + (e['備品購入']||0) + (e['その他']||0);
+      var profit = (d.revenue||0) - totalCost;
+      var rate = d.revenue>0 ? Math.round(profit/d.revenue*1000)/10 : 0;
+      var html = '';
+      html += '<div class="row rev"><span class="lb">'+I18n.t('revenue')+' <span class="muted">('+d.orders+I18n.t('ordersU')+')</span></span><span class="amt">'+money(d.revenue)+'</span></div>';
+      // 商品原価（選択）
+      html += '<div class="row cost"><span class="lb">'+I18n.t('cogs')+'</span><span class="amt">− '+money(cogs)+'</span></div>';
+      html += '<div class="cogsopt">'
+        + '<label><input type="radio" name="cogs" '+(cogsMode==='auto'?'checked':'')+' onchange="setCogs(\'auto\')"> '+I18n.t('cogsAuto')+' ('+money(d.cogsAuto)+')</label>'
+        + '<label><input type="radio" name="cogs" '+(cogsMode==='purchase'?'checked':'')+' onchange="setCogs(\'purchase\')"> '+I18n.t('cogsBuy')+' ('+money(e['商品仕入']||0)+')</label>'
+        + '</div>';
+      html += '<div class="row cost"><span class="lb">'+I18n.t('wages')+'</span><span class="amt">− '+money(d.wages)+'</span></div>';
+      html += '<div class="row cost"><span class="lb">'+I18n.t('rent')+' / '+I18n.t('elec')+' / '+I18n.t('water')+'</span><span class="amt">− '+money(fixed)+'</span></div>';
+      html += '<div class="row sub"><span class="lb">'+I18n.t('rent')+'</span><span class="amt">'+money(e['賃料']||0)+'</span></div>';
+      html += '<div class="row sub"><span class="lb">'+I18n.t('elec')+'</span><span class="amt">'+money(e['電気代']||0)+'</span></div>';
+      html += '<div class="row sub"><span class="lb">'+I18n.t('water')+'</span><span class="amt">'+money(e['水道代']||0)+'</span></div>';
+      html += '<div class="row cost"><span class="lb">'+I18n.t('supply')+'</span><span class="amt">− '+money(e['備品購入']||0)+'</span></div>';
+      html += '<div class="row cost"><span class="lb">'+I18n.t('other')+'</span><span class="amt">− '+money(e['その他']||0)+'</span></div>';
+      html += '<div class="profit"><span class="lb">'+I18n.t('profit')+'<span class="rate">'+I18n.t('rate')+' '+rate+'%</span></span><span class="amt">'+money(profit)+'</span></div>';
+      html += '<div class="hint" style="margin-top:10px;" data-t="note2">※ 固定費・備品・その他・仕入は「経費一覧」で当月に登録した金額の合計です。</div>';
+      document.getElementById('result').innerHTML = html;
+      I18n && I18n.lang && applyNote();
+    }
+    function applyNote(){ var n=document.querySelector('#result [data-t="note2"]'); if(n) n.textContent=I18n.t('note2'); }
+
+    window.load = function(){
+      var mo = document.getElementById('month').value; if(!mo) return;
+      document.getElementById('result').innerHTML='<div class="loading">'+I18n.t('loading')+'</div>';
+      rpc('getMonthlyProfit',[mo]).then(function(d){ DATA=d||null; render(); })
+        .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('result').innerHTML='<div style="color:#b91c1c;padding:14px;">'+I18n.t('loadErr')+esc(e.message||e)+'</div>'; });
+    };
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; if(DATA) render(); }).catch(function(){});
+    document.getElementById('month').value = new Date().toISOString().slice(0,7);
+
+    I18n.init({
+      ja:{ title:'📈 月間粗利', back:'← 管理へ', month:'対象月', calc:'🔄 計算', hint:'売上・商品原価(レシピ自動)・従業員給与(勤怠)はシステムから自動取得。固定費・備品・その他は「経費一覧」の登録額を集計します。', loading:'読み込み中…', revenue:'売上', ordersU:'件', cogs:'商品原価', cogsAuto:'自動(レシピ)', cogsBuy:'仕入実績', wages:'従業員給与', rent:'賃料', elec:'電気代', water:'水道代', supply:'備品購入', other:'その他', profit:'粗利', rate:'粗利率', note2:'※ 固定費・備品・その他・仕入は「経費一覧」で当月に登録した金額の合計です。', errPrefix:'エラー: ', loadErr:'読み込みエラー: ' },
+      en:{ title:'📈 Monthly Gross Profit', back:'← Manage', month:'Target month', calc:'🔄 Calculate', hint:'Revenue, product cost (auto via recipes) and wages (attendance) are pulled from the system. Fixed costs / supplies / other are summed from the Expenses list.', loading:'Loading…', revenue:'Revenue', ordersU:' orders', cogs:'Product cost', cogsAuto:'Auto (recipe)', cogsBuy:'Purchases', wages:'Wages', rent:'Rent', elec:'Electricity', water:'Water', supply:'Supplies', other:'Other', profit:'Gross profit', rate:'Margin', note2:'* Fixed costs / supplies / other / purchases are totals registered for the month in the Expenses list.', errPrefix:'Error: ', loadErr:'Load error: ' }
+    }, function(){ if(DATA) render(); });
+
+    load();
+  </script>
+</body>
+</html>
