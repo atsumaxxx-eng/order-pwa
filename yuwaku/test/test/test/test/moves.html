@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <title>Stock history</title>
+  <style>
+    :root{ --bg:#f6f7f9; --surface:#fff; --border:#e5e7eb; --navy:#0f172a; --text-3:#64748b; --red:#c62828; }
+    *{ box-sizing:border-box; }
+    body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans JP',sans-serif; background:var(--bg); color:var(--navy); }
+    .head{ position:sticky; top:0; z-index:20; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 16px; }
+    .head h1{ font-size:18px; margin:0; font-weight:900; }
+    .hbtn{ background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:9px; padding:8px 12px; font-size:13px; font-weight:800; cursor:pointer; text-decoration:none; }
+    .wrap{ padding:16px; max-width:960px; margin:0 auto; }
+    .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; }
+    .bar{ display:flex; gap:12px; align-items:flex-end; margin-bottom:12px; flex-wrap:wrap; }
+    .fc{ padding:10px; border:1px solid var(--border); border-radius:9px; font-size:15px; font-family:inherit; background:var(--surface); }
+    .form-label{ font-size:12px; font-weight:700; display:block; margin-bottom:4px; }
+    .muted{ color:var(--text-3); font-size:12px; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 6px; border-bottom:1px solid var(--border); text-align:left; }
+    th{ font-size:11px; color:var(--text-3); white-space:nowrap; }
+    td.num,th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+    .b-in{ background:#dcfce7; color:#15803d; } .b-waste{ background:#fee2e2; color:#b91c1c; } .b-count{ background:#e0e7ff; color:#3730a3; }
+    .badge{ display:inline-block; border-radius:6px; padding:1px 7px; font-size:11px; font-weight:800; }
+    .kpi{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+    .kbox{ background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:10px 12px; min-width:120px; }
+    .kbox .kl{ font-size:11px; color:var(--text-3); font-weight:800; } .kbox .kv{ font-size:17px; font-weight:900; }
+  </style>
+</head>
+<body>
+  <div class="head"><h1 data-t="title">📋 在庫変動履歴</h1><div style="display:flex;gap:8px;"><button class="hbtn" data-tlang onclick="I18n.toggle()">EN</button><a class="hbtn" href="./inventory.html" data-t="inv">📦 在庫</a><a class="hbtn" href="./manage.html" data-t="back">← 管理へ</a></div></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="bar">
+        <div><label class="form-label" data-t="month">対象月</label><input id="month" type="month" class="fc"></div>
+      </div>
+      <div class="kpi" id="kpi"></div>
+      <div style="overflow:auto;">
+        <table><thead><tr>
+          <th data-t="thTime">日時</th><th data-t="thType">種別</th><th data-t="thName">商品</th>
+          <th class="num" data-t="thQty">数量</th><th class="num" data-t="thStock">変動後</th>
+          <th class="num" data-t="thCost">原価概算</th><th data-t="thReason">理由</th><th data-t="thActor">記録者</th>
+        </tr></thead>
+        <tbody id="rows"><tr><td colspan="8" style="color:#aaa;padding:16px;text-align:center;" data-t="loading">読み込み中…</td></tr></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./api.js"></script>
+  <script src="./i18n.js"></script>
+  <script>
+    var TOKEN = localStorage.getItem('mgmtToken') || '';
+    if (!TOKEN) location.href = './manage.html';
+    function rpc(fn,args){ return API.post('rpc',{fn:fn,args:args||[],token:TOKEN}).then(function(r){ return r.data; }); }
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    var ALL = [], SYM='₱', __loaded=false;
+    var TYPEKEY = { '入荷':'tIn', '廃棄':'tWaste', '棚卸':'tCount' };
+    var TYPECLS = { '入荷':'b-in', '廃棄':'b-waste', '棚卸':'b-count' };
+    function fmt(ts){ try{ return new Date(ts).toLocaleString(); }catch(e){ return esc(ts); } }
+    function typeLabel(t){ return I18n.t(TYPEKEY[t]||'tIn'); }
+
+    function render(){
+      var mo = document.getElementById('month').value;
+      var list = ALL.filter(function(r){ return r.month===mo; });
+      // KPI
+      var inN=0, wasteN=0, wasteCost=0, countDiff=0;
+      list.forEach(function(r){ if(r.type==='入荷') inN+=r.qty; else if(r.type==='廃棄'){ wasteN+= -r.qty; wasteCost+= Math.abs(r.costEst); } else if(r.type==='棚卸'){ countDiff+= r.qty; } });
+      document.getElementById('kpi').innerHTML =
+        '<div class="kbox"><div class="kl">'+I18n.t('kIn')+'</div><div class="kv">'+inN.toLocaleString()+'</div></div>'+
+        '<div class="kbox"><div class="kl">'+I18n.t('kWaste')+'</div><div class="kv" style="color:#b91c1c;">'+wasteN.toLocaleString()+' <span class="muted">('+SYM+wasteCost.toLocaleString()+')</span></div></div>'+
+        '<div class="kbox"><div class="kl">'+I18n.t('kDiff')+'</div><div class="kv" style="color:'+(countDiff<0?'#b91c1c':'#15803d')+';">'+(countDiff>0?'+':'')+countDiff.toLocaleString()+'</div></div>';
+      if(!list.length){ document.getElementById('rows').innerHTML='<tr><td colspan="8" style="color:#aaa;padding:16px;text-align:center;">'+I18n.t('empty')+'</td></tr>'; return; }
+      document.getElementById('rows').innerHTML = list.map(function(r){
+        return '<tr><td class="muted" style="white-space:nowrap;">'+esc(fmt(r.ts))+'</td>'+
+          '<td><span class="badge '+(TYPECLS[r.type]||'')+'">'+esc(typeLabel(r.type))+'</span></td>'+
+          '<td>'+esc(r.name)+'</td>'+
+          '<td class="num" style="color:'+(r.qty<0?'#b91c1c':'#15803d')+';font-weight:800;">'+(r.qty>0?'+':'')+r.qty.toLocaleString()+' '+esc(r.unit)+'</td>'+
+          '<td class="num">'+r.stock.toLocaleString()+'</td>'+
+          '<td class="num">'+SYM+(Number(r.costEst)||0).toLocaleString()+'</td>'+
+          '<td class="muted">'+esc(r.reason)+'</td><td>'+esc(r.actor)+'</td></tr>';
+      }).join('');
+    }
+    document.getElementById('month').addEventListener('change', render);
+    var ymd = new Date().toISOString().slice(0,10);
+    document.getElementById('month').value = ymd.slice(0,7);
+
+    API.post('getSettings', {}).then(function(r){ if(r.data && r.data.currencySymbol) SYM=r.data.currencySymbol; render(); }).catch(function(){});
+    rpc('getStockMoves',['']).then(function(l){ ALL=l||[]; __loaded=true; render(); })
+      .catch(function(e){ if(String(e.message||e).indexOf('unauthorized')>=0){ location.href='./manage.html'; return; } document.getElementById('rows').innerHTML='<tr><td colspan="8" style="color:#b91c1c;padding:16px;">'+I18n.t('loadErr')+esc(e.message||e)+'</td></tr>'; });
+
+    I18n.init({
+      ja:{ title:'📋 在庫変動履歴', back:'← 管理へ', inv:'📦 在庫', month:'対象月', thTime:'日時', thType:'種別', thName:'商品', thQty:'数量', thStock:'変動後', thCost:'原価概算', thReason:'理由', thActor:'記録者', loading:'読み込み中…', empty:'この月の記録はありません', loadErr:'読み込みエラー: ', tIn:'入荷', tWaste:'廃棄', tCount:'棚卸', kIn:'入荷合計', kWaste:'廃棄合計', kDiff:'棚卸差異' },
+      en:{ title:'📋 Stock history', back:'← Manage', inv:'📦 Inventory', month:'Target month', thTime:'Time', thType:'Type', thName:'Item', thQty:'Qty', thStock:'After', thCost:'Cost est.', thReason:'Reason', thActor:'By', loading:'Loading…', empty:'No records this month', loadErr:'Load error: ', tIn:'Receive', tWaste:'Waste', tCount:'Stocktake', kIn:'Received', kWaste:'Wasted', kDiff:'Count variance' }
+    }, function(){ if(__loaded) render(); });
+  </script>
+</body>
+</html>

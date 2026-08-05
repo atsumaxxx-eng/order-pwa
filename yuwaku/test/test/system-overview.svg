@@ -25,7 +25,7 @@
   <g font-size="12.5" fill="#475569" font-weight="700">
     <text x="415" y="238">① 注文</text>
     <text x="836" y="238" text-anchor="end">② 連携</text>
-    <text x="392" y="410">会計・提供</text>
+    <text x="392" y="410">注文入力・会計</text>
     <text x="906" y="392" text-anchor="end">管理・集計</text>
     <text x="662" y="400">保存</text>
   </g>
@@ -73,14 +73,14 @@
   <rect x="40" y="470" width="360" height="300" rx="14" fill="#ecfdf5" stroke="#10b981" stroke-width="2"/>
   <text x="60" y="502" fill="#047857" font-size="17" font-weight="800">🙋 ホール・店員（店舗端末）</text>
   <g font-size="12.8" fill="#1e293b">
-    <text x="60" y="532">① 🧾 注文一覧で状況を確認（卓別・滞在タイマー）</text>
-    <text x="60" y="556">② 🔔 客からの呼出・お会計依頼に対応</text>
-    <text x="60" y="580">③ 💴 会計処理：現金／カード／GCash</text>
-    <text x="60" y="604">　 ➗ 割り勘・一部会計・シニア/PWD割引</text>
-    <text x="60" y="628">④ 🖨️ レシートをプリンタ出力／✉️ eレシート</text>
-    <text x="60" y="652">🚫 注文取消（理由＋責任者の承認制）</text>
-    <text x="60" y="676">⏰ 出勤打刻（写真＋GPSで不正防止）</text>
-    <text x="60" y="700" fill="#64748b" font-size="11.5">※ 注文管理はログイン不要（店舗端末運用）</text>
+    <text x="60" y="528">① ✍️ 口頭注文をフロアスタッフが代理入力</text>
+    <text x="60" y="550">　 （管理画面→テーブル/カウンターを選択して入力）</text>
+    <text x="60" y="574">② 🧾 注文一覧で状況を確認（卓別・滞在タイマー）</text>
+    <text x="60" y="598">③ 🔔 客からの呼出・お会計依頼に対応</text>
+    <text x="60" y="622">④ 💴 会計：現金／カード／GCash（割勘・一部・シニア/PWD割引）</text>
+    <text x="60" y="646">⑤ 🖨️ レシート印刷／✉️ eレシート</text>
+    <text x="60" y="670">🚫 注文取消（理由＋責任者の承認制）／⏰ 写真＋GPS打刻</text>
+    <text x="60" y="702" fill="#64748b" font-size="11.5">※ 注文入力・管理はログイン不要（店舗端末運用）</text>
     <text x="60" y="738" fill="#047857" font-size="12" font-weight="700">🖨️ プリンタ・💳 決済端末と連携</text>
   </g>
 
